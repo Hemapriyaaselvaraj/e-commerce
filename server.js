@@ -1,0 +1,73 @@
+const express = require('express');
+const path = require('path');
+const connectDB = require('./config/db');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
+const passport = require('passport')
+const flash = require("connect-flash");
+
+require('./config/passport')
+require('dotenv').config();
+
+const app = express();
+const attachUserName = require('./middlewares/userName.middleware')
+
+
+const userRoutes = require("./routes/user")
+const adminRoutes = require('./routes/admin')
+const homeRoutes = require('./routes/customer/home')
+const productRoutes = require('./routes/customer/product')
+const wishlistRoutes = require('./routes/customer/wishlist')
+const cartRoutes = require('./routes/customer/cart')
+const checkoutRoutes = require('./routes/customer/checkout');
+const addressRoutes = require('./routes/customer/address');
+const profileRoutes = require('./routes/customer/profile');
+const orderRoutes = require('./routes/customer/order');
+const walletRoutes = require('./routes/customer/wallet')
+ 
+connectDB();
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
+    cookie: { httpOnly: true,                     
+    secure: false,                      
+    maxAge: 1000 * 60 * 60 * 24 
+    }     
+}));
+app.use(flash());
+
+app.use((req, res, next) => {
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  next();
+});
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
+app.use(attachUserName);
+
+app.use('/user',userRoutes)
+app.use('/admin',adminRoutes)
+
+app.use('/',homeRoutes)
+app.use('/products', productRoutes)
+app.use('/wishlist', wishlistRoutes)
+app.use('/cart', cartRoutes)
+app.use('/checkout', checkoutRoutes);
+app.use('/addresses', addressRoutes);
+app.use('/profile',profileRoutes)
+app.use('/order', orderRoutes);
+app.use('/wallet', walletRoutes)
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

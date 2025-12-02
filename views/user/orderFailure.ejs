@@ -1,0 +1,83 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Payment Failed</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 700px;
+      margin: 80px auto;
+      padding: 40px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h1 {
+      color: #e74c3c;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 18px;
+      color: #333;
+      margin: 10px 0;
+    }
+    .order-number {
+      font-weight: bold;
+      color: #555;
+    }
+    .buttons {
+      margin-top: 30px;
+    }
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+      text-decoration: none;
+    }
+    .btn-retry {
+      background-color: #3498db;
+      color: #fff;
+    }
+    .btn-view {
+      background-color: #95a5a6;
+      color: #fff;
+    }
+    .illustration {
+      margin: 25px 0;
+    }
+    .illustration img {
+      width: 180px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="illustration">
+      <img src="https://inai.io/hubfs/Header%20-%20Online%20payment%20failure%20reasons%20and%20how%20to%20avoid%20it_%20(1).png" alt="Payment Failed"> 
+    </div>
+
+    <h1>Oops! Payment Failed</h1>
+    <p class="order-number">Order Number: <%= order.orderNumber %></p>
+    <p><%= order.failureReason %></p>
+
+    <div class="buttons">
+      
+      <a href="/checkout/<%= order._id %>" class="btn btn-retry">Retry Payment</a>
+
+      <a href="/orders" class="btn btn-view">View Order</a>
+    </div>
+  </div>
+</body>
+</html>

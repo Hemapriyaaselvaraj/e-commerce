@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ToughToes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  
+    <style>
+        /* General Styles */
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background: #fff;
+            color: #000;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #ddd;
+        }
+        .nav-links a {
+            margin: 0 1rem;
+            text-decoration: none;
+            color: #000;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: auto;
+            margin-right: 1.5rem;
+        }
+        .search-input {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            min-width: 180px;
+        }
+        .logo {
+            margin-left: 0.5rem;
+        }
+        .btn-login {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.4rem 1.1rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-left: 0.5rem;
+        }
+        .btn-login:hover {
+            background: #0056b3;
+        }
+        .btn-logout {
+            background: #fff;
+            color: #dc3545;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            padding: 0.4rem 1.1rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            margin-left: 0.5rem;
+        }
+        .btn-logout:hover {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 2rem;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            margin-top: 60px;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+        .hero-text {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            color: #fff;
+            max-width: 800px;
+        }
+        .hero-text h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .hero-text p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        .hero-buttons .btn-outline {
+            background: transparent;
+            border: 2px solid #fff;
+            color: #fff !important;
+            padding: 0.75rem 1.5rem;
+            font-size: 1.1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .hero-buttons .btn-outline:hover {
+            background: #fff;
+            color: #000 !important;
+        }
+
+        /* Categories Section */
+        .categories {
+            padding: 2rem;
+            text-align: center;
+        }
+        .category-cards {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 2rem;
+        }
+        .card {
+            border: 1px solid #eee;
+            padding: 0.75rem;
+            border-radius: 8px;
+            width: 22%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s cubic-bezier(0.4,0.2,0.2,1), box-shadow 0.3s cubic-bezier(0.4,0.2,0.2,1), border-color 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        .card:hover {
+            transform: scale(1.07);
+            border-color: #eee;
+            box-shadow: 0 8px 32px 0 rgba(0,195,255,0.18), 0 2px 16px 0 rgba(0,0,0,0.12);
+            z-index: 2;
+        }
+        .card img {
+            width: 100%;
+            border-radius: 4px;
+        }
+        .btn-black {
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+        }
+
+        /* Featured Products Section */
+        .featured {
+            padding: 2rem;
+        }
+        .featured-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .product-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.5rem;
+        }
+        .product-card {
+            width: 23%;
+            border: 1px solid #eee;
+            padding: 1rem;
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+        }
+        .product-card img {
+            width: 100%;
+        }
+        .product-card i {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            cursor: pointer;
+        }
+        
+        /* Footer */
+        .footer {
+            display: flex;
+            justify-content: space-around;
+            background: #111;
+            color: #fff;
+            padding: 2rem;
+        }
+        .footer-column h4, .footer-column h3 {
+            margin-bottom: 0.75rem;
+        }
+        .footer-column ul {
+            list-style: none;
+            padding: 0;
+        }
+        .footer-column ul li {
+            margin-bottom: 0.5rem;
+        }
+        .footer-bottom {
+            background: #000;
+            text-align: center;
+            padding: 1rem;
+            color: #fff;
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 1024px) {
+            .hero-text h1 {
+                font-size: 2.8rem;
+            }
+            .hero-text p {
+                font-size: 1.1rem;
+            }
+            .category-cards,
+            .product-grid {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 1rem;
+            }
+            .card,
+            .product-card {
+                width: 45%;
+                margin-bottom: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                align-items: center;
+                padding: 1rem;
+                position: static;
+                box-shadow: none;
+                border-bottom: none;
+            }
+            .nav-right {
+                flex-direction: column;
+                gap: 0.5rem;
+                margin-left: 0;
+                margin-right: 0;
+                width: 100%;
+                align-items: center;
+            }
+            .search-input {
+                width: 80%;
+                max-width: 300px;
+                margin-top: 0.5rem;
+            }
+            .nav-links a {
+                margin: 0 0.5rem;
+            }
+            .hero {
+                min-height: 400px;
+                padding: 2rem 1rem;
+            }
+            .hero-text h1 {
+                font-size: 2rem;
+            }
+            .hero-text p {
+                font-size: 1rem;
+            }
+            .category-cards {
+                flex-direction: column;
+                align-items: center;
+            }
+            .card {
+                width: 80%;
+                margin-bottom: 1.5rem;
+            }
+            .product-grid {
+                flex-direction: column;
+                align-items: center;
+            }
+            .product-card {
+                width: 80%;
+                margin-bottom: 2rem;
+            }
+            .featured-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .featured-header h2 {
+                margin-bottom: 0.5rem;
+            }
+            .footer {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            .footer-column {
+                margin-bottom: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding-top: 0;
+            }
+            .hero-text h1 {
+                font-size: 1.8rem;
+            }
+            .hero-text p {
+                font-size: 0.9rem;
+            }
+            .hero-buttons {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+            .btn-outline {
+                width: 80%;
+                text-align: center;
+            }
+            .card {
+                width: 90%;
+            }
+            .product-card {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<%- include('../partials/userNavbar') %>
+
+<section class="hero" style="background-image: url('<%= bannerImage ? bannerImage : 'https://via.placeholder.com/1200x400?text=Welcome+to+ToughToes' %>');">
+    <div class="hero-text">
+      <h1>Step Into Comfort</h1>
+      <p>Discover premium shoes for every occasion. From athletic performance to formal elegance.</p>
+      <div class="hero-buttons">
+        <a href='/products' class="btn-outline" style="text-decoration:none;color:inherit;">View Collection</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="categories">
+    <h2>Shop by Category</h2>
+    <div class="category-cards">
+      <div class="card" style="pointer-events:auto;">
+<% 
+  const menImg = categories.find(c => c._id === 'MEN')?.categoryImage;
+%>
+
+<img src="<%= menImg || 'https://via.placeholder.com/300x200?text=Men\'s+Shoes' %>">
+        <h3>Men's Collection</h3>
+        <p>Sneakers, Formal, Running & Football</p>
+        <button class="btn-black" onclick="window.location.href='/products?category=MEN'; event.stopPropagation();">Shop Men's</button>
+      </div>
+      <div class="card" style="pointer-events:auto;">
+<% 
+  const womenImg = categories.find(c => c._id === 'WOMEN')?.categoryImage;
+%>
+
+<img src="<%= womenImg || 'https://via.placeholder.com/300x200?text=Women\'s+Shoes' %>">
+        <h3>Women's Collection</h3>
+        <p>Sneakers, Formal, Running & Football</p>
+        <button class="btn-black" onclick="window.location.href='/products?category=WOMEN'; event.stopPropagation();">Shop Women's</button>
+      </div>
+      <div class="card" style="pointer-events:auto;">
+<% 
+  const kidsImg = categories.find(c => c._id === 'KIDS')?.categoryImage;
+%>
+
+<img src="<%= kidsImg || 'https://via.placeholder.com/300x200?text=Kids+Shoes' %>">
+        <h3>Kids' Collection</h3>
+        <p>Sneakers, School, Running & Football</p>
+        <button class="btn-black" onclick="window.location.href='/products?category=KIDS'; event.stopPropagation();">Shop Kids'</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="featured">
+    <div class="featured-header">
+      <h2>Featured Products</h2>
+      <a href="/products">View All →</a>
+    </div>
+    <div class="product-grid">
+      <% if (featuredProducts && featuredProducts.length) { %>
+        <% featuredProducts.forEach(product => { %>
+          <div class="product-card" style="cursor:pointer;" onclick="window.location.href='/products/<%= product._id %>'">
+            <% if (product.image) { %>
+              <img src="<%= product.image %>" alt="<%= product.name %>">
+            <% } else { %>
+              <img src="https://via.placeholder.com/200x150?text=<%= encodeURIComponent(product.name) %>" alt="<%= product.name %>">
+            <% } %>
+            <h3><%= product.name %></h3>
+            <p><%= product.product_category %></p>
+            <span>₹<%= product.price.toFixed(2) %></span>
+            <i class="fas fa-cart-plus"></i>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div>No featured products available.</div>
+      <% } %>
+    </div>
+  </section>
+</body>
+  <%- include('../partials/footer') %>
+</html>

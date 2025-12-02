@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Addresses - ToughToes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    /* Sidebar styles */
+    .sidebar {
+      width: 200px;
+      background: #f8f9fa;
+    }
+    .sidebar ul li {
+      margin-bottom: 10px;
+    }
+    .sidebar a {
+      display: block;
+      padding: 10px;
+      text-decoration: none;
+      color: #333;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
+    .sidebar a.active,
+    .sidebar a:hover {
+      background-color: #e0e0e0;
+      font-weight: 500;
+    }
+    .sidebar ul li a,
+    .sidebar ul li form button {
+      display: block;
+      padding: 8px 15px;
+      color: #333;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: none;
+    }
+    .sidebar ul li a:hover,
+    .sidebar ul li form button:hover {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+    .sidebar ul li a.active {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      font-weight: 500;
+    }
+    .sidebar ul li form {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    #logoutForm button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 8px 15px;
+      cursor: pointer;
+      color: #333;
+      background: none;
+      border: none;
+      text-align: left;
+    }
+    #logoutForm button:hover {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+    .nav-links a {
+      margin: 0 1rem;
+      text-decoration: none;
+      color: #000;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+      margin-right: 1.5rem;
+    }
+    .search-input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      min-width: 180px;
+    }
+    .logo {
+      margin-left: 0.5rem;
+    }
+
+    /* Profile box */
+    .profile-box {
+      background: #fff;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .container.my-5.d-flex {
+      flex: 1 0 auto;
+      margin-top: 90px !important;
+    }
+    footer {
+      flex-shrink: 0;
+      width: 100%;
+      position: relative;
+      bottom: 0;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .container.d-flex {
+        flex-direction: column;
+        padding: 0 15px;
+      }
+      .sidebar {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <link rel="stylesheet" href="/css/common.css" />
+  <link rel="stylesheet" href="/css/footer.css" />
+  
+</head>
+<body>
+  <%- include('../partials/userNavbar') %>
+
+  
+  <div class="container my-5 d-flex">
+    
+    <div class="sidebar p-3 me-4 border rounded">
+      <ul class="list-unstyled">
+        <li><a href="/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+        <li><a href="/order/my-orders"><i class="fas fa-box me-2"></i>Orders</a></li>
+        <li><a href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
+        <li><a href="/addresses" class="active"><i class="fas fa-map-marker-alt me-2"></i>Addresses</a></li>
+        <li><a href="/wallet"><i class="fas fa-wallet me-2"></i>My Wallet</a></li>
+        <li>
+          <form id="logoutForm" method="POST" action="/user/logout">
+            <button type="submit">
+              <i class="fas fa-sign-out-alt me-2"></i>Logout
+            </button>
+          </form>
+        </li>
+      </ul>
+<script>
+  
+  const logoutForm = document.getElementById('logoutForm');
+  if (logoutForm) {
+    logoutForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch('/user/logout', { method: 'POST', credentials: 'same-origin' })
+        .then(() => { window.location.href = '/'; });
+    });
+  }
+</script>
+    </div>
+
+    
+    <div class="flex-grow-1">
+      <div class="profile-box border rounded p-4 mb-4">
+        <h4>My Addresses</h4>
+        <button class="btn btn-dark mb-3" data-bs-toggle="modal" data-bs-target="#addAddressModal">Add New Address</button>
+
+<div class="modal fade" id="addAddressModal" tabindex="-1" aria-labelledby="addAddressModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addAddressModalLabel">Add New Address</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addAddressForm">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-control" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Label</label>
+            <input type="text" class="form-control" name="label">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Type</label>
+            <select class="form-select" name="type">
+              <option value="HOME">Home</option>
+              <option value="WORK">Work</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">House Number</label>
+            <input type="text" class="form-control" name="house_number">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Locality</label>
+            <input type="text" class="form-control" name="locality">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">City</label>
+            <input type="text" class="form-control" name="city">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">State</label>
+            <input type="text" class="form-control" name="state">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Pincode</label>
+            <input type="number" class="form-control" name="pincode">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="text" class="form-control" name="phone_number">
+          </div>
+          <button type="submit" class="btn btn-dark">Add Address</button>
+        </form>
+        <div id="addAddressError" class="text-danger mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  
+  document.getElementById('addAddressForm').onsubmit = function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = {};
+    for (const el of form.elements) {
+      if (el.name) data[el.name] = el.value;
+    }
+    fetch('/addresses/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(res => {
+      if (res.ok) {
+        location.reload();
+      } else {
+        return res.text().then(t => { throw new Error(t); });
+      }
+    })
+    .catch(err => {
+      document.getElementById('addAddressError').textContent = err.message || 'Failed to add address.';
+    });
+  };
+</script>
+        <% if (addresses.length === 0) { %>
+          <p class="text-muted">No addresses found.</p>
+        <% } %>
+        <div class="row">
+          <% addresses.forEach(function(address) { %>
+            <div class="col-md-6 mb-4">
+              <div class="card p-3 <%= address.isDefault ? 'border-primary' : '' %>">
+                <h5>
+                  <%= address.name %> 
+                  <span class="badge bg-secondary"><%= address.type %></span>
+                  <% if (address.isDefault) { %>
+                    <span class="badge bg-primary">Default</span>
+                  <% } %>
+                </h5>
+                <div><%= address.label %></div>
+                <div><%= address.house_number %>, <%= address.locality %></div>
+                <div><%= address.city %>, <%= address.state %> - <%= address.pincode %></div>
+                <div>Phone: <%= address.phone_number %></div>
+                <div class="mt-2 d-flex gap-2">
+                  <button type="button" class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#editAddressModal" data-id="<%= address._id %>" data-json='<%- JSON.stringify(address) %>'>Edit</button>
+                  <% if (!address.isDefault) { %>
+                    <form action="/addresses/set-default/<%= address._id %>" method="POST" class="d-inline">
+                      <button type="submit" class="btn btn-outline-primary btn-sm">Set as Default</button>
+                    </form>
+                  <% } %>
+
+<div class="modal fade" id="editAddressModal" tabindex="-1" aria-labelledby="editAddressModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editAddressModalLabel">Edit Address</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editAddressForm">
+          <input type="hidden" name="_id" id="editAddressId">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-control" name="name" id="editName" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Label</label>
+            <input type="text" class="form-control" name="label" id="editLabel">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Type</label>
+            <select class="form-select" name="type" id="editType">
+              <option value="HOME">Home</option>
+              <option value="WORK">Work</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">House Number</label>
+            <input type="text" class="form-control" name="house_number" id="editHouseNumber">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Locality</label>
+            <input type="text" class="form-control" name="locality" id="editLocality">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">City</label>
+            <input type="text" class="form-control" name="city" id="editCity">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">State</label>
+            <input type="text" class="form-control" name="state" id="editState">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Pincode</label>
+            <input type="number" class="form-control" name="pincode" id="editPincode">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="text" class="form-control" name="phone_number" id="editPhoneNumber">
+          </div>
+          <button type="submit" class="btn btn-dark">Save Changes</button>
+        </form>
+        <div id="editAddressError" class="text-danger mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  
+  document.querySelectorAll('[data-bs-target="#editAddressModal"]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const address = JSON.parse(this.getAttribute('data-json'));
+      document.getElementById('editAddressId').value = address._id;
+      document.getElementById('editName').value = address.name || '';
+      document.getElementById('editLabel').value = address.label || '';
+      document.getElementById('editType').value = address.type || 'HOME';
+      document.getElementById('editHouseNumber').value = address.house_number || '';
+      document.getElementById('editLocality').value = address.locality || '';
+      document.getElementById('editCity').value = address.city || '';
+      document.getElementById('editState').value = address.state || '';
+      document.getElementById('editPincode').value = address.pincode || '';
+      document.getElementById('editPhoneNumber').value = address.phone_number || '';
+      document.getElementById('editAddressError').textContent = '';
+    });
+  });
+  
+
+  document.getElementById('editAddressForm').onsubmit = function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const id = document.getElementById('editAddressId').value;
+    const data = {};
+    for (const el of form.elements) {
+      if (el.name && el.name !== '_id') data[el.name] = el.value;
+    }
+    fetch('/addresses/edit/' + id, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(res => {
+      if (res.ok) {
+        location.reload();
+      } else {
+        return res.text().then(t => { throw new Error(t); });
+      }
+    })
+    .catch(err => {
+      document.getElementById('editAddressError').textContent = err.message || 'Failed to update address.';
+    });
+  };
+</script>
+                  <form method="POST" action="/addresses/delete/<%= address._id %>" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this address?')">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+    <%- include('../partials/footer') %>
+
+</body>
+</html>

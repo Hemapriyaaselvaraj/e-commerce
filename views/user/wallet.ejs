@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Wallet - ToughToes</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+
+body {
+  padding-top: 80px; /* Increase if your navbar height is larger */
+}
+
+    /* Sidebar (copied from profile) */
+    .sidebar {
+      width: 200px;
+      background: #f8f9fa;
+    }
+    .sidebar ul li {
+      margin-bottom: 10px;
+    }
+    .sidebar a {
+      display: block;
+      padding: 10px;
+      text-decoration: none;
+      color: #333;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
+    .sidebar a.active,
+    .sidebar a:hover {
+      background-color: #e0e0e0;
+      font-weight: 500;
+    }
+    .sidebar ul li a,
+    .sidebar ul li form button {
+      display: block;
+      padding: 8px 15px;
+      color: #333;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: none;
+    }
+    .sidebar ul li a:hover,
+    .sidebar ul li form button:hover {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+    .sidebar ul li a.active {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      font-weight: 500;
+    }
+    .sidebar ul li form {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    #logoutForm button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 8px 15px;
+      cursor: pointer;
+      color: #333;
+      background: none;
+      border: none;
+      text-align: left;
+    }
+    #logoutForm button:hover {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+    .nav-links a {
+      margin: 0 1rem;
+      text-decoration: none;
+      color: #000;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+      margin-right: 1.5rem;
+    }
+    .search-input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      min-width: 180px;
+    }
+    .logo {
+      margin-left: 0.5rem;
+    }
+    /* Wallet card */
+    .wallet-area {
+      flex: 1;
+      min-width: 300px;
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      border: 1px solid #eee;
+    }
+
+    .balance-box {
+      background: #fafafa;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #eee;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .balance-box h2 {
+      margin: 0;
+      font-size: 32px;
+      color: #222;
+    }
+
+    .add-money-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+    .add-money-box input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .add-money-box button {
+      padding: 12px 20px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .add-money-box button:hover {
+      background: #0056b3;
+    }
+
+    .txn-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .credit { color: #28a745; }
+    .debit { color: #dc3545; }
+
+    @media (max-width: 768px) {
+      .container.my-5.d-flex {
+        flex-direction: column;
+        padding: 0 15px;
+      }
+      .sidebar {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <%- include('../partials/userNavbar') %>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+
+
+<div class="container my-2 d-flex">
+
+    <% if (success && success.length > 0) { %>
+<script>
+  Swal.fire({
+    title: "Success!",
+    text: "<%= success[0] %>",
+    icon: "success",
+     timer: 2000, 
+     showConfirmButton: false
+  });
+</script>
+<% } %>
+
+<% if (error && error.length > 0) { %>
+<script>
+  Swal.fire({
+    title: "Error!",
+    text: "<%= error[0] %>",
+    icon: "error",
+    timer: 2000,
+    showConfirmButton: false
+  });
+</script>
+<% } %>
+
+    <div class="sidebar p-3 me-4 border rounded">
+      <ul class="list-unstyled">
+        <li><a href="/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+        <li><a href="/order/my-orders"><i class="fas fa-box me-2"></i>Orders</a></li>
+        <li><a href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
+        <li><a href="/addresses"><i class="fas fa-map-marker-alt me-2"></i>Addresses</a></li>
+        <li><a href="/wallet" class="active"><i class="fas fa-wallet me-2"></i>My Wallet</a></li>
+        <li>
+          <form id="logoutForm" method="POST" action="/user/logout">
+            <button type="submit">
+              <i class="fas fa-sign-out-alt me-2"></i>Logout
+            </button>
+          </form>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Wallet content -->
+    <div class="flex-grow-1 wallet-area">
+       <h3>Wallet</h3>
+      <div class="balance-box">
+        <p>Available Balance</p>
+        <h2>₹ <%= user.wallet ? user.wallet.toFixed(2) : '0.00' %></h2>
+      </div>
+
+      <form id="walletForm" class="d-flex gap-2 align-items-center w-100">
+  <input id="amount" 
+         type="number" 
+         min="10" 
+         placeholder="Enter amount (min ₹10)" 
+         required 
+         class="form-control w-100" />
+  
+  <button id="addMoneyBtn" class="btn btn-secondary btn-sm" type="submit">
+    Add Money
+  </button>
+</form>
+
+<!-- Message and updated balance will be displayed here -->
+<div id="message"></div>
+<div id="walletBalance" style="margin-top: 40px !important;"></div>
+
+      <h4>Transaction History</h4>
+      <% if (transactions && transactions.length > 0) { %>
+        <% transactions.forEach(t => { %>
+          <div class="txn-item">
+            <div>
+              <strong><%= t.description %></strong><br>
+              <small><%= new Date(t.date).toLocaleDateString() %></small>
+            </div>
+            <div class="<%= t.type === 'credit' ? 'credit' : 'debit' %>">
+              <%= t.type === 'credit' ? '+ ' : '- ' %>₹<%= t.amount.toFixed(2) %>
+            </div>
+          </div>
+        <% }); %>
+      <% } else { %>
+        <p>No transactions yet.</p>
+      <% } %>
+    </div>
+  </div>
+
+  <%- include('../partials/footer') %>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.getElementById('walletForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const btn = document.getElementById('addMoneyBtn');
+  const amount = Number(document.getElementById('amount').value);
+
+  if (!amount || amount < 10) {
+    Swal.fire("Error!", "Minimum amount is ₹10", "error");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Please wait...";
+
+  try {
+    // ---- CREATE ORDER ----
+    const createRes = await fetch('/wallet/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount })
+    });
+
+    const createData = await createRes.json();
+    if (!createData.success) {
+      Swal.fire("Error!", createData.message || "Failed to create order", "error");
+      btn.disabled = false;
+      btn.textContent = "Add Money";
+      return;
+    }
+
+    const order = createData.order;
+    window.lastPaymentFailed = false; // reset
+
+    // ---- RAZORPAY OPTIONS ----
+    const options = {
+      key: "<%= process.env.RAZORPAY_KEY_ID %>",
+      amount: order.amount,
+      currency: order.currency,
+      name: "ToughToes",
+      description: "Wallet Top-up",
+      order_id: order.id,
+
+      handler: async function (response) {
+        try {
+          const verifyRes = await fetch('/wallet/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            // redirect success
+            window.location.href = "/wallet";
+          } else {
+            Swal.fire("Error!", verifyData.message, "error");
+          }
+        } catch (err) {
+          Swal.fire("Error!", "Verification failed", "error");
+        }
+      },
+
+      // 💥 IMPORTANT: modal inside options before creation
+      modal: {
+        ondismiss: function () {
+          if (window.lastPaymentFailed) {
+            Swal.fire({
+              title: "Payment Failed!",
+              text: "Your transaction was not completed.",
+              icon: "error",
+              timer: 2000,
+              showConfirmButton: false
+            }).then(() => {
+              window.location.href = "/wallet";
+            });
+          }
+        }
+      }
+    };
+
+    const rzp = new Razorpay(options);
+
+    // ---> Payment failed event
+    rzp.on("payment.failed", function () {
+      window.lastPaymentFailed = true;
+    });
+
+    rzp.open();
+
+  } catch (err) {
+    Swal.fire("Error!", "Something went wrong", "error");
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Add Money";
+});
+</script>
+
+</body>
+</html>

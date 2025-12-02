@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Success - ToughToes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        .success-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            margin-top: 80px;
+        }
+
+        .success-icon {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .success-icon svg {
+            width: 64px;
+            height: 64px;
+            color: #4CAF50;
+        }
+
+        .success-title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .success-message {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .order-details {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .order-number {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .order-items {
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+        }
+
+        .order-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .order-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .order-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            margin-right: 20px;
+            border-radius: 4px;
+        }
+
+        .item-details {
+            flex: 1;
+        }
+
+        .item-details h3 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+
+        .item-details p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .item-price {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .order-summary {
+            padding-top: 20px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .summary-row.total {
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        .shipping-payment-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .shipping-info, .payment-info {
+            background: #fff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .shipping-info h3, .payment-info h3 {
+            margin: 0 0 16px 0;
+            font-size: 18px;
+        }
+
+        .shipping-info p, .payment-info p {
+            margin: 0 0 8px 0;
+            color: #666;
+        }
+
+        .delivery-estimate {
+            background: #fff;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .delivery-estimate h3 {
+            margin: 0 0 16px 0;
+            font-size: 18px;
+        }
+
+        .delivery-estimate p {
+            margin: 0;
+            color: #666;
+        }
+
+        .delivery-note {
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            justify-content: center;
+        }
+
+        .primary-button, .secondary-button {
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .primary-button {
+            background: #000;
+            color: #fff;
+        }
+
+        .secondary-button {
+            background: #fff;
+            color: #000;
+            border: 1px solid #000;
+        }
+
+        .support-section {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .support-section p {
+            margin: 0 0 8px 0;
+            color: #666;
+        }
+
+        .support-links {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .support-links a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .support-links a:hover {
+            text-decoration: underline;
+        }
+
+        .separator {
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .shipping-payment-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .order-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .order-item img {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .support-links {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .separator {
+                display: none;
+            }
+        }
+
+        @media print {
+            .navbar,
+            .action-buttons,
+            .support-section {
+                display: none !important;
+            }
+            
+            .success-container {
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0;
+            }
+            
+            .order-details,
+            .shipping-payment-info > div,
+            .delivery-estimate {
+                box-shadow: none;
+                border: 1px solid #eee;
+            }
+        }
+    </style>
+</head>
+<body>
+        <%- include('../partials/userNavbar') %>
+        <style>
+            /* Navbar (fixed position) for consistency */
+            .navbar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 1000;
+                background: #fff;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem 1.5rem;
+                border-bottom: 1px solid #ddd;
+            }
+            .nav-links a {
+                margin: 0 1rem;
+                text-decoration: none;
+                color: #000;
+            }
+            .nav-right {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                margin-left: auto;
+                margin-right: 1.5rem;
+            }
+            .logo {
+                margin-left: 0.5rem;
+            }
+            body {
+                padding-top: 80px;
+            }
+        </style>
+    
+    <main class="success-container">
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+                <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+        </div>
+        
+        <h1 class="success-title">Order Successful!</h1>
+        <p class="success-message">Thank you for your purchase. Your order has been confirmed and is being processed.</p>
+
+        <div class="order-details">
+            <h2>Order Details</h2>
+            <div class="order-number">Order #<%= order.orderNumber %></div>
+            
+            <div class="order-items">
+                <% order.items.forEach(item => { %>
+                    <div class="order-item">
+                        <% const imgSrc = (item.product && item.product.images && item.product.images.length) ? item.product.images[0] : '/images/placeholder.png'; %>
+                        <img src="<%= imgSrc %>" alt="<%= item.product ? item.product.name : 'Product' %>">
+                        <div class="item-details">
+                            <h3><%= item.product ? item.product.name : 'Product' %></h3>
+                            <p>Size: <%= item.size || 'N/A' %> | Color: <%= item.color || 'N/A' %></p>
+                            <p>Quantity: <%= item.quantity %></p>
+                        </div>
+                        <div class="item-price">₹<%= (item.price || 0).toFixed(2) %></div>
+                    </div>
+                <% }); %>
+            </div>
+
+            <div class="order-summary">
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span>₹<%= order.subtotal.toFixed(2) %></span>
+                </div>
+                <div class="summary-row">
+                    <span>Shipping</span>
+                    <span>₹<%= order.shipping.toFixed(2) %></span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax</span>
+                    <span>₹<%= order.tax.toFixed(2) %></span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total</span>
+                    <span>₹<%= order.total.toFixed(2) %></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="shipping-payment-info">
+            <div class="shipping-info">
+                <h3>Shipping Address</h3>
+                <p><%= order.shippingAddress.name %></p>
+                <% if (order.shippingAddress.house_number) { %>
+                    <p><%= order.shippingAddress.house_number %></p>
+                <% } %>
+                <% if (order.shippingAddress.locality) { %>
+                    <p><%= order.shippingAddress.locality %></p>
+                <% } %>
+                <% if (order.shippingAddress.street) { %>
+                    <p><%= order.shippingAddress.street %></p>
+                <% } %>
+                <p><%= order.shippingAddress.city %>, <%= order.shippingAddress.state %> - <%= order.shippingAddress.pincode %></p>
+                <% if (order.shippingAddress.phone_number) { %>
+                    <p>Phone: <%= order.shippingAddress.phone_number %></p>
+                <% } %>
+            </div>
+
+            <div class="payment-info">
+                <h3>Payment Method</h3>
+                <p>Charged: ₹<%= order.total.toFixed(2) %></p>
+            </div>
+        </div>
+
+        <div class="delivery-estimate">
+            <h3>Estimated Delivery</h3>
+            <p><%= order.estimatedDelivery %></p>
+            <p class="delivery-note">We'll send you tracking information once your order ships.</p>
+        </div>
+
+        <div class="action-buttons">
+            <button class="primary-button" onclick="window.location.href='/order/my-orders'">View Order</button>
+            <button class="secondary-button" onclick="window.location.href='/products'">Continue Shopping</button>
+        </div>
+
+        <div class="support-section">
+            <p>Need help with your order?</p>
+            <div class="support-links">
+                <a href="#" onclick="window.location.href='/support'">Contact Support</a>
+                <span class="separator">•</span>
+                <a href="tel:1-800-TOUGH-TOES">1-800-TOUGH-TOES</a>
+                <span class="separator">•</span>
+                <a href="#" onclick="window.location.href='/faq'">Order FAQ</a>
+            </div>
+        </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

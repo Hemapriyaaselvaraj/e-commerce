@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= mode === 'edit' ? 'Edit Product' : 'Add New Product' %></title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      .image-preview img {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        margin-right: 5px;
+        border-radius: 4px;
+      }
+      
+      
+      #cropperModal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        z-index: 9999;
+      }
+
+      
+      #cropperModal .cropper-container {
+        position: relative;
+        width: 90%;
+        max-width: 800px;
+        margin: 40px auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      
+      #cropperModal .cropper-wrapper {
+        width: 100%;
+        height: 500px;
+        margin-bottom: 20px;
+        background: white;
+        position: relative;
+        overflow: hidden;
+      }
+
+      
+      #cropperModal .cropper-wrapper img {
+        max-width: 100%;
+        max-height: 100%;
+        display: block;
+      }
+
+      
+      .cropper-view-box {
+        outline: 1px solid #39f;
+        outline-color: rgba(51, 153, 255, 0.75);
+      }
+
+      .cropper-face {
+        background-color: #fff;
+        left: 0;
+        opacity: 0.1;
+        position: absolute;
+        top: 0;
+      }
+
+      .cropper-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .variation-box {
+        border: 1px solid #ccc;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        position: relative;
+      }
+      .remove-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: transparent;
+        border: none;
+        color: red;
+        font-size: 1.2rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <%- include('../partials/sidebar') %>
+
+        <div class="col-md-10 p-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4>
+              <%= mode === 'edit' ? 'Edit Product' : 'Add New Product' %>
+            </h4>
+            <div><%= name %> <i class="fa-solid fa-user ms-2"></i></div>
+          </div>
+
+          <form
+            id="productForm"
+            action="<%= mode === 'edit' && product ? ('/admin/products/edit/' + product._id) : '/admin/products/add' %>"
+            method="POST"
+            enctype="multipart/form-data"
+          >
+            <p class="text-muted">
+              <%= mode === 'edit' ? 'Edit the product details below' : 'Fill in the product details to add a new shoe to your inventory' %>
+            </p>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label>Product Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  class="form-control"
+                  placeholder="Enter product name"
+                  value="<%= product ? product.name : '' %>"
+                  required
+                />
+              </div>
+              <div class="col-md-6">
+                <label>Product SKU</label>
+                <input
+                  type="text"
+                  name="sku"
+                  class="form-control"
+                  placeholder="SKU-001"
+                  value="<%= product ? product.product_sku : '' %>"
+                  required
+                  <%= mode === 'edit' ? 'readonly' : '' %>
+                />
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label>Price (₹)</label>
+                <input
+                  type="number"
+                  name="price"
+                  step="0.01"
+                  min="0"
+                  class="form-control"
+                  value="<%= product ? product.price : '' %>"
+                  required
+                />
+              </div>
+              <div class="col-md-6">
+                <label>Discount (%)</label>
+                <input
+                  type="number"
+                  name="discount"
+                  step="0.01"
+                  min="0"
+                  class="form-control"
+                  value="<%= product ? product.discount_percentage : '' %>"
+                />
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label>Product Description</label>
+              <textarea
+                name="description"
+                class="form-control"
+                rows="3"
+                placeholder="Enter detailed product description..."
+                required
+              ><%= product ? product.description : '' %></textarea>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label>Category</label>
+                <select name="category" class="form-select" required>
+                  <option value="">Select Category</option>
+                  <% categories.forEach(category => { %>
+                  <option value="<%= category.category %>" <%= product && product.product_category === category.category ? 'selected' : '' %>>
+                    <%= category.category %>
+                  </option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label>Shoe Type</label>
+                <select name="type" class="form-select" required>
+                  <option value="">Select Type</option>
+                  <% types.forEach(type => { %>
+                  <option value="<%= type.type %>" <%= product && product.product_type === type.type ? 'selected' : '' %>><%= type.type %></option>
+                  <% }) %>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label>Product Variations</label>
+              <div id="variationsContainer"></div>
+              <button
+                type="button"
+                class="btn btn-outline-primary mt-2"
+                onclick="addVariation()"
+              >
+                + Add Variation
+              </button>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+              <a href="/admin/products?limit=5&skip=0" class="btn btn-outline-secondary"
+                >Cancel</a
+              >
+              <button type="submit" class="btn btn-dark"><%= mode === 'edit' ? 'Update Product' : 'Add Product' %></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let variationIndex = 0;
+      const variationFiles = {}; 
+
+      function addVariation(data = {}) {
+       
+        if (data.size && data.color) {
+          const existingBoxes = document.querySelectorAll('.variation-box');
+          for (const box of existingBoxes) {
+            const sizeSel = box.querySelector('select[name^="variations"][name$="[size]"]');
+            const colorSel = box.querySelector('select[name^="variations"][name$="[color]"]');
+            if (sizeSel && colorSel && sizeSel.value === data.size && colorSel.value === data.color) {
+              alert('This size and color combination already exists.');
+              return;
+            }
+          }
+        }
+
+        const index = data.index ?? variationIndex;
+        const container = document.createElement("div");
+        container.className = "variation-box";
+        container.dataset.index = index;
+
+       
+        let imagesHtml = "";
+        if (data.images && data.images.length) {
+          data.images.forEach((url, imgIdx) => {
+            imagesHtml += `<span class="image-wrapper" style="position:relative;display:inline-block;margin-right:5px;">
+              <img src="${url}" />
+              <button type="button" class="remove-img-btn" data-img-idx="${imgIdx}" style="position:absolute;top:2px;right:2px;background:#fff;border:none;color:red;font-size:1.1rem;padding:0 4px;line-height:1;cursor:pointer;">&times;</button>
+            </span>`;
+          });
+        }
+
+        container.innerHTML = `
+          <span class="remove-btn" onclick="this.parentElement.remove()">&times;</span>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label>Size</label>
+             <select name="variations[${index}][size]" class="form-select" required>
+  <option value="">Select</option>
+  <% sizes.forEach(size => { %>
+    <option value="<%= size.size %>" ${data.size == "<%= size.size %>" ? 'selected' : ''}>
+      <%= size.size %>
+    </option>
+  <% }) %>
+</select>
+
+            </div>
+            <div class="col-md-3">
+              <label>Color</label>
+              <select name="variations[${index}][color]" class="form-select" required>
+  <option value="">Select</option>
+  <% colors.forEach(color => { %>
+    <option value="<%= color.color %>" ${data.color == "<%= color.color %>" ? 'selected' : ''}>
+      <%= color.color %>
+    </option>
+  <% }) %>
+</select>
+
+            </div>
+            <div class="col-md-2">
+              <label>Stock Quantity</label>
+              <input type="number" name="variations[${index}][stock]" class="form-control" min="0" value="${data.stock ?? ''}" required />
+            </div>
+            <div class="col-md-4">
+              <label>Images</label>
+              <button type="button" class="btn btn-outline-secondary w-100" onclick="triggerImageUpload(this)">+ Add Image</button>
+              <input type="file" accept="image/*" style="display:none" multiple />
+              <div class="image-preview mt-2">${imagesHtml}</div>
+            </div>
+          </div>
+        `;
+
+        
+        const sizeSelect = container.querySelector('select[name^="variations"][name$="[size]"]');
+        const colorSelect = container.querySelector('select[name^="variations"][name$="[color]"]');
+        function checkDuplicate() {
+          const selectedSize = sizeSelect.value;
+          const selectedColor = colorSelect.value;
+          if (!selectedSize || !selectedColor) return;
+          const existingBoxes = document.querySelectorAll('.variation-box');
+          for (const box of existingBoxes) {
+            if (box === container) continue;
+            const sizeSel = box.querySelector('select[name^="variations"][name$="[size]"]');
+            const colorSel = box.querySelector('select[name^="variations"][name$="[color]"]');
+            if (sizeSel && colorSel && sizeSel.value === selectedSize && colorSel.value === selectedColor) {
+              alert('This size and color combination already exists.');
+              
+              if (event.target === sizeSelect) sizeSelect.value = '';
+              if (event.target === colorSelect) colorSelect.value = '';
+              return;
+            }
+          }
+        }
+        sizeSelect.addEventListener('change', checkDuplicate);
+        colorSelect.addEventListener('change', checkDuplicate);
+
+        const fileInput = container.querySelector('input[type="file"]');
+        const previewBox = container.querySelector(".image-preview");
+        variationFiles[index] = [];
+
+        
+        if (data.images && data.images.length) {
+          previewBox.querySelectorAll('.remove-img-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+              e.stopPropagation();
+              const imgIdx = parseInt(btn.getAttribute('data-img-idx'));
+              
+              btn.parentElement.remove();
+              
+              const delInput = document.createElement('input');
+              delInput.type = 'hidden';
+              delInput.name = `variations[${index}][deleteImages][]`;
+              delInput.value = data.images[imgIdx];
+              container.appendChild(delInput);
+            });
+          });
+        }
+
+        fileInput.addEventListener("change", function () {
+          const files = Array.from(this.files);
+          let fileIdx = 0;
+          function cropNext() {
+            if (fileIdx < files.length) {
+              startCrop(files[fileIdx], fileInput, previewBox);
+              
+              
+              const modal = document.getElementById('cropperModal');
+              const observer = new MutationObserver(() => {
+                if (modal.style.display === 'none') {
+                  observer.disconnect();
+                  fileIdx++;
+                  cropNext();
+                }
+              });
+              observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
+            }
+          }
+          cropNext();
+        });
+
+        document.getElementById("variationsContainer").appendChild(container);
+        variationIndex = Math.max(variationIndex, index + 1);
+      }
+
+      function triggerImageUpload(button) {
+        const input = button.nextElementSibling;
+        input.click();
+      }
+
+
+      document.getElementById("productForm").addEventListener("submit", function (e) {
+        
+        const variationBoxes = document.querySelectorAll('.variation-box');
+        variationBoxes.forEach((box, newIdx) => {
+          
+          box.dataset.index = newIdx;
+          
+          box.querySelectorAll('[name]').forEach(input => {
+            input.name = input.name.replace(/variations\[\d+\]/, `variations[${newIdx}]`);
+          });
+        });
+
+        
+        const newVariationFiles = {};
+        variationBoxes.forEach((box, newIdx) => {
+          const oldIdx = box.dataset.index;
+          newVariationFiles[newIdx] = variationFiles[oldIdx] || [];
+        });
+        
+        Object.keys(variationFiles).forEach(k => delete variationFiles[k]);
+        Object.assign(variationFiles, newVariationFiles);
+
+        const formData = new FormData(this);
+        Object.entries(variationFiles).forEach(([index, files]) => {
+          files.forEach((file) => {
+            formData.append(`variationImages_${index}`, file);
+          });
+        });
+
+        
+        variationBoxes.forEach((box, idx) => {
+          const deletedInputs = box.querySelectorAll('input[name^="variations[' + idx + '][deleteImages]"]');
+          deletedInputs.forEach(input => {
+            formData.append(`deletedVariationImage_${idx}`, input.value);
+          });
+        });
+
+        fetch(this.action, {
+          method: this.method,
+          body: formData,
+        }).then((res) => {
+          if (res.ok) {
+            Swal.fire({
+              icon: 'success',
+              title: '<%= mode === "edit" ? "Product Updated!" : "Product Added!" %>',
+              text: '<%= mode === "edit" ? "The product has been updated successfully." : "The new product has been added successfully." %>',
+              showConfirmButton: false,
+              timer: 1500
+            }).then(() => {
+              window.location = "/admin/products";
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Submission Failed',
+              text: 'There was an error saving the product. Please try again.',
+              confirmButtonText: 'OK'
+            });
+          }
+        }).catch(() => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Connection Error',
+            text: 'There was a problem connecting to the server. Please check your connection and try again.',
+            confirmButtonText: 'OK'
+          });
+        });
+
+        e.preventDefault();
+      });
+
+      
+      <% if (mode === 'edit' && product && product.variations && product.variations.length) { %>
+        const editVariations = <%- JSON.stringify(product.variations) %>;
+        window.onload = function() {
+          editVariations.forEach(function(v, i) {
+            addVariation({
+              index: i,
+              size: v.size,
+              color: v.color,
+              stock: v.stock,
+              images: v.images || []
+            });
+          });
+        };
+      <% } %>
+  </script>
+
+  
+  <div class="cropper-modal" id="cropperModal">
+    <div class="cropper-container">
+      <div class="cropper-wrapper">
+        <img id="cropperImage" src="" alt="Image to crop">
+      </div>
+      <div class="cropper-buttons">
+        <button type="button" class="btn btn-secondary" onclick="cancelCrop()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="completeCrop()">Crop & Save</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <style>
+    body.cropper-active {
+      overflow: hidden;
+      padding-right: 17px;
+    }
+  </style>
+
+  <script>
+    let activeCropper = null;
+    let currentFileInput = null;
+    let currentPreviewBox = null;
+    
+    function startCrop(file, fileInput, previewBox) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const modal = document.getElementById('cropperModal');
+        const image = document.getElementById('cropperImage');
+        
+       
+        if (activeCropper) {
+          activeCropper.destroy();
+        }
+        
+        
+        modal.style.display = 'block';
+        document.body.classList.add('cropper-active');
+        image.src = e.target.result;
+        
+        
+        activeCropper = new Cropper(image, {
+          aspectRatio: 1,
+          viewMode: 2,
+          autoCropArea: 1,
+        });
+        
+        
+        currentFileInput = fileInput;
+        currentPreviewBox = previewBox;
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    function cancelCrop() {
+      const modal = document.getElementById('cropperModal');
+      modal.style.display = 'none';
+      document.body.classList.remove('cropper-active');
+      if (activeCropper) {
+        activeCropper.destroy();
+        activeCropper = null;
+      }
+      if (currentFileInput) {
+        currentFileInput.value = '';
+      }
+    }
+    
+    function completeCrop() {
+      if (!activeCropper) return;
+      
+      const canvas = activeCropper.getCroppedCanvas({
+        width: 600,
+        height: 600,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+      });
+      
+      canvas.toBlob((blob) => {
+        
+        const croppedFile = new File([blob], 'cropped.jpg', {
+          type: 'image/jpeg',
+          lastModified: new Date().getTime()
+        });
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const wrapper = document.createElement('span');
+          wrapper.className = 'image-wrapper';
+          wrapper.style.position = 'relative';
+          wrapper.style.display = 'inline-block';
+          wrapper.style.marginRight = '5px';
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          wrapper.appendChild(img);
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'remove-img-btn';
+          removeBtn.innerHTML = '&times;';
+          removeBtn.style.position = 'absolute';
+          removeBtn.style.top = '2px';
+          removeBtn.style.right = '2px';
+          removeBtn.style.background = '#fff';
+          removeBtn.style.border = 'none';
+          removeBtn.style.color = 'red';
+          removeBtn.style.fontSize = '1.1rem';
+          removeBtn.style.padding = '0 4px';
+          removeBtn.style.lineHeight = '1';
+          removeBtn.style.cursor = 'pointer';
+          removeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            wrapper.remove();
+            
+            const variationIndex = currentFileInput.closest('.variation-box').dataset.index;
+            const filesArr = variationFiles[variationIndex];
+            
+            const wrappers = Array.from(currentPreviewBox.querySelectorAll('.image-wrapper'));
+            const fileIdx = wrappers.indexOf(wrapper);
+            if (fileIdx > -1) {
+              filesArr.splice(fileIdx - countExistingImages(variationIndex), 1);
+            }
+          });
+          wrapper.appendChild(removeBtn);
+          currentPreviewBox.appendChild(wrapper);
+        };
+        reader.readAsDataURL(croppedFile);
+        
+        const variationIndex = currentFileInput.closest('.variation-box').dataset.index;
+        if (!variationFiles[variationIndex]) variationFiles[variationIndex] = [];
+        variationFiles[variationIndex].push(croppedFile); 
+        
+        cancelCrop();
+      }, 'image/jpeg', 0.9);
+    }
+    
+    
+    function countExistingImages(variationIndex) {
+      const box = document.querySelector(`.variation-box[data-index='${variationIndex}']`);
+      if (!box) return 0;
+      return box.querySelectorAll('.image-wrapper .remove-img-btn[data-img-idx]').length;
+    }
+
+  </script>
+</body>
+</html>

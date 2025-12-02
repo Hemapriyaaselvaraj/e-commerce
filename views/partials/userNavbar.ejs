@@ -1,0 +1,91 @@
+<header class="navbar" style="padding-top: 20px; padding-bottom: 20px;">
+  <a href="/" class="logo" style="text-decoration:none;color:inherit;font-size:20px;color:#230215;"><strong>ToughToes</strong></a>
+  <nav class="nav-links">
+    <a href="#" onclick="selectCategory('MEN'); return false;">Men</a>
+    <a href="#" onclick="selectCategory('WOMEN'); return false;">Women</a>
+    <a href="#" onclick="selectCategory('KIDS'); return false;">Kids</a>
+  </nav>
+  <div class="nav-right">
+    
+    <form id="navbarSearchForm" style="display:flex;align-items:center;gap:6px;margin-right:6px;" onsubmit="return false;">
+      <input
+        type="text"
+        name="search"
+        id="navbarSearchInput"
+        placeholder="Search products..."
+        aria-label="Search products"
+        value="<%= typeof query !== 'undefined' && query.search ? query.search : '' %>"
+        style="padding:6px 8px;border:1px solid #ccc;border-radius:6px;min-width:160px;"
+      />
+      <button id="navbarSearchBtn" type="button" style="border:none;background:none;color:inherit;cursor:pointer;">
+        <i class="fas fa-search"></i>
+      </button>
+    </form>
+    <i class="fas fa-shopping-cart" onclick="window.location.href='/cart'" style="cursor:pointer;"></i>
+    <i class="fas fa-heart" onclick="window.location.href='/wishlist'" style="cursor:pointer;"></i>
+    <i class="fas fa-user" id="profileIcon" style="cursor:pointer;"></i>
+    <% if (typeof name === 'string' && name.trim().length > 0) { %>
+      <span><%= name %></span>
+    <% } else { %>
+      <button id="loginBtn" class="btn btn-login">Login</button>
+    <% } %>
+  </div>
+</header>
+
+<script>
+  function selectCategory(category) {
+    window.location.href = '/products?category=' + encodeURIComponent(category);
+  }
+  
+  (function() {
+    const searchInput = document.getElementById('navbarSearchInput');
+    const searchBtn = document.getElementById('navbarSearchBtn');
+    function doNavbarSearch() {
+      if (!searchInput) return;
+      const q = searchInput.value.trim();
+      const params = new URLSearchParams(window.location.search);
+      if (q.length > 0) {
+        params.set('search', q);
+      } else {
+        params.delete('search');
+      }
+      
+      const qs = params.toString();
+      window.location.href = '/products' + (qs ? ('?' + qs) : '');
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          doNavbarSearch();
+        }
+      });
+    }
+
+    if (searchBtn) {
+      searchBtn.addEventListener('click', doNavbarSearch);
+    }
+  })();
+  
+  const loginBtn = document.getElementById("loginBtn");
+  if (loginBtn) {
+    loginBtn.addEventListener("click", function () {
+      window.location.href = "/user/login";
+    });
+  }
+
+  
+  const profileIcon = document.getElementById("profileIcon");
+  const isLoggedIn = document.getElementById("loginBtn") == null;
+  
+  if (profileIcon) {
+    profileIcon.addEventListener("click", function() {
+      if (isLoggedIn) {
+        window.location.href = "/profile";
+      } else {
+        window.location.href = "/user/login";
+      }
+    });
+  }
+</script>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Details - ToughToes</title>
+
+  <!-- External libs (keep) -->
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Internal CSS -->
+  <style>
+    /* General Layout */
+    body {
+      margin: 0;
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding-top: 90px;
+    }
+
+    /* Navbar alignment (match profile page) */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .nav-links a {
+      margin: 0 1rem;
+      text-decoration: none;
+      color: #000;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+      margin-right: 1.5rem;
+    }
+
+    .search-input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      min-width: 180px;
+    }
+
+    .admin-layout {
+      display: flex;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 20px;
+      background-color: #fff;
+      min-height: 100vh;
+    }
+
+    /* Page Header */
+    h2 {
+      font-weight: 600;
+      color: #343a40;
+    }
+
+    /* Order Summary */
+    .mb-4 p {
+      margin: 0.25rem 0;
+      font-size: 1rem;
+    }
+
+    .mb-4 a.btn {
+      margin-top: 0.5rem;
+    }
+
+    /* Table Styling */
+    .table {
+      margin-top: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .table th {
+      background-color: #343a40;
+      color: #fff;
+    }
+
+    .table td, .table th {
+      vertical-align: middle;
+    }
+
+    /* Buttons */
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 0.875rem;
+    }
+
+    button.btn {
+      min-width: 85px;
+    }
+
+    /* Status Dropdown */
+    form select.form-select {
+      font-size: 0.9rem;
+    }
+
+    /* Return Request List */
+    .list-group-item {
+      background-color: #fefefe;
+      border-left: 4px solid #dee2e6;
+      padding: 12px 15px;
+      margin-bottom: 5px;
+    }
+
+    .list-group-item strong {
+      color: #333;
+    }
+
+    /* Modal Customization */
+    .modal-header {
+      background-color: #f1f1f1;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .modal-title {
+      font-weight: 600;
+    }
+
+    .modal-footer .btn {
+      min-width: 100px;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .table thead {
+        display: none;
+      }
+
+      .table, .table tbody, .table tr, .table td {
+        display: block;
+        width: 100%;
+      }
+
+      .table tr {
+        margin-bottom: 1rem;
+      }
+
+      .table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+      }
+
+      .table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 50%;
+        padding-left: 15px;
+        font-weight: bold;
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <%- include('../partials/userNavbar') %>
+
+<div class="container my-5">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <a href="/order/my-orders" class="btn btn-outline-secondary btn-sm me-3">
+                <i class="fas fa-arrow-left me-1"></i> Back to Orders
+              </a>
+              <h4 class="mb-0">Order #<%= order.orderNumber %></h4>
+            </div>
+            <div>
+              <span class="badge bg-<%= order.status === 'DELIVERED' ? 'success' : (order.status === 'CANCELLED' ? 'danger' : 'primary') %>">
+                <%= order.status %>
+              </span>
+              <% if (order.status === 'ORDERED') { %>
+                <button class="btn btn-danger btn-sm ms-2" onclick="cancelOrder('<%= order._id %>')">
+                  <i class="fas fa-times me-1"></i> Cancel Order
+                </button>
+              <% } %>
+              <% if (order.status === 'DELIVERED') { %>
+                <a href="/order/download-invoice/<%= order._id %>" class="btn btn-outline-dark btn-sm ms-2" target="_blank">
+                  <i class="fas fa-download me-1"></i> Download Invoice
+                </a>
+              <% } %>
+            </div>
+          </div>
+          <div class="card-body">
+            
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <h5>Order Information</h5>
+                <p class="mb-1"><strong>Order Date:</strong> <%= new Date(order.createdAt).toLocaleDateString() %></p>
+                <p class="mb-1"><strong>Payment Method:</strong> <%= order.paymentMethod %></p>
+                <p class="mb-1"><strong>Payment Status:</strong> <%= order.paymentStatus %></p>
+                <% if (order.estimatedDelivery) { %>
+                  <p class="mb-1"><strong>Estimated Delivery:</strong> <%= new Date(order.estimatedDelivery).toLocaleDateString() %></p>
+                <% } %>
+              </div>
+              <div class="col-md-6">
+                <h5>Shipping Address</h5>
+                <p class="mb-1"><%= order.shippingAddress.name %></p>
+                <p class="mb-1"><%= order.shippingAddress.house_number %>, <%= order.shippingAddress.street %></p>
+                <p class="mb-1"><%= order.shippingAddress.locality %></p>
+                <p class="mb-1"><%= order.shippingAddress.city %>, <%= order.shippingAddress.state %></p>
+                <p class="mb-1">PIN: <%= order.shippingAddress.pincode %></p>
+                <p class="mb-1">Phone: <%= order.shippingAddress.phone_number %></p>
+              </div>
+            </div>
+
+            
+            <h5>Order Items</h5>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% order.items.forEach(function(item) { %>
+                    <tr>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <img src="<%= item.image %>" alt="<%= item.name %>" class="me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                          <div>
+                            <h6 class="mb-0"><%= item.name %></h6>
+                            <small>Size: <%= item.size %>, Color: <%= item.color %></small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>₹<%= item.price %></td>
+                      <td><%= item.quantity %></td>
+                      <td>₹<%= item.price * item.quantity %></td>
+                      <td>
+                        <span class="badge bg-<%= item.status === 'RETURNED' ? 'warning' : 
+                          (item.status === 'RETURN_REQUESTED' ? 'info' : 
+                          (order.status === 'DELIVERED' ? 'success' : 'primary')) %>">
+                          <%= item.status || order.status %>
+                        </span>
+                      </td>
+                      <td>
+                        <% if (item.status === 'RETURN_REQUESTED') { %>
+                          <span class="text-muted">Return Pending Approval</span>
+                        <% } else if (item.status === 'RETURNED') { %>
+                          <span class="text-muted">Returned</span>
+                        <% } else if (order.status === 'DELIVERED' || order.status === 'Delivered') { %>
+                          <button class="btn btn-warning btn-sm" onclick="requestReturn('<%= order._id %>', '<%= item._id %>')">
+                            Request Return
+                          </button>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+
+        
+            <div class="row mt-4">
+              <div class="col-md-6 ms-auto">
+                <table class="table table-bordered">
+                  <tbody>
+                    <tr>
+                      <td><strong>Subtotal</strong></td>
+                      <td class="text-end">₹<%= order.subtotal %></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Shipping</strong></td>
+                      <td class="text-end">₹<%= order.shipping_charge %></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Tax</strong></td>
+                      <td class="text-end">₹<%= order.tax %></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Total</strong></td>
+                      <td class="text-end"><strong>₹<%= order.total %></strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+    <%- include('../partials/footer') %>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+  <script>
+    async function cancelOrder(orderId) {
+      const result = await Swal.fire({
+        title: 'Cancel Order',
+        text: 'Are you sure you want to cancel this order?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, cancel it',
+        cancelButtonText: 'No, keep it',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d'
+      });
+      
+      if (!result.isConfirmed) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/order/cancel/${orderId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          await Swal.fire({
+            title: 'Order Cancelled',
+            text: 'Your order has been cancelled successfully',
+            icon: 'success',
+            confirmButtonColor: '#28a745'
+          });
+          window.location.reload();
+        } else {
+          await Swal.fire({
+            title: 'Error',
+            text: data.message || 'Failed to cancel order',
+            icon: 'error',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      } catch (error) {
+        await Swal.fire({
+          title: 'Error',
+          text: 'An error occurred while cancelling the order',
+          icon: 'error',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+    }
+
+    async function requestReturn(orderId, itemId) {
+      const { value: formValues } = await Swal.fire({
+        title: 'Request Return',
+        html: `
+          <div class="mb-3">
+            <label class="form-label">Return Reason</label>
+            <select id="returnReason" class="form-select">
+              <option value="">Select a reason</option>
+              <option value="DAMAGED">Product damaged/defective</option>
+              <option value="WRONG_ITEM">Wrong item received</option>
+              <option value="SIZE_ISSUE">Size/fit issue</option>
+              <option value="QUALITY_ISSUE">Quality not as expected</option>
+              <option value="OTHER">Other reason</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Additional Comments</label>
+            <textarea id="returnComments" class="form-control" rows="3" placeholder="Please provide more details about your return request"></textarea>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Submit Return Request',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        preConfirm: () => {
+          const reason = document.getElementById('returnReason').value;
+          const comments = document.getElementById('returnComments').value;
+          
+          if (!reason) {
+            Swal.showValidationMessage('Please select a return reason');
+            return false;
+          }
+          
+          return { reason, comments };
+        }
+      });
+
+      if (!formValues) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/order/return-request`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            orderId,
+            itemId,
+            reason: formValues.reason,
+            comments: formValues.comments
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          await Swal.fire({
+            title: 'Return Requested',
+            text: 'Your return request has been submitted successfully',
+            icon: 'success',
+            confirmButtonColor: '#28a745'
+          });
+          window.location.reload();
+        } else {
+          await Swal.fire({
+            title: 'Error',
+            text: data.message || 'Failed to request return',
+            icon: 'error',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      } catch (error) {
+        await Swal.fire({
+          title: 'Error',
+          text: 'An error occurred while requesting the return',
+          icon: 'error',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+    }
+  </script>
+  </body>
+</html>

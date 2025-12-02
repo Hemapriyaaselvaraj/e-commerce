@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin - Products</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <style>
+    
+    .table-hover {
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      margin-bottom: 0;
+    }
+    .table-hover thead tr {
+      background: #f8fafc;
+      color: #222;
+      font-size: 14px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .table-hover th, .table-hover td {
+      vertical-align: middle;
+      padding: 12px 16px;
+      border: none;
+    }
+    .table-hover tbody tr {
+      transition: background 0.2s;
+    }
+    .table-hover tbody tr:hover {
+      background: #f1f5f9;
+    }
+    .table-hover td .badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    .table-hover td .status.active {
+      color: #22c55e;
+      font-weight: 600;
+    }
+    .table-hover td .status.inactive {
+      color: #f59e42;
+      font-weight: 600;
+    }
+    .table-hover td .fa-edit,
+    .table-hover td .fa-lock, 
+    .table-hover td .fa-unlock {
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .table-hover td .fa-lock {
+      color: #f59e42;
+      margin-left: 8px;
+    }
+    .table-hover td .fa-unlock {
+      color: #22c55e;
+      margin-left: 8px;
+    }
+
+    .search-container {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .search-container label {
+      font-size: 14px;
+      color: #555;
+      margin-right: 4px;
+    }
+    .search-container select,
+    .search-container input[type="text"] {
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 14px;
+      background: #fff;
+      margin-right: 8px;
+    }
+    .search-container .btn-dark {
+      border-radius: 6px;
+      font-size: 14px;
+      padding: 6px 16px;
+    }
+
+    .pagination {
+      display: flex;
+      gap: 6px;
+      margin-top: 18px;
+      justify-content: flex-end;
+    }
+    .pagination button {
+      border: none;
+      background: #f1f5f9;
+      color: #222;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .pagination button.active,
+    .pagination button:disabled {
+      background: #222;
+      color: #fff;
+      cursor: default;
+    }
+    .pagination button.disabled {
+      background: #e5e7eb;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+
+    .text-muted {
+      color: #888 !important;
+      font-size: 12px;
+    }
+
+    
+    @media (max-width: 768px) {
+      
+      .search-container div[style*="display: flex"] {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px;
+      }
+      .search-container select,
+      .search-container input[type="text"] {
+        margin-right: 0 !important;
+        width: 100%;
+      }
+      .search-container .btn-dark,
+      .search-container button {
+        width: 100%;
+        margin-top: 8px;
+      }
+
+      
+      .table-responsive {
+        overflow-x: auto;
+      }
+
+
+      .table-hover thead tr,
+      .table-hover th, .table-hover td {
+        font-size: 12px;
+        padding: 8px 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .search-container label {
+        font-size: 12px;
+      }
+      .search-container input[type="text"] {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container-fluid">
+  <div class="row">
+    <%- include('../partials/sidebar') %>
+    <div class="col-md-10 p-0">
+      <div class="bg-white d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
+        <h5 class="mb-0">Products</h5>
+        <div class="d-flex align-items-center gap-2">
+          <span><%= name %></span>
+          <i class="fa-solid fa-user"></i>
+        </div>
+      </div>
+      <div class="p-4">
+        <div class="search-container mb-3 d-flex justify-content-between align-items-center">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <label for="category">Category:</label>
+            <select id="category">
+              <option value="all" <%= currentCategory === 'all' ? 'selected' : '' %>>All</option>
+              <% categories.forEach(cat => { %>
+                <option value="<%= cat.category %>" <%= currentCategory === cat.category ? 'selected' : '' %>><%= cat.category %></option>
+              <% }) %>
+            </select>
+            <label for="type">Type:</label>
+            <select id="type">
+              <option value="all" <%= currentType === 'all' ? 'selected' : '' %>>All</option>
+              <% types.forEach(t => { %>
+                <option value="<%= t.type %>" <%= currentType === t.type ? 'selected' : '' %>><%= t.type %></option>
+              <% }) %>
+            </select>
+            <label for="sort">Sort by:</label>
+            <select id="sort">
+              <option value="latest" <%= currentSort === 'latest' ? 'selected' : '' %>>Latest Created</option>
+              <option value="nameAsc" <%= currentSort === 'nameAsc' ? 'selected' : '' %>>A to Z (Ascending)</option>
+              <option value="nameDesc" <%= currentSort === 'nameDesc' ? 'selected' : '' %>>Z to A (Descending)</option>
+            </select>
+            <button type="button" class="btn btn-outline-secondary ms-2" id="clearFilters">Clear All Filters</button>
+          </div>
+          <div style="flex:1; text-align:right;">
+            <input type="text" id="searchInput" placeholder="Search products..." style="width: 250px;" value="<%= currentSearch || '' %>">
+            <a href="/admin/products/addProduct" class="btn btn-dark ms-2"><i class="fa fa-plus"></i> Add Product</a>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th><input type="checkbox" /></th>
+                <th>Product</th>
+                <th>Product SKU</th>
+                <th>Price</th>
+                <th>Category</th>
+                <th>Type</th>
+                <th>Added On</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% products.forEach(product => { %>
+                <tr data-id="<%= product._id %>">
+                  <td><input type="checkbox" /></td>
+                  <td>
+                    <div><strong><%= product.name %></strong></div>
+                    <div class="text-muted"><%= product.brand %></div>
+                  </td>
+                  <td>#<%= product.product_sku %></td>
+                  <td>₹ <%= product.price.toFixed(2) %></td>
+                  <td><%= product.product_category %></span></td>
+                  <td><%= product.product_type %></span></td>
+                  <td><%= product.created_at.toDateString() %></td>
+                  <td>
+                    <span class="status <%= product.is_active ? 'active' : 'inactive' %>">
+                      <%= product.is_active ? 'Active' : 'Inactive' %>
+                    </span>
+                  </td>
+                  <td>
+                    <button class="edit btn btn-sm btn-link p-0" title="Edit"><i class="fa fa-edit text-primary"></i></button>
+                    <% if (product.is_active) { %>
+                      <button class="toggle-active btn btn-sm btn-link p-0" title="Make Inactive"><i class="fa fa-lock text-warning"></i></button>
+                    <% } else { %>
+                      <button class="toggle-active btn btn-sm btn-link p-0" title="Make Active"><i class="fa fa-unlock text-success"></i></button>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size:13px;color:#888;margin-top:8px;">
+          Showing <%= (totalResults === 0 ? 0 : ((currentPage - 1) * pageSize + 1)) %> to <%= Math.min(currentPage * pageSize, totalResults) %> of <%= totalResults %> results
+        </div>
+
+        <div class="pagination">
+          <button <%= currentPage === 1 ? 'class="disabled" disabled' : '' %> onclick="goToPage(<%= currentPage - 1 %>)">Previous</button>
+          <% for(let i = 1; i <= totalPages; i++) { %>
+            <button <%= currentPage === i ? 'class="active" disabled' : '' %> onclick="goToPage(<%= i %>)"><%= i %></button>
+          <% } %>
+          <button <%= currentPage === totalPages || totalPages === 0 ? 'class="disabled" disabled' : '' %> onclick="goToPage(<%= currentPage + 1 %>)">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  
+  document.getElementById('category').addEventListener('change', updateQuery);
+  document.getElementById('type').addEventListener('change', updateQuery);
+  document.getElementById('sort').addEventListener('change', updateQuery);
+  document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') updateQuery();
+  });
+  document.getElementById('clearFilters').addEventListener('click', function() {
+    window.location.href = '/admin/products';
+  });
+  function updateQuery() {
+    const category = document.getElementById('category').value;
+    const type = document.getElementById('type').value;
+    const sort = document.getElementById('sort').value;
+    const search = document.getElementById('searchInput').value;
+    const params = new URLSearchParams();
+    if (category !== 'all') params.append('category', category);
+    if (type !== 'all') params.append('type', type);
+    if (sort && sort !== 'latest') params.append('sort', sort);
+    if (search) params.append('search', search);
+    window.location.search = params.toString();
+  }
+  
+  function goToPage(page) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('page', page);
+    window.location.search = params.toString();
+  }
+  
+  document.querySelectorAll('.edit').forEach(button => {
+    button.addEventListener('click', function() {
+      const row = button.closest('tr');
+      const id = row.getAttribute('data-id');
+      window.location.href = `/admin/products/edit/${id}`;
+    });
+  });
+  
+ document.querySelectorAll('.toggle-active').forEach(button => {
+  button.addEventListener('click', function() {
+    const row = button.closest('tr');
+    const id = row.getAttribute('data-id');
+    const isActive = row.querySelector('.status').classList.contains('active');
+    const action = isActive ? 'inactivate' : 'activate';
+    if (confirm(`Are you sure you want to ${action} this product?`)) {
+      fetch(`/admin/products/${id}/toggle-active`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          window.location.reload();
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to update status'
+          });
+        }
+      });
+    }
+  });
+});
+</script>
+</body>
+</html>

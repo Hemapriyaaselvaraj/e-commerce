@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Account - ToughToes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Cropper.js CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+
+  <style>
+    /* Profile Image styles */
+    .profile-image-container {
+      position: relative;
+      display: inline-block;
+    }
+    .profile-image {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .profile-image-edit {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: #fff;
+      border-radius: 50%;
+      padding: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .profile-image-edit:hover {
+      background: #f8f9fa;
+    }
+
+    /* Navbar styles */
+    .btn-login {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 0.4rem 1.1rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-left: 0.5rem;
+    }
+    .btn-login:hover {
+      background: #0056b3;
+    }
+
+    /* Sidebar styles */
+    .sidebar {
+      width: 200px;
+      background: #f8f9fa;
+    }
+    .sidebar ul li {
+      margin-bottom: 10px;
+    }
+    .sidebar a {
+      display: block;
+      padding: 10px;
+      text-decoration: none;
+      color: #333;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
+    .sidebar a.active,
+    .sidebar a:hover {
+      background-color: #e0e0e0;
+      font-weight: 500;
+    }
+    .sidebar ul li a,
+    .sidebar ul li form button {
+      display: block;
+      padding: 8px 15px;
+      color: #333;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: none;
+    }
+    .sidebar ul li a:hover,
+    .sidebar ul li form button:hover {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+    .sidebar ul li a.active {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      font-weight: 500;
+    }
+    .sidebar ul li form {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    #logoutForm button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 8px 15px;
+      cursor: pointer;
+      color: #333;
+      background: none;
+      border: none;
+      text-align: left;
+    }
+    #logoutForm button:hover {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+    .nav-links a {
+      margin: 0 1rem;
+      text-decoration: none;
+      color: #000;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+      margin-right: 1.5rem;
+    }
+    .search-input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      min-width: 180px;
+    }
+    .logo {
+      margin-left: 0.5rem;
+    }
+
+    /* Profile box disabled inputs */
+    .profile-box input:disabled {
+      background-color: #f0f0f0;
+      cursor: not-allowed;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .container.d-flex {
+        flex-direction: column;
+        padding: 0 15px;
+      }
+      .sidebar {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <%- include('../partials/userNavbar', { name: name }) %>
+
+  <div class="container my-5 d-flex" style="margin-top: 90px !important;">
+    <div class="sidebar p-3 me-4 border rounded">
+      <ul class="list-unstyled">
+        <li><a href="/profile"  class="active"><i class="fas fa-user me-2"></i>Profile</a></li>
+        <li><a href="/order/my-orders" ><i class="fas fa-box me-2"></i>Orders</a></li>
+        <li><a href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
+        <li><a href="/addresses"><i class="fas fa-map-marker-alt me-2"></i>Addresses</a></li>
+        <li><a href="/wallet"><i class="fas fa-wallet me-2"></i>My Wallet</a></li>
+        <li>
+          <form id="logoutForm" method="POST" action="/user/logout">
+            <button type="submit">
+              <i class="fas fa-sign-out-alt me-2"></i>Logout
+            </button>
+          </form>
+        </li>
+      </ul>
+    </div>
+
+    <div class="flex-grow-1">
+  <div class="profile-box border rounded p-4 mb-4">
+
+    <!-- UPDATED PROFILE IMAGE AREA -->
+    <form id="profileImgForm"
+          action="/profile/update-image"
+          method="POST"
+          enctype="multipart/form-data"
+          style="display:none;">
+      <input type="file" id="profileImageInput"
+             name="profileImage"
+             accept="image/*">
+    </form>
+
+    <div class="d-flex align-items-center mb-4">
+      <div class="position-relative me-4">
+
+        <!-- PROFILE IMAGE PREVIEW -->
+        <img id="profileImagePreview"
+             src="<%= user.profileImage || '/images/default-profile.png' %>"
+             alt="Profile Picture"
+             class="rounded-circle profile-image"
+             style="width: 100px; height: 100px; object-fit: cover;">
+
+        <!-- CAMERA ICON (Triggers hidden input) -->
+        <label for="profileImageInput"
+               class="position-absolute bottom-0 end-0 bg-white rounded-circle p-1 cursor-pointer"
+               style="cursor: pointer;">
+          <i class="fas fa-camera text-dark"></i>
+        </label>
+
+      </div>
+
+          <div>
+            <h4><%= user.firstName %> <%= user.lastName %></h4>
+            <p class="text-muted mb-0"><%= user.email %><br>
+              Member since <%= user.createdAt ? new Date(user.createdAt).toLocaleString('default', { month: 'long', year: 'numeric' }) : '' %>
+            </p>
+          </div>
+        </div>
+        <hr>
+        <h6 class="mb-3">Personal Info</h6>
+        <form method="POST" action="/profile" id="profileForm">
+          <div class="row mb-3">
+            <div class="col">
+              <label>First Name</label>
+              <input type="text" class="form-control" name="firstName" value="<%= user.firstName %>" disabled>
+            </div>
+            <div class="col">
+              <label>Last Name</label>
+              <input type="text" class="form-control" name="lastName" value="<%= user.lastName %>" disabled>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col">
+              <label>Email Address</label>
+              <div class="input-group">
+                <input type="email" class="form-control" name="email" id="emailInput" value="<%= user.email %>" disabled>
+              </div>
+            </div>
+            <div class="col">
+              <label>Phone Number</label>
+              <input type="text" class="form-control" name="phoneNumber" value="<%= user.phoneNumber %>" disabled>
+            </div>
+          </div>
+          <div id="profileEditBtns" style="display:none;">
+            <button class="btn btn-dark" type="submit"><i class="fas fa-save me-2"></i>Save Changes</button>
+            <button class="btn btn-link text-muted" type="button" id="cancelEditBtn">Cancel</button>
+          </div>
+        </form>
+        <a class="btn btn-outline-dark mt-2" href="/profile/edit"><i class="fas fa-edit me-2"></i>Edit Profile</a>
+      </div>
+
+      
+      <div class="border rounded p-4 mb-4 bg-light">
+        <h6>Default Shipping Address</h6>
+        <% if (defaultAddress) { %>
+          <div class="card mt-2">
+            <div class="card-body">
+              <h6 class="card-title">
+                <%= defaultAddress.name %> 
+                <span class="badge bg-secondary"><%= defaultAddress.type %></span>
+              </h6>
+              <p class="card-text">
+                <%= defaultAddress.house_number %>, <%= defaultAddress.locality %><br>
+                <%= defaultAddress.city %>, <%= defaultAddress.state %> - <%= defaultAddress.pincode %><br>
+                Phone: <%= defaultAddress.phone_number %>
+              </p>
+              <a href="/addresses" class="btn btn-outline-dark btn-sm">
+                <i class="fas fa-edit me-2"></i>Change
+              </a>
+            </div>
+          </div>
+        <% } else { %>
+          <p class="text-muted mb-3">No default address set.</p>
+          <a href="/addresses" class="btn btn-outline-dark btn-sm">
+            <i class="fas fa-plus me-2"></i>Add Address
+          </a>
+        <% } %>
+      </div>
+
+      
+      <div class="border rounded p-4 mb-4 bg-light">
+        <h6>Change Password</h6>
+        <p class="text-muted small">Change your account password securely.</p>
+        <button class="btn btn-outline-dark" id="changePasswordBtn">Change Password</button>
+      </div>
+
+      
+      <div class="danger-zone border rounded p-4 bg-light">
+        <h6>Danger Zone</h6>
+        <p class="text-muted small">These actions cannot be undone. Please proceed with caution.</p>
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>Deactivate Account</strong>
+            <p class="text-muted mb-0 small">Deactivating account will temporarily disable your login. Reach out to customer care to Re-Activate</p>
+          </div>
+          <button class="btn btn-outline-dark">Deactivate Account</button>
+        </div>
+      </div>
+</div>
+
+
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="changePasswordForm">
+          <div class="mb-3">
+            <label for="changePasswordEmail" class="form-label">Email</label>
+            <input type="email" class="form-control" id="changePasswordEmail" value="<%= user.email %>" readonly>
+          </div>
+          <div class="mb-3">
+            <button type="button" class="btn btn-outline-secondary" id="sendOtpBtn">Send OTP</button>
+          </div>
+          <div class="mb-3">
+            <label for="otpInput" class="form-label">OTP</label>
+            <input type="text" class="form-control" id="otpInput" placeholder="Enter OTP" disabled>
+          </div>
+          <div class="mb-3">
+            <label for="newPasswordInput" class="form-label">New Password</label>
+            <input type="password" class="form-control" id="newPasswordInput" placeholder="New Password" disabled>
+          </div>
+          <div class="mb-3">
+            <label for="confirmPasswordInput" class="form-label">Confirm Password</label>
+            <input type="password" class="form-control" id="confirmPasswordInput" placeholder="Confirm Password" disabled>
+          </div>
+          <button type="submit" class="btn btn-dark" id="submitChangePasswordBtn" disabled>Change Password</button>
+        </form>
+        <div id="changePasswordError" class="text-danger mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+      <!-- Crop Image Modal -->
+      <div class="modal fade" id="cropImageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Crop Profile Image</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+              <div style="max-height:90vh; overflow:auto;">
+                <img id="cropperImage" src="" style="max-width:100%; display:block; margin-left:auto; margin-right:auto;" />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-dark" id="applyCropBtn">Crop & Upload</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+  </div>
+
+  <%- include('../partials/footer') %>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+  <script>
+  const input = document.getElementById("profileImageInput");
+  const form = document.getElementById("profileImgForm");
+  const preview = document.getElementById("profileImagePreview");
+  let cropper = null;
+
+  const cropperImage = document.getElementById('cropperImage');
+  const cropImageModalEl = document.getElementById('cropImageModal');
+  const cropImageModal = new bootstrap.Modal(cropImageModalEl);
+  const applyCropBtn = document.getElementById('applyCropBtn');
+
+  // When the user picks a file we show an instant preview and open crop modal.
+  input.addEventListener("change", () => {
+    if (input.files && input.files[0]) {
+  const file = input.files[0];
+
+      // Set up cropper image and show modal
+      cropperImage.src = URL.createObjectURL(file);
+      cropperImage.onload = () => {
+        // destroy existing cropper if any
+        if (cropper) {
+          try { cropper.destroy(); } catch (e) { /* ignore */ }
+          cropper = null;
+        }
+        cropper = new Cropper(cropperImage, {
+          aspectRatio: 1,
+          viewMode: 1,
+          movable: true,
+          zoomable: true,
+          scalable: false,
+          background: false,
+          responsive: true,
+          // Make the initial crop area cover most of the image (good for landscape)
+          autoCropArea: 0.95,
+          // Prevent the crop box from being tiny on very large images
+          minCropBoxWidth: 150,
+          minCropBoxHeight: 150,
+          // allow double-click to toggle drag mode
+          toggleDragModeOnDblclick: true,
+          // When cropper is ready, set a consistent square crop box size centered
+          ready: function () {
+            try {
+              const cp = this;
+              const container = cp.getContainerData();
+              const image = cp.getImageData();
+              // Desired crop box: 85% of the smaller container dimension, capped by image natural size
+              const base = Math.min(container.width, container.height);
+              let desired = Math.floor(base * 0.85);
+              // don't exceed natural image size
+              desired = Math.min(desired, Math.floor(image.naturalWidth), Math.floor(image.naturalHeight));
+              // minimal fallback
+              if (desired < 150) desired = Math.min(150, Math.floor(base * 0.7));
+              const left = Math.max(0, Math.floor((container.width - desired) / 2));
+              const top = Math.max(0, Math.floor((container.height - desired) / 2));
+              // apply a fixed square crop box so portrait and landscape get same window size
+              cp.setCropBoxData({ left: left, top: top, width: desired, height: desired });
+            } catch (err) {
+              // if anything fails, ignore and allow default behavior
+              console.warn('Cropper ready customization failed', err);
+            }
+          }
+        });
+        cropImageModal.show();
+      };
+    }
+  });
+
+  // Cleanup cropper when modal hidden
+  cropImageModalEl.addEventListener('hidden.bs.modal', function () {
+    if (cropper) {
+      try { cropper.destroy(); } catch (e) { /* ignore */ }
+      cropper = null;
+    }
+    try { URL.revokeObjectURL(cropperImage.src); } catch(e){}
+    // clear file input so selecting same file later will re-trigger change
+    try { input.value = ''; } catch(e){}
+  });
+
+  // Upload cropped image when user clicks apply
+  applyCropBtn.addEventListener('click', () => {
+    if (!cropper) return;
+    const canvas = cropper.getCroppedCanvas({ width: 400, height: 400, imageSmoothingQuality: 'high' });
+    if (!canvas) {
+      alert('Could not crop image.');
+      return;
+    }
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        alert('Failed to create image blob.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('profileImage', blob, 'profile.jpg');
+
+      try {
+        const response = await fetch('/profile/update-image', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const newUrl = data.imageUrl;
+          // Update all profile image elements and the preview only after successful upload
+          try { document.getElementById('profileImagePreview').src = newUrl; } catch(e){}
+          document.querySelectorAll('.profile-image').forEach(img => { img.src = newUrl; });
+          cropImageModal.hide();
+          setTimeout(() => { window.location.reload(); }, 500);
+        } else {
+          const text = await response.text();
+          alert('Failed to upload image. ' + text);
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert('Failed to upload image. Please try again.');
+      }
+    }, 'image/jpeg', 0.9);
+  });
+
+  const logoutForm = document.getElementById('logoutForm');
+  if (logoutForm) {
+    logoutForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch('/user/logout', { method: 'POST', credentials: 'same-origin' })
+        .then(() => { window.location.href = '/'; });
+    });
+  }
+
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
+  const changePasswordModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+  const sendOtpBtn = document.getElementById('sendOtpBtn');
+  const otpInput = document.getElementById('otpInput');
+  const newPasswordInput = document.getElementById('newPasswordInput');
+  const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+  const submitChangePasswordBtn = document.getElementById('submitChangePasswordBtn');
+  const changePasswordError = document.getElementById('changePasswordError');
+
+  changePasswordBtn.onclick = function() {
+    changePasswordModal.show();
+    otpInput.value = '';
+    newPasswordInput.value = '';
+    confirmPasswordInput.value = '';
+    otpInput.disabled = true;
+    newPasswordInput.disabled = true;
+    confirmPasswordInput.disabled = true;
+    submitChangePasswordBtn.disabled = true;
+    changePasswordError.textContent = '';
+  };
+
+  sendOtpBtn.onclick = function() {
+    fetch('/user/login/sendOtp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: document.getElementById('changePasswordEmail').value })
+    })
+    .then(res => res.text())
+    .then(() => {
+      otpInput.disabled = false;
+      changePasswordError.textContent = 'OTP sent to your email.';
+    })
+    .catch(() => {
+      changePasswordError.textContent = 'Failed to send OTP.';
+    });
+  };
+
+  otpInput.oninput = function() {
+    if (otpInput.value.length === 6) {
+      newPasswordInput.disabled = false;
+      confirmPasswordInput.disabled = false;
+      submitChangePasswordBtn.disabled = false;
+    } else {
+      newPasswordInput.disabled = true;
+      confirmPasswordInput.disabled = true;
+      submitChangePasswordBtn.disabled = true;
+    }
+  };
+
+  document.getElementById('changePasswordForm').onsubmit = function(e) {
+    e.preventDefault();
+    fetch('/user/changePassword', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: document.getElementById('changePasswordEmail').value,
+        otp: otpInput.value,
+        password: newPasswordInput.value,
+        confirmPassword: confirmPasswordInput.value
+      })
+    })
+    .then(res => res.text())
+    .then(response => {
+      const trimmed = response.trim();
+      if (trimmed === 'Password changed successfully!') {
+        changePasswordModal.hide();
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Password changed successfully! Please login with your new password.',
+          showConfirmButton: false,
+          timer: 2000,
+          didClose: () => {
+            
+            fetch('/user/logout', { 
+              method: 'POST', 
+              credentials: 'same-origin' 
+            }).then(() => {
+              window.location.href = '/user/login';
+            });
+          }
+        });
+      } else if (trimmed.includes('Invalid otp')) {
+        changePasswordError.textContent = 'Wrong OTP';
+      } else {
+        changePasswordError.textContent = trimmed;
+      }
+    })
+    .catch(() => {
+      changePasswordError.textContent = 'Failed to change password.';
+    });
+  };
+  
+  </script>
+</body>
+</html>
