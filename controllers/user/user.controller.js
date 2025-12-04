@@ -1,5 +1,6 @@
 const userModel = require("../../models/userModel");
 const otpVerificationModel = require("../../models/otpVerificationModel");
+const WalletTransaction = require('../../models/walletModel')
 require('dotenv').config();
 
 const bcrypt = require("bcrypt");
@@ -15,9 +16,9 @@ const transporter = nodemailer.createTransport({
 });
 
 const signup = async (req, res) => {
-  const { firstName, lastName, email, phoneNumber, password } = req.body;
+  const { firstName, lastName, email, phoneNumber, password, referralCode } = req.body;
 
-  const user = await userModel.findOne({ email });
+  let user = await userModel.findOne({ email });
 
   if (user && user.isVerified) {
     return res.render("user/signup", {
@@ -28,39 +29,92 @@ const signup = async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, saltround);
 
+  // A) UNVERIFIED USER EXISTS
   if (user) {
- 
+
     user.firstName = firstName;
     user.lastName = lastName;
     user.phoneNumber = phoneNumber;
     user.password = hashedPassword;
 
+    // Generate referral code if missing
+    if (!user.referralCode) {
+      user.referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    }
+
+    // Referral handling only once
+    if (!user.referredBy && referralCode) {
+      const referrer = await userModel.findOne({ referralCode });
+
+      if (referrer) {
+        user.referredBy = referrer._id;
+
+        // Give ₹50 to new user immediately
+        user.wallet += 50;
+
+        await WalletTransaction.create({
+          user_id: user._id,
+          type: "CREDIT",
+          amount: 50,
+          description: "Referral signup bonus"
+        });
+      }
+    }
+
     await user.save();
 
   } else {
 
-    const newUser = new userModel({
-    firstName,
-    lastName,
-    email,
-    phoneNumber,
-    password: hashedPassword,
-    isVerified: false,
-    signupMethod: 'email'
-   });
+    // B) CREATE NEW USER
+    user = new userModel({
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      password: hashedPassword,
+      isVerified: false,
+      signupMethod: "email",
+      referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
+      wallet: 0,
+      referredBy: null
+    });
 
-  await newUser.save();
+    // Referral code entered
+    if (referralCode) {
+      const referrer = await userModel.findOne({ referralCode });
 
+      if (referrer) {
+        user.referredBy = referrer._id;
+
+        // Give ₹50 to new user
+        user.wallet = 50;
+
+        await WalletTransaction.create({
+          user_id: user._id,
+          type: "CREDIT",
+          amount: 50,
+          description: "Referral signup bonus"
+        });
+      }
+    }
+
+    await user.save();
   }
 
+  // Send OTP
   await sendOtpToVerifyEmail(email);
 
-  return res.render('user/verifyOtp', { error: null, email, flow: 'sign-up'});
+  return res.render("user/verifyOtp", { error: null, email, flow: "sign-up" });
 };
 
-const viewSignUp = (req, res) => {
-  return res.render("user/signup", { error: null, oldInput: null });
+const viewSignup = (req, res) => {
+  return res.render("user/signup", {
+    error: null,
+    oldInput: {},
+  });
 };
+
+
 
 const viewLogin = (req, res) => {
     const loginError = req.session.loginError || null;
@@ -121,6 +175,27 @@ if (otpVerification.otp !== otp || otpVerification.expiry < new Date()) {
 
       await user.save();
 
+      if (user.referredBy && !user.isReferralRewarded) {
+    const referrer = await userModel.findById(user.referredBy);
+
+    if (referrer) {
+      // Give ₹100 to the person who referred
+      referrer.wallet += 100;
+
+      await WalletTransaction.create({
+        user_id: referrer._id,
+        type: "credit",
+        amount: 100,
+        description: "Referral reward - new user verified"
+      });
+
+      await referrer.save();
+
+      // Mark reward as given so it never happens twice
+      user.isReferralRewarded = true;
+      await user.save();
+    }
+  }
      return res.redirect('/user/login');
 
   } else if (flow == 'login') {
@@ -250,7 +325,7 @@ async function sendOtpToVerifyEmail(email) {
 
 module.exports = {
     signup,
-    viewSignUp,
+    viewSignup,
     viewLogin,
     forgotPassword,
     sendOtp,

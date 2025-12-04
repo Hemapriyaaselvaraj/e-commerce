@@ -6,7 +6,9 @@ const uploadProfile = require('../../utils/profileUploader');
 router.get('/',profileController.getProfile);
 router.post('/', profileController.updateProfile);
 router.get('/edit', profileController.getEditProfile);
-router.post('/edit', profileController.postEditProfile)
+router.post('/edit', profileController.postEditProfile);
+router.get('/referAndEarn', profileController.getReferAndEarn);
+
 
 // UPDATE PROFILE IMAGE
 router.post(

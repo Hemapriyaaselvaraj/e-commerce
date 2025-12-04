@@ -74,8 +74,8 @@
     /* Checkout layout */
     .checkout-wrapper {
       display: flex;
-      gap: 32px;
-      padding: 140px 40px 60px;
+      gap: 50px;
+      padding: 100px 0.1px 60px;
       width: min(1280px, 100%);
       margin: 0 auto;
       align-items: flex-start;
@@ -265,20 +265,20 @@
       color: #0f172a;
     }
 
-    .discount-row {
+    .coupon-box {
       display: flex;
       gap: 10px;
       margin: 18px 0 6px;
     }
 
-    .discount-row input {
+    .coupon-box input {
       flex: 1;
       border: 1px solid #d1d5db;
       border-radius: 12px;
       padding: 10px 14px;
     }
 
-    .discount-row button {
+    .coupon-box button {
       border: none;
       border-radius: 12px;
       padding: 10px 16px;
@@ -583,10 +583,16 @@
           <span>₹<%= typeof total !== 'undefined' ? total : 0 %></span>
         </div>
 
-        <div class="discount-row">
-          <input type="text" placeholder="Discount code" />
-          <button type="button">Apply</button>
-        </div>
+        <div class="coupon-box">
+  <input type="text" id="couponInput" placeholder="Enter coupon">
+  <button onclick="applyCoupon()">Apply</button>
+  <button onclick="removeCoupon()">Remove</button>
+  <p id="couponMessage" class="text-danger mt-2"></p>
+</div>
+
+<p>Discount: <span id="discountValue">₹0</span></p>
+<p><b>Grand Total: <span id="grandTotal">₹<%= total %></span></b></p>
+
 
         <button id="placeOrder">Place Order</button>
         <p class="secure-note">Secure checkout powered by SSL encryption</p>
@@ -897,5 +903,44 @@
 
      
     </script>
+    <script>
+async function applyCoupon() {
+  const code = document.getElementById("couponInput").value;
+
+  const res = await fetch("/orders/apply-coupon", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ couponCode: code })
+  });
+
+  const data = await res.json();
+
+  document.getElementById("couponMessage").innerText = data.message;
+
+  if (data.success) {
+    document.getElementById("discountValue").innerText = "₹" + data.discount;
+    document.getElementById("grandTotal").innerText = "₹" + data.grandTotal;
+  }
+}
+
+async function removeCoupon() {
+  const code = document.getElementById("couponInput").value;
+
+  const res = await fetch("/orders/remove-coupon", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ couponCode: code })
+  });
+
+  const data = await res.json();
+  document.getElementById("couponMessage").innerText = data.message;
+
+  if (data.success) {
+    // Refresh cart totals
+    location.reload();
+  }
+}
+</script>
+
     </body>
 </html>

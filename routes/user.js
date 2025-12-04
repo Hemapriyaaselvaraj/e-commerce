@@ -3,7 +3,7 @@ const router = express.Router();
 const passport = require('../config/passport')
 const userController = require('../controllers/user/user.controller');
 
-router.get('/signup', userController.viewSignUp)
+router.get('/signup', userController.viewSignup)
 router.post('/signup', userController.signup)
 router.get('/login', userController.viewLogin)
 router.post('/login', userController.login)

@@ -67,6 +67,23 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    referralCode: { 
+      type: String, 
+      unique: true 
+    },
+    referredBy: { 
+      type: String, 
+      default: null 
+    },
+    referralEarnings: {
+       type: Number, 
+       default: 0 
+      },
+    isReferralRewarded: {
+       type: Boolean, 
+       default: false
+       }, // avoid double reward
+
   },
   {
     timestamps: true,

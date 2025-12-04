@@ -100,11 +100,48 @@ const postEditProfile = async (req, res) => {
   }
 };
 
+const getReferAndEarn = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+
+    const user = await userModel.findById(userId).lean();
+    if (!user) return res.redirect("/user/login");
+
+    // Count referrals
+    const totalReferrals = await userModel.countDocuments({ referredBy: userId });
+
+    // Total earnings
+    const totalReferralEarnings = totalReferrals * 100;
+
+    // Get the referral code that THIS user entered during signup
+    let appliedReferralCode = null;
+
+    if (user.referredBy) {
+      const referrer = await userModel.findById(user.referredBy).lean();
+      if (referrer) {
+        appliedReferralCode = referrer.referralCode;
+      }
+    }
+
+    res.render("user/referAndEarn", {
+      user,
+      totalReferrals,
+      totalReferralEarnings,
+      appliedReferralCode     // <-- IMPORTANT
+    });
+
+  } catch (err) {
+    console.log("Refer & Earn page error:", err);
+    res.status(500).send("Server error");
+  }
+};
+
 
 module.exports = {
     getProfile,
     updateProfile,
     updateProfileImage,
     getEditProfile,
-    postEditProfile
+    postEditProfile,
+    getReferAndEarn
 }
