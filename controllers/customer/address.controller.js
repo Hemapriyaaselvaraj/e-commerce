@@ -31,11 +31,17 @@ const postAddAddress = async (req, res) => {
       isDefault 
     } = req.body;
 
+    // Validate required fields
+    if (!name || !house_number || !locality || !city || !state || !pincode || !phone_number) {
+      console.log('❌ Missing required fields');
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
     const newAddress = {
       user_id: req.session.userId,
       name,
-      label,
-      type,
+      label: label || 'Home',
+      type: type || 'HOME',
       house_number,
       locality,
       city,
@@ -50,8 +56,9 @@ const postAddAddress = async (req, res) => {
     return res.json({ success: true, message: 'Address added successfully' });
 
   } catch (error) {
-    console.error("Error adding address:", error);
-    return res.status(500).json({ success: false, message: "Server error while adding address" });
+    console.error("❌ Error adding address:", error);
+    console.error("❌ Error stack:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error while adding address" });
   }
 };
 

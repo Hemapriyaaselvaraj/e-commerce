@@ -361,7 +361,7 @@ const getProducts = async (req, res) => {
       page = 1,
     } = req.query;
 
-    const pageSize = 5;
+    const pageSize = 7;
     const currentPage = parseInt(page) || 1;
 
     const filter = {};

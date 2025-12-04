@@ -7,6 +7,7 @@ const WalletTransaction = require("../../models/walletModel");
 const {generateOrderNumber} = require('../../utils/orderNumberGenerator')
 const razorpayInstance = require('../../config/razorpay')
 const crypto = require('crypto');
+const PDFDocument = require('pdfkit');
 
 
 const placeOrder = async (req, res) => {
@@ -111,6 +112,7 @@ const placeOrder = async (req, res) => {
       phone_number: address.phone_number
     };
 
+
     const order = new Order({
       order_number: orderNumber,
       user_id: userId,
@@ -148,17 +150,14 @@ if (paymentMethod === 'WALLET') {
   const userWallet = user.wallet || 0;
   if (userWallet < total) return res.status(400).json({ success: false, message: "Not enough wallet balance" });
 
-  // Update order before saving
   await Order.findByIdAndUpdate(savedOrder._id, {
-    payment_status: "PAID",
+    payment_status: "COMPLETED",
     status: "ORDERED"
   });
   
-  // Deduct wallet balance
   user.wallet = userWallet - total;
   await user.save();
 
-  // Log wallet transaction
   await WalletTransaction.create({
     user_id: userId,
     amount: total,
@@ -563,6 +562,342 @@ const getOrderDetails = async(req,res) => {
   }
 }
 
+const requestReturn = async (req, res) => {
+  try {
+    const { orderId, itemId, reason, comments } = req.body;
+    const userId = req.session.userId;
+
+    if (!orderId || !itemId || !reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields'
+      });
+    }
+
+    const order = await Order.findOne({ _id: orderId, user_id: userId });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Find the product item in the order
+    const productItem = order.products.find(p => p._id.toString() === itemId);
+    
+    if (!productItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found in order'
+      });
+    }
+
+    // Check if product is eligible for return (must be delivered)
+    if (productItem.status !== 'DELIVERED' && order.status !== 'DELIVERED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only delivered products can be returned'
+      });
+    }
+
+    // Check if return already requested
+    if (productItem.status === 'RETURN_REQUESTED' || productItem.status === 'RETURNED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Return already requested for this product'
+      });
+    }
+
+    // Calculate refund amount
+    const refundAmount = productItem.price * productItem.quantity;
+
+    // Update product status and add return details
+    productItem.status = 'RETURN_REQUESTED';
+    productItem.return_details = {
+      reason,
+      comments: comments || '',
+      requested_at: new Date(),
+      status: 'PENDING',
+      refundAmount
+    };
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Return request submitted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error requesting return:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while requesting the return'
+    });
+  }
+};
+
+const downloadInvoice = async (req, res) => {
+  try {
+    const orderId = req.params.orderId;
+    const userId = req.session.userId;
+
+    const order = await Order.findOne({ _id: orderId, user_id: userId })
+      .populate('user_id')
+      .lean();
+
+    if (!order) {
+      return res.status(404).send('Order not found');
+    }
+
+    const doc = new PDFDocument({ margin: 50 });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=invoice-${order.order_number || orderId}.pdf`
+    );
+
+    doc.pipe(res);
+
+    // ========== HEADER ==========
+    doc.fontSize(20).text('ToughToes', { align: 'center' });
+    doc.fontSize(12).text('Premium Footwear Collection', { align: 'center' });
+    doc.moveDown(1);
+
+    doc.fontSize(14).text('INVOICE', { align: 'center', underline: true });
+    doc.moveDown(1);
+
+    // ========== ORDER INFO ==========
+    doc.fontSize(12);
+    doc.text(`Order Number: ${order.order_number || '-'}`);
+    doc.text(`Order Date: ${new Date(order.createdAt).toLocaleDateString()}`);
+    doc.text(`Payment Method: ${order.payment_method || '-'}`);
+    doc.text(`Payment Status: ${order.payment_status || '-'}`);
+    doc.moveDown(1);
+
+    // ========== CUSTOMER INFO ==========
+    const user = order.user_id || {};
+    doc.fontSize(14).text('Customer Details:', { underline: true });
+    doc.fontSize(11);
+    doc.text(`Name: ${(user.firstName || '') + ' ' + (user.lastName || '')}`);
+    doc.text(`Email: ${user.email || '-'}`);
+    doc.moveDown(1);
+
+    // ========== SHIPPING ADDRESS ==========
+    const addr = order.shipping_address || {};
+    doc.fontSize(14).text('Shipping Address:', { underline: true });
+    doc.fontSize(11);
+    doc.text(addr.name || '-');
+    doc.text(`${addr.house_number || ''}, ${addr.locality || ''}`);
+    doc.text(`${addr.city || ''}, ${addr.state || ''} - ${addr.pincode || ''}`);
+    doc.text(`Phone: ${addr.phone_number || '-'}`);
+    doc.moveDown(1);
+
+    // ========== ORDER ITEMS ==========
+    doc.fontSize(14).text('Order Items:', { underline: true });
+    doc.moveDown(0.5);
+
+    const tableTop = doc.y;
+    doc.fontSize(11).font('Helvetica-Bold');
+    doc.text('Product', 40, tableTop);
+    doc.text('Qty', 300, tableTop);
+    doc.text('Price', 350, tableTop);
+    doc.text('Total', 450, tableTop);
+    doc.moveTo(40, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+
+    doc.font('Helvetica');
+
+    let y = tableTop + 25;
+
+    const addRow = (item) => {
+      if (y > 720) {
+        doc.addPage();
+        y = 50;
+      }
+
+      doc.text(item.name || '-', 40, y, { width: 240 });
+      doc.text(item.quantity?.toString() || '0', 300, y);
+      doc.text(`₹${(item.price || 0).toFixed(2)}`, 350, y);
+      doc.text(`₹${((item.price || 0) * (item.quantity || 0)).toFixed(2)}`, 450, y);
+
+      y += 25;
+    };
+
+    order.products.forEach(addRow);
+
+    doc.moveTo(40, y).lineTo(550, y).stroke();
+    y += 10;
+
+    // ========== TOTALS ==========
+    doc.fontSize(11);
+
+    const totals = [
+      ['Subtotal:', order.subtotal],
+      ['Shipping:', order.shipping_charge],
+      ['Tax:', order.tax],
+    ];
+
+    totals.forEach(([label, value]) => {
+      doc.text(label, 350, y);
+      doc.text(`₹${(value || 0).toFixed(2)}`, 450, y);
+      y += 20;
+    });
+
+    doc.font('Helvetica-Bold').fontSize(13);
+    doc.text('Total:', 350, y);
+    doc.text(`₹${(order.total || 0).toFixed(2)}`, 450, y);
+
+    // FOOTER
+    doc.fontSize(10).font('Helvetica').text(
+      'Thank you for shopping with ToughToes!',
+      50,
+      doc.page.height - 60,
+      { align: 'center' }
+    );
+
+    doc.end();
+  } catch (error) {
+    console.error('Error generating invoice:', error);
+    res.status(500).send('Error generating invoice');
+  }
+};
+
+const cancelOrder = async (req, res) => {
+  try {
+    const { productId, reason } = req.body;
+    const orderId = req.params.orderId;
+    const userId = req.session.userId;
+
+    const order = await Order.findOne({
+      _id: orderId,
+      user_id: userId
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // If order is already fully closed
+    if (['DELIVERED', 'CANCELLED', 'RETURNED'].includes(order.status)) {
+      return res.status(400).json({ success: false, message: "Order cannot be cancelled now." });
+    }
+
+    let refundAmount = 0;
+    let itemsToRefund = [];
+
+    // -----------------------------------------
+    // 1️⃣ CANCEL FULL ORDER
+    // -----------------------------------------
+    if (productId === "full") {
+      order.status = "CANCELLED";
+
+      order.products.forEach(item => {
+        if (item.status !== "CANCELLED") {
+          item.status = "CANCELLED";
+
+          // restore stock
+          itemsToRefund.push({
+            variation: item.variation,
+            quantity: item.quantity
+          });
+
+          // refund amount
+          refundAmount += item.quantity * item.price;
+        }
+      });
+
+    } 
+    // -----------------------------------------
+    // 2️⃣ CANCEL ONE PRODUCT
+    // -----------------------------------------
+    else {
+      const item = order.products.find(p => p._id.toString() === productId);
+
+      if (!item) {
+        return res.status(404).json({ success: false, message: "Product not found in order" });
+      }
+
+      if (item.status === "CANCELLED" || item.status === "RETURNED") {
+        return res.status(400).json({ success: false, message: "This product cannot be cancelled" });
+      }
+
+      // cancel only that item
+      item.status = "CANCELLED";
+
+      // restore stock only for this
+      itemsToRefund.push({
+        variation: item.variation,
+        quantity: item.quantity
+      });
+
+      // refund only that item's amount
+      refundAmount = item.quantity * item.price;
+
+      // If ALL items cancelled → mark order cancelled
+      const allCancelled = order.products.every(p => p.status === "CANCELLED");
+      if (allCancelled) order.status = "CANCELLED";
+    }
+
+    // -----------------------------------------
+    // 3️⃣ RESTORE STOCK (BULK)
+    // -----------------------------------------
+    const stockUpdates = itemsToRefund.map(item => ({
+      updateOne: {
+        filter: { _id: item.variation },
+        update: { $inc: { stock_quantity: item.quantity } }
+      }
+    }));
+
+    if (stockUpdates.length > 0) {
+      await ProductVariation.bulkWrite(stockUpdates);
+    }
+
+    // -----------------------------------------
+    // 4️⃣ REFUND IF PAYMENT WAS ONLINE OR WALLET
+    // -----------------------------------------
+    if (refundAmount > 0 && ['RAZORPAY', 'RAZOR_PAY', 'ONLINE', 'WALLET'].includes(order.payment_method)) {
+      const user = await userModel.findById(userId);
+
+      // Add refund to wallet
+      user.wallet = (user.wallet || 0) + refundAmount;
+      await user.save();
+
+      // Log wallet transaction
+      await WalletTransaction.create({
+        user_id: userId,
+        amount: refundAmount,
+        type: "credit",
+        description: `Refund for cancelled item(s) in order ${order.order_number}`
+      });
+
+      order.refund_amount = (order.refund_amount || 0) + refundAmount;
+      order.refund_status = "PARTIAL_REFUND";
+      if (order.status === "CANCELLED") {
+        order.refund_status = "FULL_REFUND";
+      }
+    }
+
+    // save order
+    order.cancellationReason = reason || "";
+    await order.save();
+
+    return res.json({
+      success: true,
+      message: productId === "full"
+        ? "Order cancelled successfully"
+        : "Product cancelled successfully",
+      refund: refundAmount
+    });
+
+  } catch (err) {
+    console.error("Cancel error:", err);
+    return res.status(500).json({ success: false, message: "Error cancelling order" });
+  }
+};
+
+
 
 module.exports = {
     placeOrder,
@@ -570,5 +905,8 @@ module.exports = {
     getOrderFailure,
     verifyPayment,
     getUserOrders,
-    getOrderDetails
+    getOrderDetails,
+    requestReturn,
+    downloadInvoice,
+    cancelOrder
 }

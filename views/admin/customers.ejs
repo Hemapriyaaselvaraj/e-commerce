@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Customers</title>
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f9f9f9;
+    }
+
+    .main-content {
+      margin-top: 20px;
+    }
+
+    .content-header p {
+      margin: 0 0 5px 0;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .search-container {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px 0;
+      gap: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search-container label {
+      font-size: 0.9rem;
+      margin-right: 4px;
+    }
+
+    .search-container select,
+    .search-container input[type="text"] {
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    .customers-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border: 1px solid #ddd;
+      font-size: 0.9rem;
+    }
+
+    .customers-table th,
+    .customers-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+
+    .customers-table th {
+      background-color: #f2f2f2;
+      font-weight: 600;
+    }
+
+    .customers-table tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .email-text {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      display: inline-block;
+      text-transform: capitalize;
+    }
+
+    .status.active {
+      background: #e6f4ea;
+      color: #1a7f37;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status.blocked {
+      background-color: #ffe6e6;
+      color: #cc0000;
+      border: 1px solid #f5c2c2;
+    }
+
+    button.view,
+    button.block,
+    button.unblock {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 8px;
+      color: #555;
+    }
+
+    button.view:hover,
+    button.block:hover,
+    button.unblock:hover {
+      color: #007bff;
+    }
+
+    .result-count {
+      font-size: 13px;
+      color: #888;
+      margin-top: 8px;
+    }
+
+    .pagination {
+      margin-top: 10px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+
+    .pagination button,
+    .pagination span {
+      padding: 4px 10px;
+      border: 1px solid #ccc;
+      background: white;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .pagination .active {
+      background: #000;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .pagination .disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Bootstrap table helpers override if needed */
+    .table td,
+    .table th {
+      vertical-align: middle;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.35em 0.6em;
+    }
+
+    .form-label {
+      font-size: 0.85rem;
+      margin-bottom: 0.2rem;
+    }
+
+    /* Responsive styles */
+    @media (max-width: 992px) {
+      .search-container {
+        align-items: flex-start;
+      }
+
+      .search-container > div {
+        width: 100%;
+      }
+    }
+
+    /* Stack table rows into cards on small screens */
+    @media (max-width: 768px) {
+      .customers-table thead {
+        display: none;
+      }
+
+      .customers-table,
+      .customers-table tbody,
+      .customers-table tr,
+      .customers-table td {
+        display: block;
+        width: 100%;
+      }
+
+      .customers-table tr {
+        margin-bottom: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        padding: 0.5rem 0.75rem;
+      }
+
+      .customers-table td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+      }
+
+      .customers-table td:last-child {
+        border-bottom: none;
+      }
+
+      .customers-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0.75rem;
+        width: 45%;
+        padding-right: 0.75rem;
+        font-weight: 600;
+        text-align: left;
+        color: #555;
+        font-size: 0.85rem;
+      }
+
+      .search-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-container > div {
+        text-align: left !important;
+      }
+
+      .search-container input[type="text"] {
+        width: 100% !important;
+      }
+
+      button.view,
+      button.block,
+      button.unblock {
+        margin-right: 4px;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .bg-white.py-3.px-4 {
+        padding: 0.75rem 1rem !important;
+      }
+
+      .result-count {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+
+      <%- include('../partials/sidebar') %>
+
+      <div class="col-md-10 p-0">
+        <!-- Top bar -->
+        <div class="bg-white d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
+          <h5 class="mb-0">Customers</h5>
+          <div class="d-flex align-items-center gap-2">
+            <span><%= name %></span>
+            <i class="fa-solid fa-user"></i>
+          </div>
+        </div>
+
+        <div class="p-4">
+          <section class="main-content">
+            <div class="content-header">
+              <h5>Manage your customer accounts and data</h5>
+            </div>
+
+            <!-- Filters + search -->
+            <div class="search-container">
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <label for="status">Status:</label>
+                <select id="status">
+                  <option value="all" <%= currentStatus === 'all' ? 'selected' : '' %>>All</option>
+                  <option value="active" <%= currentStatus === 'active' ? 'selected' : '' %>>Active</option>
+                  <option value="blocked" <%= currentStatus === 'blocked' ? 'selected' : '' %>>Blocked</option>
+                </select>
+
+                <label for="sort">Sort by:</label>
+                <select id="sort">
+                  <option value="nameAsc" <%= currentSort === 'nameAsc' ? 'selected' : '' %>>A to Z (Ascending)</option>
+                  <option value="nameDesc" <%= currentSort === 'nameDesc' ? 'selected' : '' %>>Z to A (Descending)</option>
+                </select>
+
+                 <div style="flex:1; text-align:right;">
+                <input type="text" placeholder="Search customers..." style="width: 250px;">
+              </div>
+            </div>
+
+                <button type="button" class="btn btn-dark ms-2" id="clearFilters">Clear All Filters</button>
+              </div>
+
+             
+
+            <!-- Customers table -->
+            <table class="customers-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Customer ID</th>
+                  <th>Total Orders</th>
+                  <th>Wallet Balance</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% customers.forEach(customer => { %>
+                  <tr data-id="<%= customer._id %>">
+                    <td data-label="Customer">
+                      <strong><%= customer.name %></strong><br>
+                      <span class="email-text"><%= customer.email %></span>
+                    </td>
+                    <td data-label="Customer ID"><%= customer.id %></td>
+                    <td data-label="Total Orders"><%= customer.totalOrders %></td>
+                    <td data-label="Wallet Balance"><%= customer.walletBalance.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+                    <td data-label="Status">
+                      <span class="status <%= customer.status %>">
+                        <%= customer.status.charAt(0).toUpperCase() + customer.status.slice(1) %>
+                      </span>
+                    </td>
+                    <td data-label="Actions">
+                      <% if (customer.status === 'active') { %>
+                        <button class="block" title="Block" data-id="<%= customer._id %>"><i class="fa fa-lock"></i></button>
+                      <% } else { %>
+                        <button class="unblock" title="Unblock" data-id="<%= customer._id %>"><i class="fa fa-unlock"></i></button>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+
+            <div class="result-count">
+              Showing <%= (totalResults === 0 ? 0 : ((currentPage - 1) * 5 + 1)) %> to <%= Math.min(currentPage * 5, totalResults) %> of <%= totalResults %> results
+            </div>
+
+            <div class="pagination">
+              <button <%= currentPage === 1 ? 'class="disabled" disabled' : '' %> onclick="goToPage(<%= currentPage - 1 %>)">Previous</button>
+              <% for(let i = 1; i <= totalPages; i++) { %>
+                <button <%= currentPage === i ? 'class="active" disabled' : '' %> onclick="goToPage(<%= i %>)"><%= i %></button>
+              <% } %>
+              <button <%= currentPage === totalPages || totalPages === 0 ? 'class="disabled" disabled' : '' %> onclick="goToPage(<%= currentPage + 1 %>)">Next</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.view').forEach(button => {
+        button.addEventListener('click', () => {
+        });
+      });
+      document.querySelectorAll('.block').forEach(button => {
+        button.addEventListener('click', () => {
+        });
+      });
+      document.querySelectorAll('.unblock').forEach(button => {
+        button.addEventListener('click', () => {
+        });
+      });
+    });
+
+    document.getElementById('status').addEventListener('change', function() {
+      updateQuery();
+    });
+    document.getElementById('sort').addEventListener('change', function() {
+      updateQuery();
+    });
+    document.querySelector('input[placeholder="Search customers..."]').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') updateQuery();
+    });
+
+    function updateQuery() {
+      const status = document.getElementById('status').value;
+      const sort = document.getElementById('sort').value;
+      const search = document.querySelector('input[placeholder="Search customers..."]').value;
+      const params = new URLSearchParams();
+      if (status !== 'all') params.append('status', status);
+      if (sort) params.append('sort', sort);
+      if (search) params.append('search', search);
+      window.location.search = params.toString();
+    }
+
+    document.querySelectorAll('.block, .unblock').forEach(button => {
+      button.addEventListener('click', function() {
+        const row = button.closest('tr');
+        const customerId = row.querySelector('td:nth-child(3)').textContent.trim();
+        const id = row.getAttribute('data-id') || button.dataset.id;
+        const action = button.classList.contains('block') ? 'block' : 'unblock';
+        if (confirm(`Are you sure you want to ${action} this customer?`)) {
+          fetch(`/admin/customers/${id}/block-unblock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) window.location.reload();
+            else alert('Failed to update status');
+          });
+        }
+      });
+    });
+
+    document.querySelectorAll('.view').forEach(button => {
+      button.addEventListener('click', function() {
+        const row = button.closest('tr');
+        const id = row.getAttribute('data-id') || button.dataset.id;
+        window.open(`/admin/customers/${id}`, '_blank');
+      });
+    });
+
+    document.getElementById('clearFilters').addEventListener('click', function() {
+      window.location.href = '/admin/customers';
+    });
+
+    function goToPage(page) {
+      const params = new URLSearchParams(window.location.search);
+      params.set('page', page);
+      window.location.search = params.toString();
+    }
+  </script>
+</body>
+</html>

@@ -51,7 +51,7 @@ const addressSchema = new Schema({
   }
 });
 
-addressSchema.pre('save', async function(next) {
+addressSchema.pre('save', async function() {
   if (this.isNew) {
     const Address = this.constructor;
     const count = await Address.countDocuments({ user_id: this.user_id });
@@ -59,7 +59,6 @@ addressSchema.pre('save', async function(next) {
       this.isDefault = true;
     }
   }
-  next();
 });
 
 module.exports = mongoose.model('Address', addressSchema);

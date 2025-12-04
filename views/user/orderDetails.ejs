@@ -265,16 +265,30 @@
                         </span>
                       </td>
                       <td>
-                        <% if (item.status === 'RETURN_REQUESTED') { %>
-                          <span class="text-muted">Return Pending Approval</span>
-                        <% } else if (item.status === 'RETURNED') { %>
-                          <span class="text-muted">Returned</span>
-                        <% } else if (order.status === 'DELIVERED' || order.status === 'Delivered') { %>
-                          <button class="btn btn-warning btn-sm" onclick="requestReturn('<%= order._id %>', '<%= item._id %>')">
-                            Request Return
-                          </button>
-                        <% } %>
-                      </td>
+  <% if (item.status === 'CANCELLED') { %>
+    <span class="text-muted">Cancelled</span>
+
+  <% } else if (order.status === 'ORDERED') { %>
+    <button class="btn btn-danger btn-sm"
+            onclick="cancelProduct('<%= order._id %>', '<%= item._id %>')">
+      Cancel Item
+    </button>
+
+  <% } else if (item.status === 'RETURN_REQUESTED') { %>
+    <span class="text-muted">Return Pending</span>
+
+  <% } else if (item.status === 'RETURNED') { %>
+    <span class="text-muted">Returned</span>
+
+  <% } else if (order.status === 'DELIVERED') { %>
+    <button class="btn btn-warning btn-sm"
+            onclick="requestReturn('<%= order._id %>', '<%= item._id %>')">
+      Request Return
+    </button>
+
+  <% } %>
+</td>
+
                     </tr>
                   <% }); %>
                 </tbody>
@@ -450,5 +464,53 @@
       }
     }
   </script>
+  <script>
+async function cancelProduct(orderId, itemId) {
+
+  const { value: reason } = await Swal.fire({
+    title: "Cancel This Product?",
+    input: "textarea",
+    inputPlaceholder: "Enter cancellation reason",
+    inputAttributes: { "aria-label": "Cancellation reason" },
+    showCancelButton: true,
+    confirmButtonText: "Submit",
+    cancelButtonText: "Close",
+    preConfirm: (value) => {
+      if (!value) {
+        Swal.showValidationMessage("Reason is required.");
+      }
+      return value;
+    }
+  });
+
+  if (!reason) return;
+
+  try {
+    const response = await fetch(`/order/cancel/${orderId}/product`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ productId: itemId, reason })
+});
+
+
+    const data = await response.json();
+
+    if (data.success) {
+      await Swal.fire({
+        title: "Item Cancelled",
+        text: "This product has been cancelled",
+        icon: "success"
+      });
+      window.location.reload();
+    } else {
+      Swal.fire("Error", data.message || "Failed to cancel item", "error");
+    }
+
+  } catch (err) {
+    Swal.fire("Error", "Something went wrong while cancelling", "error");
+  }
+}
+</script>
+
   </body>
 </html>

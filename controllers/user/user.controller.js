@@ -216,7 +216,7 @@ const logout = (req, res) => {
       return res.status(500).json({ success: false, message: 'Logout failed' });
     }
     res.clearCookie('connect.sid');
-    return res.redirect("user/login");
+    return res.redirect("/user/login");
   });
 };
 

@@ -12,6 +12,10 @@ const razorpay = new Razorpay({
 
 const getWalletPage = async(req, res) => {
 try{
+  if (!req.session.userId) {
+  return res.redirect('/user/login');
+}
+
 const userId = req.session.userId;
 const user = await User.findById(userId);
 

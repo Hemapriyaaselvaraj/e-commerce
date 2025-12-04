@@ -260,14 +260,16 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    .then(res => {
-      if (res.ok) {
+    .then(res => res.json())
+    .then(result => {
+      if (result.success) {
         location.reload();
       } else {
-        return res.text().then(t => { throw new Error(t); });
+        document.getElementById('addAddressError').textContent = result.message || 'Failed to add address.';
       }
     })
     .catch(err => {
+      console.error('Error adding address:', err);
       document.getElementById('addAddressError').textContent = err.message || 'Failed to add address.';
     });
   };

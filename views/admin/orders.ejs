@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Management</title>
+
+  <!-- Bootstrap & Icons -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Reset and layout */
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background-color: #ffffff;
+
+    }
+
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+      background-color: #ffffff;
+    }
+
+    .main-content {
+      flex-grow: 1;
+      background-color: #ffffff;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    /* Top bar */
+    .top-bar {
+      background-color: #ffffff;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .top-bar h5 {
+      font-weight: 600;
+    }
+
+    /* Filters */
+    .filter-group .form-control,
+    .filter-group .form-select {
+      max-width: 180px;
+      min-width: 150px;
+      padding: 4px 8px;
+      font-size: 16px;
+    }
+
+    .filter-group .btn {
+      padding: 6px 12px;
+      font-size: 16px;
+    }
+
+    .filter-group .btn-primary {
+      background-color: #343a40;
+      border-color: #343a40;
+      color: #fff;
+    }
+
+    .filter-group .btn-primary:hover {
+      background-color: #23272b;
+      border-color: #1d2124;
+    }
+
+    .filter-group {
+      gap: 0.5rem;
+    }
+
+   .status {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: capitalize;
+  padding: 0;         
+  border-radius: 0;    
+  background: none;    
+}
+
+
+    .status.pending {
+      color: #e69f24;
+    
+    }
+
+    .status.ordered {
+      color: #223551;
+      
+    }
+
+    .status.shipped {
+      color: #427e8a;
+    }
+
+    .status.out_for_delivery {
+      color: #784a24;
+      
+    }
+
+    .status.delivered {
+      color: #9be7a5;
+      
+    }
+
+    .status.returned {
+      color: #6c757d;
+    }
+
+    .status.cancelled {
+     color: #c53f3f;
+      
+    }
+
+
+    /* Actions */
+    .order-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .order-actions .action-icon {
+      text-decoration: none;
+      font-size: 16px;
+      transition: transform 0.2s;
+    }
+
+    .order-actions .action-icon:hover {
+      transform: scale(1.2);
+    }
+
+    .order-actions .action-icon i {
+      cursor: pointer;
+    }
+
+    /* Table */
+    .table {
+      margin-bottom: 0;
+      font-size: 16px;
+      background: #fff;
+      border: none;
+    }
+
+    .table thead {
+      background: #fafafa;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table thead th {
+      white-space: nowrap;
+      font-weight: 500;
+      color: #000000;
+      font-size: 16px;
+      padding: 12px 16px;
+      border: none;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .table tbody td {
+      padding: 5px 16px;
+      border: none;
+      vertical-align: middle;
+    }
+
+    .table tbody tr {
+      transition: background-color 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+      background: #f0f7ff;
+      cursor: pointer;
+    }
+
+    .table tbody td:nth-child(2) {
+      font-weight: 600;
+      color: #222;
+    }
+
+    .table input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .text-muted {
+      color: #888 !important;
+    }
+
+    .small {
+      font-size: 12px;
+    }
+
+    .table-responsive {
+      /* border-radius: 8px; */
+      /* background-color: #ffffff; */
+      /* border: 1px solid #e5e7eb; */
+      overflow: hidden;
+    }
+
+    /* Pagination */
+    .pagination {
+      gap: 4px;
+    }
+
+    .pagination .page-item {
+      margin: 0;
+    }
+
+    .pagination .page-link {
+      font-size: 13px;
+      padding: 8px 14px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      color: #333;
+      border-radius: 6px;
+      transition: all 0.2s;
+      margin: 0 2px;
+    }
+
+    .pagination .page-item.active .page-link {
+      background: #222;
+      color: #fff;
+      border-color: #222;
+    }
+
+    .pagination .page-item.disabled .page-link {
+      background: #f5f5f5;
+      color: #999;
+      cursor: not-allowed;
+      border-color: #e5e7eb;
+    }
+
+    .pagination .page-link:hover:not(.disabled) {
+      background: #f5f5f5;
+      border-color: #d0d0d0;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 992px) {
+      .top-bar {
+        padding-inline: 1rem !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        padding: 15px;
+      }
+
+      .filter-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .filter-group .form-control,
+      .filter-group .form-select,
+      .filter-group .btn {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .table thead {
+        font-size: 13px;
+      }
+
+      .table tbody td {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .top-bar h5 {
+        font-size: 16px;
+      }
+
+      .top-bar span {
+        font-size: 14px;
+      }
+
+      .pagination {
+        flex-wrap: wrap;
+      }
+
+      .pagination .page-item {
+        margin-bottom: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid admin-layout">
+    <div class="row flex-nowrap w-100">
+<%- include('../partials/sidebar') %>
+
+  <div class="col-md-10 col-12 p-0">
+    <div class="top-bar d-flex justify-content-between align-items-center py-3 px-4">
+      <h5 class="mb-0">Order Management</h5>
+      <div class="d-flex align-items-center gap-2">
+        <span><%= name %></span>
+        <i class="fa-solid fa-user"></i>
+      </div>
+    </div>
+
+    <div class="p-2 p-md-3">
+      <section class="main-content">
+        <div class="filter-group mb-3 d-flex flex-wrap align-items-center">
+          
+
+          <select id="statusFilter" class="form-select">
+            <option value="">All Status</option>
+            <option value="PENDING" <%= status === 'PENDING' ? 'selected' : '' %>>Pending</option>
+            <option value="ORDERED" <%= status === 'ORDERED' ? 'selected' : '' %>>Ordered</option>
+            <option value="SHIPPED" <%= status === 'SHIPPED' ? 'selected' : '' %>>Shipped</option>
+            <option value="OUT_FOR_DELIVERY" <%= status === 'OUT_FOR_DELIVERY' ? 'selected' : '' %>>Out for Delivery</option>
+            <option value="DELIVERED" <%= status === 'DELIVERED' ? 'selected' : '' %>>Delivered</option>
+            <option value="RETURNED" <%= status === 'RETURNED' ? 'selected' : '' %>>Returned</option>
+            <option value="CANCELLED" <%= status === 'CANCELLED' ? 'selected' : '' %>>Cancelled</option>
+          </select>
+
+          <select id="sortOrder" class="form-select">
+            <option value="desc" <%= sort === 'desc' ? 'selected' : '' %>>Latest First</option>
+            <option value="asc" <%= sort === 'asc' ? 'selected' : '' %>>Oldest First</option>
+          </select>
+
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search orders..."
+            class="form-control"
+            value="<%= search || '' %>"
+          >
+
+          <button class="btn btn-dark" type="button" onclick="applyFilters()">Search</button>
+          <button class="btn btn-outline-secondary" type="button" onclick="clearFilters()">Clear All Filters</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>User</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (orders && orders.length > 0) { %>
+                <% orders.forEach(order => { %>
+                  <tr>
+                    <td><strong><%= order.order_number %></strong></td>
+                    <td>
+                      <div><%= order.user_id ? order.user_id.firstName : 'N/A' %></div>
+                      <div class="text-muted small"><%= order.user_id ? order.user_id.email : 'N/A' %></div>
+                    </td>
+                    <td>
+                      <span class="status <%= order.status.toLowerCase() %>">
+                        <%= order.status %>
+                      </span>
+                    </td>
+                    <td><%= new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) %></td>
+                    <td>₹ <%= order.total.toLocaleString() %></td>
+                    <td class="order-actions">
+                      <a href="/admin/orders/<%= order._id %>" class="action-icon" title="View Order">
+                        <i class="fa fa-eye text-dark"></i>
+                      </a>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr>
+                  <td colspan="7" class="text-center">No orders found.</td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="text-muted small">
+            Showing <%= (totalResults === 0 ? 0 : ((currentPage - 1) * 10 + 1)) %> to <%= Math.min(currentPage * 10, totalResults) %> of <%= totalResults %> results
+          </div>
+        </div>
+
+          <nav class="d-flex justify-content-end">
+            <ul class="pagination mb-0">
+              <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&sort=<%= sort || 'desc' %>">Previous</a>
+              </li>
+              <% for (let i = 1; i <= totalPages; i++) { %>
+                <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                  <a
+                    class="page-link"
+                    href="?page=<%= i %>&search=<%= search || '' %>&status=<%= status || '' %>&sort=<%= sort || 'desc' %>"
+                  >
+                    <%= i %>
+                  </a>
+                </li>
+              <% } %>
+              <li class="page-item <%= currentPage === totalPages || totalPages === 0 ? 'disabled' : '' %>">
+                <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&sort=<%= sort || 'desc' %>">Next</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</div>
+  </div>
+
+  <script>
+    function applyFilters() {
+      const search = document.getElementById('searchInput').value;
+      const status = document.getElementById('statusFilter').value;
+      const sort = document.getElementById('sortOrder').value;
+      const url = `?search=${encodeURIComponent(search)}&status=${status}&sort=${sort}`;
+      window.location.href = url;
+    }
+
+    function clearFilters() {
+      window.location.href = '?';
+    }
+  </script>
+</body>
+</html>
+
+
+
+
