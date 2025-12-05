@@ -170,6 +170,44 @@ body {
     .credit { color: #28a745; }
     .debit { color: #dc3545; }
 
+    /* Pagination styling */
+    .pagination {
+      gap: 4px;
+    }
+
+    .pagination .page-item {
+      margin: 0;
+    }
+
+    .pagination .page-link {
+      font-size: 14px;
+      padding: 8px 14px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      color: #333;
+      border-radius: 6px;
+      transition: all 0.2s;
+      margin: 0 2px;
+    }
+
+    .pagination .page-item.active .page-link {
+      background: #000;
+      color: #fff;
+      border-color: #000;
+    }
+
+    .pagination .page-item.disabled .page-link {
+      background: #f5f5f5;
+      color: #999;
+      cursor: not-allowed;
+      border-color: #e5e7eb;
+    }
+
+    .pagination .page-link:hover:not(.disabled) {
+      background: #f5f5f5;
+      border-color: #d0d0d0;
+    }
+
     @media (max-width: 768px) {
       .container.my-5.d-flex {
         flex-direction: column;
@@ -259,7 +297,7 @@ body {
 <div id="message"></div>
 <div id="walletBalance" style="margin-top: 40px !important;"></div>
 
-      <h4>Transaction History</h4>
+      <h4 class="mt-4 mb-3">Transaction History</h4>
       <% if (transactions && transactions.length > 0) { %>
         <% transactions.forEach(t => { %>
           <div class="txn-item">
@@ -272,11 +310,37 @@ body {
             </div>
           </div>
         <% }); %>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div class="text-muted" style="font-size: 14px;">
+            Showing <%= (totalResults === 0 ? 0 : ((currentPage - 1) * 10 + 1)) %> to <%= Math.min(currentPage * 10, totalResults) %> of <%= totalResults %> transactions
+          </div>
+          
+          <nav>
+            <ul class="pagination mb-0">
+              <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                <a class="page-link" href="?page=<%= currentPage - 1 %>">Previous</a>
+              </li>
+              <% for (let i = 1; i <= totalPages; i++) { %>
+                <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                  <a class="page-link" href="?page=<%= i %>">
+                    <%= i %>
+                  </a>
+                </li>
+              <% } %>
+              <li class="page-item <%= currentPage === totalPages || totalPages === 0 ? 'disabled' : '' %>">
+                <a class="page-link" href="?page=<%= currentPage + 1 %>">Next</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
       <% } else { %>
-        <p>No transactions yet.</p>
+        <p class="text-muted text-center py-4">No transactions yet.</p>
       <% } %>
     </div>
   </div>
+   
 
   <%- include('../partials/footer') %>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

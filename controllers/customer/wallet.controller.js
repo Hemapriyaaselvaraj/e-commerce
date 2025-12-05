@@ -15,17 +15,26 @@ try{
   if (!req.session.userId) {
   return res.redirect('/user/login');
 }
-
+const {page=1} = req.query;
+const ITEMS_PER_PAGE = 10;
 const userId = req.session.userId;
 const user = await User.findById(userId);
 
-const transactions = await WalletTransaction.find({user_id:userId})
+const filter = {user_id: userId};
+const totalTransactions = await WalletTransaction.countDocuments(filter);
+
+const transactions = await WalletTransaction.find(filter)
 .sort({date: -1})
+.skip((page - 1) * ITEMS_PER_PAGE)
+.limit(ITEMS_PER_PAGE)
 .lean();
 
 res.render("user/wallet", {
       user,
-      transactions
+      transactions,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalTransactions / ITEMS_PER_PAGE),
+      totalResults: totalTransactions,
     });
 
   } catch (error) {
