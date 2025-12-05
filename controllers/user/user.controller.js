@@ -54,7 +54,7 @@ const signup = async (req, res) => {
 
         await WalletTransaction.create({
           user_id: user._id,
-          type: "CREDIT",
+          type: "credit",
           amount: 50,
           description: "Referral signup bonus"
         });
@@ -91,7 +91,7 @@ const signup = async (req, res) => {
 
         await WalletTransaction.create({
           user_id: user._id,
-          type: "CREDIT",
+          type: "credit",
           amount: 50,
           description: "Referral signup bonus"
         });

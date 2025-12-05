@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= offer ? "Edit Offer" : "Add Offer" %></title>
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Reset and layout */
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background-color: #ffffff;
+    }
+
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+      background-color: #ffffff;
+    }
+
+    .main-content {
+      flex-grow: 1;
+      background-color: #ffffff;
+      padding: 20px;
+      overflow-y: auto;
+      max-width: 900px;
+    }
+
+    /* Top bar */
+    .top-bar {
+      background-color: #ffffff;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .top-bar h5 {
+      font-weight: 600;
+      margin: 0;
+    }
+
+    /* Form styles */
+    .form-label {
+      font-weight: 600;
+      color: #000;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .form-control {
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .form-control:focus {
+      border-color: #000;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Multi-select checkbox styles */
+    .checkbox-list {
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 250px;
+      overflow-y: auto;
+      background-color: #fff;
+    }
+
+    .checkbox-item {
+      padding: 10px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background-color 0.2s;
+    }
+
+    .checkbox-item:last-child {
+      border-bottom: none;
+    }
+
+    .checkbox-item:hover {
+      background-color: #f8f9fa;
+    }
+
+    .checkbox-item label {
+      cursor: pointer;
+      margin-bottom: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      accent-color: #000;
+    }
+
+    /* Button styles */
+    .btn-dark {
+      background: #000;
+      border: none;
+      padding: 12px 24px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+      border-radius: 6px;
+    }
+
+    .btn-dark:hover {
+      background: #333;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+      border-radius: 6px;
+    }
+
+    .btn-secondary:hover {
+      background: #d1d5db;
+      color: #000;
+    }
+
+    /* Card style for form */
+    .form-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-width: 992px) {
+      .top-bar {
+        padding-inline: 1rem !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        padding: 15px;
+      }
+
+      .form-card {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body></body>
+  <div class="container-fluid admin-layout">
+    <div class="row flex-nowrap w-100">
+
+      <%- include('../partials/sidebar') %>
+
+      <div class="col-md-10 col-12 p-0">
+
+        <div class="top-bar d-flex justify-content-between align-items-center py-3 px-4">
+          <div>
+            <h5><%= offer ? "Edit Offer" : "Add New Offer" %></h5>
+            <p class="text-muted mb-0" style="font-size: 17px;">
+              <%= offer ? "Update offer details and settings" : "Create a new promotional offer" %>
+            </p>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span><%= name %></span>
+            <i class="fa-solid fa-user"></i>
+          </div>
+        </div>
+
+        <div class="p-2 p-md-4">
+          <section class="main-content">
+            <div class="form-card">
+              <form 
+                action="<%= offer ? '/admin/edit-offer/' + offer._id : '/admin/add-offer' %>" 
+                method="POST">
+
+              <!-- Offer Name -->
+              <div class="mb-3">
+                <label class="form-label">Offer Name</label>
+                <input 
+                  type="text" 
+                  name="offerName" 
+                  class="form-control" 
+                  value="<%= offer ? offer.offerName : '' %>" 
+                  required 
+                />
+              </div>
+
+              <!-- Discount -->
+              <div class="mb-3">
+                <label class="form-label">Discount Percentage</label>
+                <input 
+                  type="number" 
+                  name="discountPercentage" 
+                  class="form-control" 
+                  min="1" 
+                  max="90"
+                  value="<%= offer ? offer.discountPercentage : '' %>"
+                  required 
+                />
+              </div>
+
+              <!-- Products -->
+              <div class="mb-3">
+                <label class="form-label">Select Products (Optional)</label>
+                <div class="checkbox-list">
+                  <% if (products.length === 0) { %>
+                    <div class="text-muted text-center py-2">No products available</div>
+                  <% } else { %>
+                    <% products.forEach(p => { %>
+                      <div class="checkbox-item">
+                        <label>
+                          <input 
+                            type="checkbox" 
+                            name="product" 
+                            value="<%= p._id %>"
+                            <%= offer && offer.product.some(prod => prod._id ? prod._id.toString() === p._id.toString() : prod.toString() === p._id.toString()) ? "checked" : "" %>
+                          >
+                          <span><%= p.name %> (SKU: <%= p.product_sku %>)</span>
+                        </label>
+                      </div>
+                    <% }) %>
+                  <% } %>
+                </div>
+              </div>
+
+              <!-- Categories -->
+              <div class="mb-3">
+                <label class="form-label">Select Categories (Optional)</label>
+                <div class="checkbox-list">
+                  <% if (categories.length === 0) { %>
+                    <div class="text-muted text-center py-2">No categories available</div>
+                  <% } else { %>
+                    <% categories.forEach(c => { %>
+                      <div class="checkbox-item">
+                        <label>
+                          <input 
+                            type="checkbox" 
+                            name="category" 
+                            value="<%= c._id %>"
+                            <%= offer && offer.category.some(cat => cat._id.toString() === c._id.toString()) ? "checked" : "" %>
+                          >
+                          <span><%= c.category %></span>
+                        </label>
+                      </div>
+                    <% }) %>
+                  <% } %>
+                </div>
+              </div>
+
+              <!-- Validity -->
+              <div class="row">
+                <div class="col">
+                  <label class="form-label">Valid From</label>
+                  <input 
+                    type="date" 
+                    name="validFrom" 
+                    class="form-control"
+                    value="<%= offer ? offer.validFrom.toISOString().split('T')[0] : '' %>"
+                    required 
+                  />
+                </div>
+
+                <div class="col">
+                  <label class="form-label">Valid To</label>
+                  <input 
+                    type="date" 
+                    name="validTo" 
+                    class="form-control"
+                    value="<%= offer ? offer.validTo.toISOString().split('T')[0] : '' %>"
+                    required 
+                  />
+                </div>
+              </div>
+
+                <div class="d-flex gap-2 mt-4">
+                  <button type="submit" class="btn btn-dark">
+                    <i class="fa fa-<%= offer ? 'save' : 'plus' %> me-1"></i>
+                    <%= offer ? "Update Offer" : "Create Offer" %>
+                  </button>
+                  <a href="/admin/offers" class="btn btn-secondary">
+                    <i class="fa fa-times me-1"></i>
+                    Cancel
+                  </a>
+                </div>
+
+              </form>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <% if (error) { %>
+    <script>
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: '<%= error %>',
+        confirmButtonColor: '#000'
+      });
+    </script>
+  <% } %>
+
+</body>
+</html>

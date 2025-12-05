@@ -4,6 +4,7 @@ const dashboardController = require('../controllers/admin/dashboard.controller')
 const productController = require('../controllers/admin/product.controller')
 const orderController = require('../controllers/admin/order-management.controller')
 const customerController = require('../controllers/admin/customer-management.controller')
+const offerController = require('../controllers/admin/offer-management.controller')
 const upload = require('../utils/imageUploader');
 
 
@@ -43,6 +44,16 @@ router.post('/orders/:id/return/verify', orderController.verifyReturn)
 
 router.get('/customers', customerController.getCustomers)
 router.post('/customers/:id/block-unblock', customerController.blockUnblockCustomer)
+
+router.get("/offers", offerController.getOffersList)
+router.get("/add-offer", offerController.getAddOffer)
+router.post("/add-offer", offerController.postAddOffer)
+
+router.get('/edit-offer/:id', offerController.getEditOffer)
+router.post('/edit-offer/:id', offerController.postEditOffer)
+router.post('/toggle-offer/:id', offerController.toggleOfferStatus)
+router.get('/delete-offer/:id', offerController.deleteOffer)
+router.post('/delete/:id', offerController.deleteOffer)
 
 router.get('/logout', productController.logout);
 
