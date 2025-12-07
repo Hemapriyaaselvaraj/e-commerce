@@ -3,6 +3,7 @@ const router = express.Router();
 const checkoutController = require('../../controllers/customer/checkout.controller');
 
 router.get('/', checkoutController.checkout);
+router.get('/available-coupons', checkoutController.getAvailableCoupons);
 // router.post('/address/add' , checkoutController.addAddress )
 // router.post('/address/edit', checkoutController.editAddress)
 

@@ -138,7 +138,17 @@ const placeOrder = async (req, res) => {
     }
 
     const shipping_charge = subtotal > 1000 ? 0 : 50;
-    const total = subtotal + shipping_charge;
+    
+    // Apply coupon discount if available
+    let couponDiscount = 0;
+    let appliedCouponCode = null;
+    if (req.session.appliedCoupon) {
+      couponDiscount = req.session.appliedCoupon.discount || 0;
+      appliedCouponCode = req.session.appliedCoupon.code;
+      console.log('💰 Coupon Applied:', appliedCouponCode, '| Discount:', couponDiscount);
+    }
+    
+    const total = subtotal + shipping_charge - couponDiscount;
 
     const orderNumber = await generateOrderNumber();
     const estimatedDelivery = new Date();
@@ -166,6 +176,8 @@ const placeOrder = async (req, res) => {
       subtotal,
       tax: 0, // Tax is already included in product prices
       shipping_charge,
+      coupon_discount: couponDiscount,
+      applied_coupon_code: appliedCouponCode,
       shipping_address: shippingAddress,
       payment_method: paymentMethod,
       estimated_delivery_date: estimatedDelivery,
@@ -179,6 +191,24 @@ const placeOrder = async (req, res) => {
     if (paymentMethod === 'COD') {
       await ProductVariation.bulkWrite(stockUpdates);
       await Cart.deleteMany({ user_id: userId });
+      
+      // Update coupon usage
+      if (appliedCouponCode) {
+        const Coupon = require('../../models/couponModel');
+        await Coupon.findOneAndUpdate(
+          { code: appliedCouponCode, 'usedBy.userId': userId },
+          { $inc: { 'usedBy.$.count': 1 } }
+        );
+        
+        // If user hasn't used this coupon before, add them
+        await Coupon.findOneAndUpdate(
+          { code: appliedCouponCode, 'usedBy.userId': { $ne: userId } },
+          { $push: { usedBy: { userId, count: 1 } } }
+        );
+      }
+      
+      // Clear applied coupon from session
+      delete req.session.appliedCoupon;
 
       return res.status(200).json({
         success: true,
@@ -212,6 +242,24 @@ if (paymentMethod === 'WALLET') {
 
   await ProductVariation.bulkWrite(stockUpdates);
   await Cart.deleteMany({ user_id: userId });
+  
+  // Update coupon usage
+  if (appliedCouponCode) {
+    const Coupon = require('../../models/couponModel');
+    await Coupon.findOneAndUpdate(
+      { code: appliedCouponCode, 'usedBy.userId': userId },
+      { $inc: { 'usedBy.$.count': 1 } }
+    );
+    
+    // If user hasn't used this coupon before, add them
+    await Coupon.findOneAndUpdate(
+      { code: appliedCouponCode, 'usedBy.userId': { $ne: userId } },
+      { $push: { usedBy: { userId, count: 1 } } }
+    );
+  }
+  
+  // Clear applied coupon from session
+  delete req.session.appliedCoupon;
 
   return res.status(200).json({
     success: true,
@@ -329,6 +377,8 @@ const getOrderSuccess = async (req, res) => {
       subtotal: order.subtotal,
       shipping: order.shipping_charge,
       tax: order.tax,
+      couponDiscount: order.coupon_discount || 0,
+      appliedCouponCode: order.applied_coupon_code || null,
       total: order.total,
       shippingAddress: order.shipping_address,
       paymentDetails: {
@@ -497,6 +547,26 @@ const verifyPayment = async (req, res) => {
 
     if (stockUpdates.length > 0) {
       await ProductVariation.bulkWrite(stockUpdates);
+    }
+    
+    // Update coupon usage
+    if (order.applied_coupon_code) {
+      const Coupon = require('../../models/couponModel');
+      await Coupon.findOneAndUpdate(
+        { code: order.applied_coupon_code, 'usedBy.userId': userId },
+        { $inc: { 'usedBy.$.count': 1 } }
+      );
+      
+      // If user hasn't used this coupon before, add them
+      await Coupon.findOneAndUpdate(
+        { code: order.applied_coupon_code, 'usedBy.userId': { $ne: userId } },
+        { $push: { usedBy: { userId, count: 1 } } }
+      );
+    }
+    
+    // Clear applied coupon from session
+    if (req.session.appliedCoupon) {
+      delete req.session.appliedCoupon;
     }
 
     console.log('✅ Payment verified successfully');

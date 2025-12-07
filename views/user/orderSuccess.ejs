@@ -361,6 +361,22 @@
                     <span>Shipping</span>
                     <span>₹<%= order.shipping.toFixed(2) %></span>
                 </div>
+                
+                <% if (order.couponDiscount && order.couponDiscount > 0) { %>
+                <div style="margin: 1rem 0; padding: 1rem; background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="color: #16a34a; font-weight: 600;">
+                      <i class="fas fa-tag" style="margin-right: 0.5rem;"></i>Coupon Applied
+                    </span>
+                    <span style="font-family: 'Courier New', monospace; font-weight: 700; color: #16a34a;"><%= order.appliedCouponCode %></span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #15803d;">Discount</span>
+                    <span style="color: #16a34a; font-weight: 700; font-size: 1.1rem;">-₹<%= order.couponDiscount.toFixed(2) %></span>
+                  </div>
+                </div>
+                <% } %>
+                
                 <div class="summary-row total">
                     <span>Total</span>
                     <span>₹<%= order.total.toFixed(2) %></span>

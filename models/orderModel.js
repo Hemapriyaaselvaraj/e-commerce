@@ -80,6 +80,8 @@ const orderSchema = new Schema({
   subtotal: { type: Number, required: true },
   tax: { type: Number, required: true },
   shipping_charge: { type: Number, required: true },
+  coupon_discount: { type: Number, default: 0 },
+  applied_coupon_code: { type: String },
   total: { type: Number, required: true },
 
   // DATES

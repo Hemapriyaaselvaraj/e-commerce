@@ -596,15 +596,38 @@
         <p style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">* All prices include applicable taxes</p>
 
         <div class="coupon-box">
-          <input type="text" id="couponInput" placeholder="Enter coupon">
+          <input type="text" id="couponInput" placeholder="Enter coupon code" style="text-transform: uppercase;">
           <button onclick="applyCoupon()">Apply</button>
           <button onclick="removeCoupon()">Remove</button>
-          <p id="couponMessage" class="text-danger mt-2"></p>
+        </div>
+        <div style="text-align: center; margin-top: 0.5rem;">
+          <button onclick="showAvailableCoupons()" style="background: none; border: none; color: #0f172a; text-decoration: underline; cursor: pointer; font-size: 0.9rem;">
+            View Available Coupons
+          </button>
+        </div>
+        <p id="couponMessage" class="mt-2" style="font-size: 0.9rem;"></p>
+
+        <!-- Coupon Discount Section -->
+        <div id="couponDiscountSection" style="display: none; margin-top: 1rem; padding: 1rem; background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="color: #16a34a; font-weight: 600;">
+              <i class="fas fa-tag" style="margin-right: 0.5rem;"></i>Coupon Applied
+            </span>
+            <span id="appliedCouponCode" style="font-family: 'Courier New', monospace; font-weight: 700; color: #16a34a;"></span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #15803d;">Discount</span>
+            <span id="discountValue" style="color: #16a34a; font-weight: 700; font-size: 1.1rem;">-₹0</span>
+          </div>
         </div>
 
-        <p>Coupon Discount: <span id="discountValue">₹0</span></p>
-        <p><b>Grand Total: <span id="grandTotal">₹<%= total %></span></b></p>
-
+        <!-- Grand Total -->
+        <div style="margin-top: 1rem; padding: 1rem; background-color: #f8f9fa; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 1.2rem; font-weight: 700; color: #0f172a;">Grand Total</span>
+            <span id="grandTotal" style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">₹<%= total %></span>
+          </div>
+        </div>
 
         <button id="placeOrder">Place Order</button>
         <p class="secure-note">Secure checkout powered by SSL encryption</p>
@@ -916,10 +939,90 @@
      
     </script>
     <script>
-async function applyCoupon() {
-  const code = document.getElementById("couponInput").value;
+async function showAvailableCoupons() {
+  try {
+    const res = await fetch("/checkout/available-coupons");
+    const data = await res.json();
+    
+    if (data.success && data.coupons.length > 0) {
+      let couponsHTML = '<div style="max-height: 400px; overflow-y: auto;">';
+      data.coupons.forEach(coupon => {
+        const discountText = coupon.discountType === 'PERCENTAGE' 
+          ? `${coupon.discountValue}% OFF` 
+          : `₹${coupon.discountValue} OFF`;
+        
+        const isDisabled = coupon.isUsed;
+        const opacity = isDisabled ? '0.5' : '1';
+        const cursor = isDisabled ? 'not-allowed' : 'pointer';
+        const clickHandler = isDisabled ? '' : `onclick="applyCouponCode('${coupon.code}')"`;
+        const hoverHandlers = isDisabled ? '' : `onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.borderColor='#0f172a';" onmouseout="this.style.backgroundColor='white'; this.style.borderColor='#e5e7eb';"`;
+        
+        couponsHTML += `
+          <div style="border: 1px solid ${isDisabled ? '#e5e7eb' : '#e5e7eb'}; border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: ${cursor}; transition: all 0.3s; opacity: ${opacity}; position: relative;" 
+               ${clickHandler}
+               ${hoverHandlers}>
+            ${isDisabled ? '<div style="position: absolute; top: 8px; right: 8px; background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">USED</div>' : ''}
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-family: 'Courier New', monospace; font-weight: 700; font-size: 1.1rem; color: ${isDisabled ? '#9ca3af' : '#0f172a'};">${coupon.code}</div>
+                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 4px;">${coupon.description || 'Special discount'}</div>
+                ${isDisabled ? `<div style="font-size: 0.8rem; color: #dc3545; margin-top: 4px;">You've used this coupon ${coupon.timesUsed}/${coupon.usageLimit} times</div>` : ''}
+              </div>
+              <div style="background: ${isDisabled ? '#9ca3af' : '#0f172a'}; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.9rem;">
+                ${discountText}
+              </div>
+            </div>
+            ${coupon.minimumPurchase > 0 ? `<div style="font-size: 0.85rem; color: #6b7280; margin-top: 8px;">Min purchase: ₹${coupon.minimumPurchase}</div>` : ''}
+          </div>
+        `;
+      });
+      couponsHTML += '</div>';
+      
+      Swal.fire({
+        title: 'Available Coupons',
+        html: couponsHTML,
+        width: '600px',
+        showCloseButton: true,
+        showConfirmButton: false,
+        customClass: {
+          container: 'coupon-modal'
+        }
+      });
+    } else {
+      Swal.fire({
+        icon: 'info',
+        title: 'No Coupons Available',
+        text: 'There are no active coupons at the moment.',
+        confirmButtonColor: '#0f172a'
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching coupons:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to load coupons. Please try again.',
+      confirmButtonColor: '#0f172a'
+    });
+  }
+}
 
-  const res = await fetch("/orders/apply-coupon", {
+function applyCouponCode(code) {
+  document.getElementById("couponInput").value = code;
+  Swal.close();
+  applyCoupon();
+}
+
+async function applyCoupon() {
+  const code = document.getElementById("couponInput").value.trim().toUpperCase();
+  
+  if (!code) {
+    document.getElementById("couponMessage").innerText = "Please enter a coupon code";
+    document.getElementById("couponMessage").style.color = "#dc3545";
+    return;
+  }
+
+  const res = await fetch("/order/apply-coupon", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ couponCode: code })
@@ -928,17 +1031,25 @@ async function applyCoupon() {
   const data = await res.json();
 
   document.getElementById("couponMessage").innerText = data.message;
+  document.getElementById("couponMessage").style.color = data.success ? "#198754" : "#dc3545";
 
   if (data.success) {
-    document.getElementById("discountValue").innerText = "₹" + data.discount;
+    // Show coupon discount section
+    document.getElementById("couponDiscountSection").style.display = "block";
+    document.getElementById("appliedCouponCode").innerText = code;
+    document.getElementById("discountValue").innerText = "-₹" + data.discount;
     document.getElementById("grandTotal").innerText = "₹" + data.grandTotal;
+    document.getElementById("couponInput").value = code;
+  } else {
+    // Hide coupon discount section on error
+    document.getElementById("couponDiscountSection").style.display = "none";
   }
 }
 
 async function removeCoupon() {
   const code = document.getElementById("couponInput").value;
 
-  const res = await fetch("/orders/remove-coupon", {
+  const res = await fetch("/order/remove-coupon", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ couponCode: code })
@@ -946,9 +1057,13 @@ async function removeCoupon() {
 
   const data = await res.json();
   document.getElementById("couponMessage").innerText = data.message;
+  document.getElementById("couponMessage").style.color = data.success ? "#198754" : "#dc3545";
 
   if (data.success) {
-    // Refresh cart totals
+    // Hide coupon discount section
+    document.getElementById("couponDiscountSection").style.display = "none";
+    document.getElementById("couponInput").value = "";
+    // Refresh to update totals
     location.reload();
   }
 }

@@ -190,7 +190,45 @@ const checkout = async (req, res) => {
 // };
 
 
+const getAvailableCoupons = async (req, res) => {
+  try {
+    const Coupon = require('../../models/couponModel');
+    const userId = req.session.userId;
+    const now = new Date();
+    
+    const coupons = await Coupon.find({
+      validFrom: { $lte: now },
+      validTo: { $gte: now }
+    }).select('code description discountType discountValue minimumPurchase maxDiscount usageLimitPerUser usedBy').lean();
+    
+    // Check usage for each coupon
+    const couponsWithUsage = coupons.map(coupon => {
+      const userUsage = coupon.usedBy?.find(u => u.userId.toString() === userId?.toString());
+      const timesUsed = userUsage ? userUsage.count : 0;
+      const isUsed = timesUsed >= coupon.usageLimitPerUser;
+      
+      return {
+        code: coupon.code,
+        description: coupon.description,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        minimumPurchase: coupon.minimumPurchase,
+        maxDiscount: coupon.maxDiscount,
+        isUsed,
+        timesUsed,
+        usageLimit: coupon.usageLimitPerUser
+      };
+    });
+    
+    res.json({ success: true, coupons: couponsWithUsage });
+  } catch (error) {
+    console.error('Error fetching available coupons:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch coupons' });
+  }
+};
+
 module.exports = {
   checkout,
+  getAvailableCoupons
 //   addAddress
 };
