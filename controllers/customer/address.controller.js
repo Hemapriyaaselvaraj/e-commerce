@@ -33,7 +33,6 @@ const postAddAddress = async (req, res) => {
 
     // Validate required fields
     if (!name || !house_number || !locality || !city || !state || !pincode || !phone_number) {
-      console.log('❌ Missing required fields');
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 

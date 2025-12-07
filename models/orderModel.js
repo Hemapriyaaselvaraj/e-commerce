@@ -24,7 +24,7 @@ const orderSchema = new Schema({
       },
       name: String,
       quantity: Number,
-      price: Number, // Discounted price (already includes tax)
+      price: Number, 
       original_price: Number,
       discount_percentage: Number,
       color: String,

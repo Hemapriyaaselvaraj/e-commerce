@@ -416,7 +416,6 @@ const getOrderSuccess = async (req, res) => {
 const getOrderFailure = async (req, res) => {
   try {
     const orderId = req.params.id;
-    console.log('🔹 getOrderFailure called with orderId:', orderId);
     const userId = req.session.userId;
 
     
@@ -583,7 +582,6 @@ const verifyPayment = async (req, res) => {
       delete req.session.appliedCoupon;
     }
 
-    console.log('✅ Payment verified successfully');
     return res.status(200).json({
       success: true,
       message: 'Payment verified successfully',

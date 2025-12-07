@@ -182,8 +182,6 @@
         otpInput.disabled = false;
         emailOtpForm.querySelector('button[type="submit"]').disabled = false;
         if (data.success) {
-          console.log("Success email change")
-
           emailOtpModal.hide();
           originalEmail = pendingNewEmail;
           emailInput.value = pendingNewEmail;

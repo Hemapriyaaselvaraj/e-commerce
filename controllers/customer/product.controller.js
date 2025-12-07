@@ -300,7 +300,6 @@ const productDetail = async (req, res) => {
     });
 
     product.offerDiscount = maxOfferDiscount;
-    console.log('Product:', product.name, 'Category:', product.product_category, 'Offer:', maxOfferDiscount);
 
     const variations = await ProductVariation.find({ product_id: productId }).lean();
 

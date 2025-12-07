@@ -690,11 +690,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  console.log('🔹 SCRIPT STARTED');
-  console.log('🔹 SweetAlert loaded:', typeof Swal !== 'undefined');
-
   document.addEventListener("DOMContentLoaded", () => {
-    console.log('🔹 DOM Content Loaded');
     const addressModal = document.getElementById("addressModal");
       document.getElementById("openAddAddressModal").onclick = () => {
         document.getElementById("addressModalTitle").textContent =
@@ -747,7 +743,6 @@
 
       // Place Order Button
       const placeOrderButton = document.getElementById("placeOrder");
-      console.log('🔹 Place Order button element:', placeOrderButton);
       
       if (!placeOrderButton) {
         console.error('❌ Place Order button not found!');
@@ -757,10 +752,7 @@
       let isProcessing = false;
 
       placeOrderButton.addEventListener("click", async () => {
-        console.log('🔹 Place Order button clicked!'); // DEBUG
-        
         if (isProcessing) {
-          console.log('🔹 Already processing, returning...'); // DEBUG
           return;
         }
         
@@ -770,9 +762,6 @@
         const addressId = document.querySelector(
           'input[name="selectedAddress"]:checked'
         )?.value;
-        
-        console.log('🔹 Payment method:', paymentMethod); // DEBUG
-        console.log('🔹 Address ID:', addressId); // DEBUG
         
         if (!addressId) {
           Swal.fire({
@@ -787,7 +776,6 @@
           isProcessing = true;
           placeOrderButton.disabled = true;
           placeOrderButton.textContent = "Processing...";
-          console.log('🔹 Sending request to /order/place-order'); // DEBUG
 
 
           const res = await fetch("/order/place-order", {
@@ -796,14 +784,11 @@
             credentials: "include",
             body: JSON.stringify({ paymentMethod, addressId }),
           });
-          console.log('🔹 Response status:', res.status); // DEBUG
-          console.log('🔹 Response headers:', res.headers.get('content-type')); // DEBUG
 
           let data;
           const contentType = res.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             data = await res.json();
-            console.log('🔹 Full response:', data); // DEBUG
           } else {
             const text = await res.text();
             console.error('❌ Non-JSON response:', text.substring(0, 200));
@@ -824,10 +809,7 @@
               return;
           }
 
-          console.log('🔹 Order success, payment method:', paymentMethod); // DEBUG
-
           if (paymentMethod === "COD" || paymentMethod === "WALLET") {
-            console.log('🔹 Redirecting to success page:', data.orderId); // DEBUG
             window.location.href = `/order/orderSuccess/${data.orderId}`;
             return;
           }
@@ -915,15 +897,12 @@
       
       document.querySelectorAll('.address-card').forEach(card => {
         card.addEventListener('click', (e) => {
-          console.log('🔹 Address card clicked'); // DEBUG
           // Don't trigger if clicking the edit button
           if (e.target.closest('.edit-address')) {
-            console.log('🔹 Edit button clicked, ignoring'); // DEBUG
             return;
           }
           const radio = card.querySelector('input[name="selectedAddress"]');
           if (radio) {
-            console.log('🔹 Setting radio to checked:', radio.value); // DEBUG
             radio.checked = true;
             // Trigger change event manually
             radio.dispatchEvent(new Event('change'));
