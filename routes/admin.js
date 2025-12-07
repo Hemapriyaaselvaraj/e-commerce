@@ -5,6 +5,7 @@ const productController = require('../controllers/admin/product.controller')
 const orderController = require('../controllers/admin/order-management.controller')
 const customerController = require('../controllers/admin/customer-management.controller')
 const offerController = require('../controllers/admin/offer-management.controller')
+const couponController = require('../controllers/admin/coupon.management.controller')
 const upload = require('../utils/imageUploader');
 
 
@@ -54,6 +55,13 @@ router.post('/edit-offer/:id', offerController.postEditOffer)
 router.post('/toggle-offer/:id', offerController.toggleOfferStatus)
 router.get('/delete-offer/:id', offerController.deleteOffer)
 router.post('/delete/:id', offerController.deleteOffer)
+
+router.get('/coupons', couponController.getCoupons)
+router.get('/add-coupon', couponController.getAddCoupon)
+router.post('/add-coupon', couponController.postAddCoupon)
+router.get('/edit-coupon/:id', couponController.getEditCoupon)
+router.post('/edit-coupon/:id', couponController.postEditCoupon)
+router.post('/delete-coupon/:id', couponController.deleteCoupon)
 
 router.get('/logout', productController.logout);
 
