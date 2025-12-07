@@ -7,6 +7,7 @@ const orderController = require('../controllers/admin/order-management.controlle
 const customerController = require('../controllers/admin/customer-management.controller')
 const offerController = require('../controllers/admin/offer-management.controller')
 const couponController = require('../controllers/admin/coupon.management.controller')
+const reportController = require('../controllers/admin/report.controller')
 const upload = require('../utils/imageUploader');
 
 router.use(isAdminAccessible);
@@ -64,6 +65,13 @@ router.post('/add-coupon', couponController.postAddCoupon)
 router.get('/edit-coupon/:id', couponController.getEditCoupon)
 router.post('/edit-coupon/:id', couponController.postEditCoupon)
 router.post('/delete-coupon/:id', couponController.deleteCoupon)
+
+router.get('/sales-report', reportController.getSalesReportPage)
+router.get('/sales-report/data',reportController.getSalesReportData);
+
+router.get('/sales-report/download/pdf', reportController.downloadPDF);
+router.get('/sales-report/download/excel', reportController.downloadExcel);
+
 
 router.get('/logout', productController.logout);
 

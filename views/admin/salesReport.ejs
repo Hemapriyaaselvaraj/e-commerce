@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sales Report - Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 20px;
+      background-color: #fff;
+      overflow-x: auto;
+    }
+
+    h2 {
+      font-weight: 600;
+      color: #343a40;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-box {
+      background: #f8f9fa;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #dee2e6;
+      margin-bottom: 2rem;
+    }
+
+    .filter-box .form-label {
+      font-weight: 500;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .summary-card {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .summary-card h6 {
+      color: #6c757d;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .summary-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #343a40;
+    }
+
+    .summary-card .icon {
+      font-size: 2.5rem;
+      color: #343a40;
+      opacity: 0.2;
+      position: absolute;
+      right: 1.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .summary-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .table {
+      background-color: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table th {
+      background-color: #343a40;
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      padding: 1rem;
+    }
+
+    .table td {
+      vertical-align: middle;
+      padding: 1rem;
+      border-color: #dee2e6;
+    }
+
+    .table tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .btn-generate {
+      background-color: #343a40;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: background-color 0.3s;
+    }
+
+    .btn-generate:hover {
+      background-color: #23272b;
+    }
+
+    .btn-download {
+      background-color: #fff;
+      color: #343a40;
+      border: 1px solid #343a40;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.3s;
+    }
+
+    .btn-download:hover {
+      background-color: #343a40;
+      color: #fff;
+    }
+
+    @media (max-width: 992px) {
+      .main-content {
+        padding: 15px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .admin-layout {
+        flex-direction: column;
+      }
+      
+      .summary-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-layout">
+    <%- include('../partials/sidebar') %>
+
+    <div class="main-content">
+      <%- include('../partials/adminNavbar', { pageTitle: 'Sales Report'}) %>
+
+      <div class="container py-3">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2>
+            <i class="fas fa-chart-line me-2"></i>Sales Report
+          </h2>
+          <div id="downloadBtns" style="display: none;">
+            <button onclick="downloadExcel()" class="btn-download me-2">
+              <i class="fas fa-file-excel me-2"></i>Download Excel
+            </button>
+            <button onclick="downloadPDF()" class="btn-download">
+              <i class="fas fa-file-pdf me-2"></i>Download PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- FILTER SECTION -->
+        <div class="filter-box">
+          <form id="filterForm">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Filter Type</label>
+                <select class="form-select" id="filterType" name="filterType">
+                  <option value="daily">Today</option>
+                  <option value="weekly">This Week</option>
+                  <option value="monthly">This Month</option>
+                  <option value="yearly">This Year</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+              </div>
+
+              <div class="col-md-3 custom-range" style="display: none;">
+                <label class="form-label">From Date</label>
+                <input type="date" class="form-control" id="fromDate" name="fromDate">
+              </div>
+
+              <div class="col-md-3 custom-range" style="display: none;">
+                <label class="form-label">To Date</label>
+                <input type="date" class="form-control" id="toDate" name="toDate">
+              </div>
+
+              <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn-generate w-100">
+                  <i class="fas fa-sync-alt me-2"></i>Generate Report
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- SUMMARY CARDS -->
+        <div id="summarySection" style="display: none;">
+          <div class="summary-cards">
+            <div class="summary-card">
+              <h6>Total Sales</h6>
+              <div class="value" id="totalSales">₹0</div>
+              <i class="fas fa-rupee-sign icon"></i>
+            </div>
+
+            <div class="summary-card">
+              <h6>Total Orders</h6>
+              <div class="value" id="totalOrders">0</div>
+              <i class="fas fa-shopping-cart icon"></i>
+            </div>
+
+            <div class="summary-card">
+              <h6>Total Discount</h6>
+              <div class="value" id="totalDiscount">₹0</div>
+              <i class="fas fa-tags icon"></i>
+            </div>
+
+            <div class="summary-card">
+              <h6>Avg Order Value</h6>
+              <div class="value" id="avgOrderValue">₹0</div>
+              <i class="fas fa-chart-bar icon"></i>
+            </div>
+          </div>
+
+          <!-- ORDERS TABLE -->
+          <div class="mt-4">
+            <h5 class="mb-3">Order Details</h5>
+            <div class="table-responsive">
+              <table class="table table-bordered" id="ordersTable">
+                <thead>
+                  <tr>
+                    <th>Order #</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Subtotal</th>
+                    <th>Discount</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div id="emptyState" class="text-center py-5">
+          <i class="fas fa-chart-line" style="font-size: 4rem; color: #dee2e6;"></i>
+          <p class="text-muted mt-3">Select a filter and generate report to view sales data</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Show/hide custom date range
+    document.getElementById('filterType').addEventListener('change', function() {
+      const customRangeFields = document.querySelectorAll('.custom-range');
+      if (this.value === 'custom') {
+        customRangeFields.forEach(field => field.style.display = 'block');
+      } else {
+        customRangeFields.forEach(field => field.style.display = 'none');
+      }
+    });
+
+    // Generate report
+    document.getElementById('filterForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const filterType = document.getElementById('filterType').value;
+      const fromDate = document.getElementById('fromDate').value;
+      const toDate = document.getElementById('toDate').value;
+      
+      let url = `/admin/sales-report/data?filterType=${filterType}`;
+      if (filterType === 'custom' && fromDate && toDate) {
+        url += `&startDate=${fromDate}&endDate=${toDate}`;
+      }
+      
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+          displayReport(data);
+        } else {
+          alert(data.message || 'Failed to generate report');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to generate report');
+      }
+    });
+
+    function displayReport(data) {
+      // Show summary section
+      document.getElementById('summarySection').style.display = 'block';
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('downloadBtns').style.display = 'block';
+      
+      // Calculate average order value
+      const avgOrderValue = data.summary.totalSalesCount > 0 
+        ? Math.round(data.summary.totalAmount / data.summary.totalSalesCount) 
+        : 0;
+      
+      // Update summary cards
+      document.getElementById('totalSales').textContent = `₹${data.summary.totalAmount.toLocaleString()}`;
+      document.getElementById('totalOrders').textContent = data.summary.totalSalesCount;
+      document.getElementById('totalDiscount').textContent = `₹${(data.summary.totalDiscount + data.summary.totalCouponDeduction).toLocaleString()}`;
+      document.getElementById('avgOrderValue').textContent = `₹${avgOrderValue.toLocaleString()}`;
+      
+      // Populate orders table
+      const tbody = document.getElementById('ordersTableBody');
+      tbody.innerHTML = '';
+      
+      if (data.orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No orders found for this period</td></tr>';
+      } else {
+        data.orders.forEach(order => {
+          const customerName = order.user_id ? order.user_id.firstName : 'Guest';
+          const itemCount = order.products ? order.products.length : 0;
+          
+          // Calculate product discount
+          let productDiscount = 0;
+          if (order.products && order.products.length > 0) {
+            order.products.forEach(product => {
+              if (product.original_price && product.price) {
+                productDiscount += (product.original_price - product.price) * product.quantity;
+              }
+            });
+          }
+          
+          const couponDiscount = order.coupon_discount || 0;
+          const totalDiscount = productDiscount + couponDiscount;
+          const subtotal = order.subtotal || 0;
+          
+          const row = `
+            <tr>
+              <td>${order.order_number}</td>
+              <td>${new Date(order.ordered_at).toLocaleDateString()}</td>
+              <td>${customerName}</td>
+              <td>${itemCount}</td>
+              <td>₹${subtotal.toLocaleString()}</td>
+              <td>₹${totalDiscount.toLocaleString()}</td>
+              <td>₹${order.total.toLocaleString()}</td>
+              <td><span class="badge bg-success">${order.status}</span></td>
+            </tr>
+          `;
+          tbody.innerHTML += row;
+        });
+      }
+    }
+
+    function downloadExcel() {
+      const filterType = document.getElementById('filterType').value;
+      const fromDate = document.getElementById('fromDate').value;
+      const toDate = document.getElementById('toDate').value;
+      
+      let url = `/admin/sales-report/download/excel?filterType=${filterType}`;
+      if (filterType === 'custom' && fromDate && toDate) {
+        url += `&startDate=${fromDate}&endDate=${toDate}`;
+      }
+      
+      window.location.href = url;
+    }
+
+    function downloadPDF() {
+      const filterType = document.getElementById('filterType').value;
+      const fromDate = document.getElementById('fromDate').value;
+      const toDate = document.getElementById('toDate').value;
+      
+      let url = `/admin/sales-report/download/pdf?filterType=${filterType}`;
+      if (filterType === 'custom' && fromDate && toDate) {
+        url += `&startDate=${fromDate}&endDate=${toDate}`;
+      }
+      
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>
