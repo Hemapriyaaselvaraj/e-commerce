@@ -250,11 +250,23 @@
       <div class="product-info">
         <h1><%= product.name %></h1>
         <p class="category"><%= product.product_category %> | <%= product.product_type %></p>
-        <p class="price">₹ <%= (product.price * (1 - (product.discount_percentage || 0) / 100)).toLocaleString() %></p>
-        <% if (product.discount_percentage && product.discount_percentage > 0) { %>
-          <span class="product-original-price">₹ <%= product.price.toLocaleString() %></span>
-          <span class="product-discount">(<%= Math.round(product.discount_percentage) %>% OFF)</span>
+        
+        <% if (product.offerDiscount && product.offerDiscount > 0) { %>
+          <!-- Show discounted price with strikethrough original -->
+          <p class="price">
+            ₹ <%= Math.round(product.price * (1 - product.offerDiscount / 100)).toLocaleString() %>
+            <span style="text-decoration: line-through; color: #888; font-size: 20px; margin-left: 10px;">
+              ₹ <%= product.price.toLocaleString() %>
+            </span>
+            <span style="color: #ff6b35; font-weight: 700; font-size: 21px; margin-left: 10px;">
+              (<%= Math.round(product.offerDiscount) %>% OFF)
+            </span>
+          </p>
+        <% } else { %>
+          <!-- Show original price only -->
+          <p class="price">₹ <%= product.price.toLocaleString() %></p>
         <% } %>
+        
         <div class="size">
           <p>Size</p>
           <div class="sizes">
@@ -345,13 +357,7 @@
                   <div class="product-title"><%= product.name %></div>
                   <div class="product-meta"><%= product.product_type %></div>
                   <div class="product-price-row">
-                    <% if (product.discount_percentage && product.discount_percentage > 0) { %>
-                      <span class="product-price">₹ <%= (product.price * (1 - product.discount_percentage / 100)).toLocaleString() %></span>
-                      <span class="product-original-price">₹ <%= product.price.toLocaleString() %></span>
-                      <span class="product-discount">(<%= Math.round(product.discount_percentage) %>% OFF)</span>
-                    <% } else { %>
-                      <span class="product-price">₹ <%= product.price.toLocaleString() %></span>
-                    <% } %>
+                    <span class="product-price">₹ <%= product.price.toLocaleString() %></span>
                   </div>
                 </div>
               </div>

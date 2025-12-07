@@ -309,12 +309,11 @@
                       <td class="text-end">₹<%= order.shipping_charge %></td>
                     </tr>
                     <tr>
-                      <td><strong>Tax</strong></td>
-                      <td class="text-end">₹<%= order.tax %></td>
-                    </tr>
-                    <tr>
                       <td><strong>Total</strong></td>
                       <td class="text-end"><strong>₹<%= order.total %></strong></td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" style="font-size: 0.85rem; color: #666; padding-top: 0.5rem;">* All prices include applicable taxes</td>
                     </tr>
                   </tbody>
                 </table>
@@ -351,7 +350,8 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ productId: 'full' })
         });
         
         const data = await response.json();
@@ -498,7 +498,7 @@ async function cancelProduct(orderId, itemId) {
     if (data.success) {
       await Swal.fire({
         title: "Item Cancelled",
-        text: "This product has been cancelled",
+        text: "This product has been cancelled and amount is added to the wallet",
         icon: "success"
       });
       window.location.reload();

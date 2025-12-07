@@ -1,6 +1,7 @@
 const Cart = require('../../models/cartModel');
 const ProductVariation = require('../../models/productVariationModel');
 const User = require('../../models/userModel');
+const Offer = require('../../models/offerModel');
 
 const getCartPage = async (req, res) => {
   try {
@@ -14,16 +15,61 @@ const getCartPage = async (req, res) => {
         populate: { path: "product_id" }  
       });
 
+    // Get all active offers
+    const now = new Date();
+    const activeOffers = await Offer.find({
+      isActive: true,
+      validFrom: { $lte: now },
+      validTo: { $gte: now }
+    })
+    .populate('category', 'category')
+    .lean();
+
     const items = cartItems.map(cart => {
 
       const variation = cart.product_variation_id;   
       const product = variation?.product_id;         
 
       const originalPrice = product?.price || 0;
-      const discount = product?.discount_percentage || 0;
 
-      const finalPrice = discount
-        ? originalPrice * (1 - discount / 100)
+      // Calculate maximum offer discount for this product
+      let maxOfferDiscount = 0;
+
+      if (product) {
+        // Check product-specific offers
+        const productOffers = activeOffers.filter(offer => 
+          offer.product.some(prodId => prodId.toString() === product._id.toString())
+        );
+        productOffers.forEach(offer => {
+          if (offer.discountPercentage > maxOfferDiscount) {
+            maxOfferDiscount = offer.discountPercentage;
+          }
+        });
+
+        // Check category-specific offers
+        const categoryOffers = activeOffers.filter(offer => 
+          offer.category && offer.category.length > 0 &&
+          offer.category.some(cat => cat && cat.category === product.product_category)
+        );
+        categoryOffers.forEach(offer => {
+          if (offer.discountPercentage > maxOfferDiscount) {
+            maxOfferDiscount = offer.discountPercentage;
+          }
+        });
+
+        // Check general offers
+        const generalOffers = activeOffers.filter(offer => 
+          offer.product.length === 0 && offer.category.length === 0
+        );
+        generalOffers.forEach(offer => {
+          if (offer.discountPercentage > maxOfferDiscount) {
+            maxOfferDiscount = offer.discountPercentage;
+          }
+        });
+      }
+
+      const finalPrice = maxOfferDiscount > 0
+        ? originalPrice * (1 - maxOfferDiscount / 100)
         : originalPrice;
 
       return {
@@ -35,7 +81,7 @@ const getCartPage = async (req, res) => {
         quantity: cart.quantity,
         priceBefore: Math.round(originalPrice),
         priceAfter: Math.round(finalPrice),
-        discount,
+        discount: maxOfferDiscount, // Show offer discount instead of product discount
         total: Math.round(finalPrice * cart.quantity),
         stock: variation.stock_quantity,
         isActive: product?.is_active
@@ -46,16 +92,12 @@ const getCartPage = async (req, res) => {
 
     const subtotal = validItems.reduce((sum, i) => sum + i.total, 0);
     const shipping = subtotal > 1000 ? 0 : 50;
-    const taxPercent = 8;
-    const tax = Math.round(subtotal * taxPercent / 100);
-    const total = subtotal + shipping + tax;
+    const total = subtotal + shipping;
 
     res.render("user/cart", {
       items,
       subtotal,
       shipping,
-      tax,
-      taxPercent,
       total,
       
     });

@@ -461,13 +461,11 @@
         <div class="summary-line">
           <span>Shipping</span><span>₹<%= shipping %></span>
         </div>
-        <div class="summary-line">
-          <span>Tax (<%= taxPercent %>%)</span><span>₹<%= tax %></span>
-        </div>
         <hr />
         <div class="summary-line total">
           <span>Total</span><span>₹<%= total %></span>
         </div>
+        <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem; text-align: center;">* All prices include applicable taxes</p>
   <button class="checkout-btn" id="proceedToCheckoutBtn" <%= items.length === 0 ? 'disabled title="Your cart is empty"' : '' %>>Proceed to Checkout</button>
         <p class="secure-checkout"
           ><i class="fa-solid fa-lock"></i> Secure Checkout</p

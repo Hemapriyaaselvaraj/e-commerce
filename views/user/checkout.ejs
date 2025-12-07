@@ -567,31 +567,43 @@
         </div>
 
         <div class="summary-row">
-          <span>Subtotal</span>
+          <span>Original Price</span>
+          <span>₹<%= typeof originalSubtotal !== 'undefined' ? originalSubtotal : 0 %></span>
+        </div>
+        
+        <% if (typeof offerDiscount !== 'undefined' && offerDiscount > 0) { %>
+        <div class="summary-row" style="color: #ff6b35;">
+          <span>Offer Discount</span>
+          <span>- ₹<%= offerDiscount %></span>
+        </div>
+        <% } %>
+        
+        <div class="summary-row">
+          <span>Discounted Price</span>
           <span>₹<%= typeof subtotal !== 'undefined' ? subtotal : 0 %></span>
         </div>
+        
         <div class="summary-row">
           <span>Shipping</span>
           <span>₹<%= typeof shipping !== 'undefined' ? shipping : 0 %></span>
         </div>
-        <div class="summary-row">
-          <span>Tax</span>
-          <span>₹<%= typeof tax !== 'undefined' ? tax : 0 %></span>
-        </div>
+        
         <div class="summary-total">
           <span>Total</span>
           <span>₹<%= typeof total !== 'undefined' ? total : 0 %></span>
         </div>
+        
+        <p style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">* All prices include applicable taxes</p>
 
         <div class="coupon-box">
-  <input type="text" id="couponInput" placeholder="Enter coupon">
-  <button onclick="applyCoupon()">Apply</button>
-  <button onclick="removeCoupon()">Remove</button>
-  <p id="couponMessage" class="text-danger mt-2"></p>
-</div>
+          <input type="text" id="couponInput" placeholder="Enter coupon">
+          <button onclick="applyCoupon()">Apply</button>
+          <button onclick="removeCoupon()">Remove</button>
+          <p id="couponMessage" class="text-danger mt-2"></p>
+        </div>
 
-<p>Discount: <span id="discountValue">₹0</span></p>
-<p><b>Grand Total: <span id="grandTotal">₹<%= total %></span></b></p>
+        <p>Coupon Discount: <span id="discountValue">₹0</span></p>
+        <p><b>Grand Total: <span id="grandTotal">₹<%= total %></span></b></p>
 
 
         <button id="placeOrder">Place Order</button>

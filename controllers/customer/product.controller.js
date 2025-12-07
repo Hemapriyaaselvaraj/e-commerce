@@ -6,6 +6,7 @@ const productTypeModel = require("../../models/productTypeModel");
 const Product = require("../../models/productModel");
 const ProductVariation = require("../../models/productVariationModel");
 const Wishlist = require("../../models/wishlistModel");
+const Offer = require("../../models/offerModel");
 
 
 const productList = async (req, res) => {
@@ -70,8 +71,55 @@ const productList = async (req, res) => {
 
   // 6. Get, sort, and paginate products
   let products = await Product.find(filter).lean();
+  
+  // Get all active offers with populated category
+  const now = new Date();
+  const activeOffers = await Offer.find({
+    isActive: true,
+    validFrom: { $lte: now },
+    validTo: { $gte: now }
+  })
+  .populate('category', 'category')
+  .lean();
+
+  // Calculate max offer for each product
   products.forEach(p => {
-    p.afterDiscountPrice = p.price * (1 - (p.discount_percentage || 0) / 100);
+    let maxOfferDiscount = 0;
+
+    // Check product-specific offers
+    const productOffers = activeOffers.filter(offer => 
+      offer.product.some(prodId => prodId.toString() === p._id.toString())
+    );
+    productOffers.forEach(offer => {
+      if (offer.discountPercentage > maxOfferDiscount) {
+        maxOfferDiscount = offer.discountPercentage;
+      }
+    });
+
+    // Check category-specific offers (match by category name)
+    const categoryOffers = activeOffers.filter(offer => 
+      offer.category && offer.category.length > 0 &&
+      offer.category.some(cat => cat && cat.category === p.product_category)
+    );
+    categoryOffers.forEach(offer => {
+      if (offer.discountPercentage > maxOfferDiscount) {
+        maxOfferDiscount = offer.discountPercentage;
+      }
+    });
+
+    // Check offers that apply to all products (no product or category specified)
+    const generalOffers = activeOffers.filter(offer => 
+      offer.product.length === 0 && offer.category.length === 0
+    );
+    generalOffers.forEach(offer => {
+      if (offer.discountPercentage > maxOfferDiscount) {
+        maxOfferDiscount = offer.discountPercentage;
+      }
+    });
+
+    // Store offer discount - only show badge if there's an actual offer
+    p.offerDiscount = maxOfferDiscount; // This will be 0 if no offers apply
+    p.afterDiscountPrice = p.price * (1 - maxOfferDiscount / 100);
   });
 
   products = sortProducts(products, sort);
@@ -207,6 +255,52 @@ const productDetail = async (req, res) => {
     if (!product) {
       return res.status(404).send("Product not found");
     }
+
+    // Calculate offer for this product
+    const now = new Date();
+    const activeOffers = await Offer.find({
+      isActive: true,
+      validFrom: { $lte: now },
+      validTo: { $gte: now }
+    })
+    .populate('category', 'category')
+    .lean();
+
+    let maxOfferDiscount = 0;
+
+    // Check product-specific offers
+    const productOffers = activeOffers.filter(offer => 
+      offer.product.some(prodId => prodId.toString() === product._id.toString())
+    );
+    productOffers.forEach(offer => {
+      if (offer.discountPercentage > maxOfferDiscount) {
+        maxOfferDiscount = offer.discountPercentage;
+      }
+    });
+
+    // Check category-specific offers
+    const categoryOffers = activeOffers.filter(offer => 
+      offer.category && offer.category.length > 0 &&
+      offer.category.some(cat => cat && cat.category === product.product_category)
+    );
+    categoryOffers.forEach(offer => {
+      if (offer.discountPercentage > maxOfferDiscount) {
+        maxOfferDiscount = offer.discountPercentage;
+      }
+    });
+
+    // Check general offers
+    const generalOffers = activeOffers.filter(offer => 
+      offer.product.length === 0 && offer.category.length === 0
+    );
+    generalOffers.forEach(offer => {
+      if (offer.discountPercentage > maxOfferDiscount) {
+        maxOfferDiscount = offer.discountPercentage;
+      }
+    });
+
+    product.offerDiscount = maxOfferDiscount;
+    console.log('Product:', product.name, 'Category:', product.product_category, 'Offer:', maxOfferDiscount);
 
     const variations = await ProductVariation.find({ product_id: productId }).lean();
 

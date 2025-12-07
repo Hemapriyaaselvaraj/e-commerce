@@ -1,6 +1,7 @@
 const userModel = require("../../models/userModel");
 const Address = require("../../models/addressModel");
 const Cart = require("../../models/cartModel");
+const Offer = require("../../models/offerModel");
 
 const checkout = async (req, res) => {
   const userId = req.session.userId;
@@ -13,24 +14,69 @@ const checkout = async (req, res) => {
     populate: { path: "product_id", model: "product" },
   });
 
+  // Get all active offers
+  const now = new Date();
+  const activeOffers = await Offer.find({
+    isActive: true,
+    validFrom: { $lte: now },
+    validTo: { $gte: now }
+  })
+  .populate('category', 'category')
+  .lean();
+
   const products = cartItems.map((item) => {
-    let priceBefore = item.product_variation_id.product_id.price;
-    let priceAfter = priceBefore;
-    let discount =
-      item.product_variation_id.product_id.discount_percentage || 0;
-    if (discount > 0) {
-      priceAfter = priceBefore * (1 - discount / 100);
+    const product = item.product_variation_id.product_id;
+    let priceBefore = product.price;
+
+    // Calculate maximum offer discount for this product
+    let maxOfferDiscount = 0;
+
+    if (product) {
+      // Check product-specific offers
+      const productOffers = activeOffers.filter(offer => 
+        offer.product.some(prodId => prodId.toString() === product._id.toString())
+      );
+      productOffers.forEach(offer => {
+        if (offer.discountPercentage > maxOfferDiscount) {
+          maxOfferDiscount = offer.discountPercentage;
+        }
+      });
+
+      // Check category-specific offers
+      const categoryOffers = activeOffers.filter(offer => 
+        offer.category && offer.category.length > 0 &&
+        offer.category.some(cat => cat && cat.category === product.product_category)
+      );
+      categoryOffers.forEach(offer => {
+        if (offer.discountPercentage > maxOfferDiscount) {
+          maxOfferDiscount = offer.discountPercentage;
+        }
+      });
+
+      // Check general offers
+      const generalOffers = activeOffers.filter(offer => 
+        offer.product.length === 0 && offer.category.length === 0
+      );
+      generalOffers.forEach(offer => {
+        if (offer.discountPercentage > maxOfferDiscount) {
+          maxOfferDiscount = offer.discountPercentage;
+        }
+      });
     }
 
+    let priceAfter = maxOfferDiscount > 0
+      ? priceBefore * (1 - maxOfferDiscount / 100)
+      : priceBefore;
+
     return {
-      name: item.product_variation_id.product_id.name,
+      name: product.name,
       image: item.product_variation_id.images,
-      price: item.product_variation_id.product_id.price,
+      price: product.price,
       quantity: item.quantity,
       priceBefore,
       priceAfter,
-      discount,
-      isActive: item.product_variation_id.product_id.is_active,
+      discount: maxOfferDiscount, // Show offer discount
+      isActive: product.is_active,
       stock: item.product_variation_id.stock_quantity
     };
   });
@@ -39,13 +85,26 @@ const checkout = async (req, res) => {
     (item) => item.isActive && item.stock > 0
   );
 
+  // Calculate original subtotal (before offers)
+  const originalSubtotal = filteredItems.reduce(
+    (sum, p) => sum + p.priceBefore * p.quantity,
+    0
+  );
+
+  // Calculate offer discount amount
+  const offerDiscount = filteredItems.reduce(
+    (sum, p) => sum + (p.priceBefore - p.priceAfter) * p.quantity,
+    0
+  );
+
+  // Calculate subtotal after offers
   const subtotal = filteredItems.reduce(
     (sum, p) => sum + p.priceAfter * p.quantity,
     0
   );
-  const tax = Math.round((subtotal * 8) / 100); 
+
   const shipping = subtotal > 1000 ? 0 : 50;
-  const total = subtotal + tax + shipping;
+  const total = subtotal + shipping;
 
   const razorpayKeyId = process.env.RAZORPAY_KEY_ID; 
 
@@ -55,8 +114,9 @@ const checkout = async (req, res) => {
     userPhone: user.phoneNumber || "",
     addresses,
     products: filteredItems,
-    subtotal,
-    tax,
+    originalSubtotal: Math.round(originalSubtotal),
+    offerDiscount: Math.round(offerDiscount),
+    subtotal: Math.round(subtotal),
     shipping,
     total,
     razorpayKeyId

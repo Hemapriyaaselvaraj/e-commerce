@@ -4,6 +4,7 @@ const Address = require("../../models/addressModel");
 const Cart = require("../../models/cartModel");
 const Order = require("../../models/orderModel");
 const WalletTransaction = require("../../models/walletModel");
+const Offer = require("../../models/offerModel");
 const {generateOrderNumber} = require('../../utils/orderNumberGenerator')
 const razorpayInstance = require('../../config/razorpay')
 const crypto = require('crypto');
@@ -48,6 +49,16 @@ const placeOrder = async (req, res) => {
       throw new Error('Shipping address not found');
     }
 
+    // Get all active offers
+    const now = new Date();
+    const activeOffers = await Offer.find({
+      isActive: true,
+      validFrom: { $lte: now },
+      validTo: { $gte: now }
+    })
+    .populate('category', 'category')
+    .lean();
+
     let subtotal = 0;
     const orderProducts = [];
     const stockUpdates = [];
@@ -60,8 +71,43 @@ const placeOrder = async (req, res) => {
         continue;
       }
 
-       const original_price = product.price;
-      const discount_percentage = product.discount_percentage || 0;
+      const original_price = product.price;
+
+      // Calculate maximum offer discount for this product
+      let maxOfferDiscount = 0;
+
+      // Check product-specific offers
+      const productOffers = activeOffers.filter(offer => 
+        offer.product.some(prodId => prodId.toString() === product._id.toString())
+      );
+      productOffers.forEach(offer => {
+        if (offer.discountPercentage > maxOfferDiscount) {
+          maxOfferDiscount = offer.discountPercentage;
+        }
+      });
+
+      // Check category-specific offers
+      const categoryOffers = activeOffers.filter(offer => 
+        offer.category && offer.category.length > 0 &&
+        offer.category.some(cat => cat && cat.category === product.product_category)
+      );
+      categoryOffers.forEach(offer => {
+        if (offer.discountPercentage > maxOfferDiscount) {
+          maxOfferDiscount = offer.discountPercentage;
+        }
+      });
+
+      // Check general offers
+      const generalOffers = activeOffers.filter(offer => 
+        offer.product.length === 0 && offer.category.length === 0
+      );
+      generalOffers.forEach(offer => {
+        if (offer.discountPercentage > maxOfferDiscount) {
+          maxOfferDiscount = offer.discountPercentage;
+        }
+      });
+
+      const discount_percentage = maxOfferDiscount;
       const price = original_price * (1 - discount_percentage / 100);
       
       subtotal += price * item.quantity;
@@ -92,8 +138,7 @@ const placeOrder = async (req, res) => {
     }
 
     const shipping_charge = subtotal > 1000 ? 0 : 50;
-    const tax = Math.round(subtotal * 0.08);
-    const total = subtotal + shipping_charge + tax;
+    const total = subtotal + shipping_charge;
 
     const orderNumber = await generateOrderNumber();
     const estimatedDelivery = new Date();
@@ -119,7 +164,7 @@ const placeOrder = async (req, res) => {
       products: orderProducts,
       total,
       subtotal,
-      tax,
+      tax: 0, // Tax is already included in product prices
       shipping_charge,
       shipping_address: shippingAddress,
       payment_method: paymentMethod,
@@ -277,7 +322,9 @@ const getOrderSuccess = async (req, res) => {
         size: item.size,
         color: item.color,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        original_price: item.original_price,
+        discount_percentage: item.discount_percentage
       })),
       subtotal: order.subtotal,
       shipping: order.shipping_charge,
@@ -804,7 +851,7 @@ const cancelOrder = async (req, res) => {
           });
 
           // refund amount
-          refundAmount += item.quantity * item.price;
+          refundAmount += item.price * item.quantity;
         }
       });
 
@@ -833,7 +880,7 @@ const cancelOrder = async (req, res) => {
       });
 
       // refund only that item's amount
-      refundAmount = item.quantity * item.price;
+      refundAmount = item.price * item.quantity;
 
       // If ALL items cancelled → mark order cancelled
       const allCancelled = order.products.every(p => p.status === "CANCELLED");

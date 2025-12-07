@@ -338,8 +338,16 @@
                             <h3><%= item.product ? item.product.name : 'Product' %></h3>
                             <p>Size: <%= item.size || 'N/A' %> | Color: <%= item.color || 'N/A' %></p>
                             <p>Quantity: <%= item.quantity %></p>
+                            <% if (item.discount_percentage && item.discount_percentage > 0) { %>
+                                <p style="color: #ff6b35; font-size: 12px;">
+                                    <span style="text-decoration: line-through; color: #999;">₹<%= (item.original_price || 0).toFixed(2) %></span>
+                                    <span style="font-weight: 600;"> <%= item.discount_percentage %>% OFF</span>
+                                </p>
+                            <% } %>
                         </div>
-                        <div class="item-price">₹<%= (item.price || 0).toFixed(2) %></div>
+                        <div class="item-price">
+                            ₹<%= (item.price || 0).toFixed(2) %>
+                        </div>
                     </div>
                 <% }); %>
             </div>
@@ -353,14 +361,11 @@
                     <span>Shipping</span>
                     <span>₹<%= order.shipping.toFixed(2) %></span>
                 </div>
-                <div class="summary-row">
-                    <span>Tax</span>
-                    <span>₹<%= order.tax.toFixed(2) %></span>
-                </div>
                 <div class="summary-row total">
                     <span>Total</span>
                     <span>₹<%= order.total.toFixed(2) %></span>
                 </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">* All prices include applicable taxes</p>
             </div>
         </div>
 

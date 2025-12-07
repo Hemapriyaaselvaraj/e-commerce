@@ -453,7 +453,6 @@ const createProduct = async (req, res) => {
       sku,
       description,
       price,
-      discount,
       category,
       type,
       variations,
@@ -464,7 +463,6 @@ const createProduct = async (req, res) => {
       product_sku: sku,
       description,
       price,
-      discount_percentage: discount,
       product_category: category,
       product_type: type,
       is_active: true,
@@ -576,7 +574,6 @@ const postEditProduct = async (req, res) => {
     const {
       name,
       price,
-      discount: discount_percentage,
       description,
       category: product_category,
       type: product_type,
@@ -586,7 +583,6 @@ const postEditProduct = async (req, res) => {
     Object.assign(product, {
       name,
       price,
-      discount_percentage,
       description,
       product_category,
       product_type,

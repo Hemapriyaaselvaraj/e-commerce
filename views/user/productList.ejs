@@ -351,6 +351,48 @@
       transform: scale(1.05);
     }
 
+    /* Offer badge - Circular scalloped design */
+    .offer-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      z-index: 5;
+      box-shadow: 0 3px 10px rgba(255, 107, 53, 0.4);
+      animation: pulse 2s infinite;
+    }
+
+    .offer-badge::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: inherit;
+      border-radius: 50%;
+      clip-path: polygon(
+        50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%
+      );
+      z-index: -1;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
     .product-card.enhanced-card:hover {
       box-shadow: 0 4px 24px 0 rgba(0,0,0,0.12);
       transform: translateY(-2px);
@@ -416,7 +458,7 @@
 
     .product-discount {
       font-size: 0.97rem;
-      color: #e53935;
+      color: #cd4e4b;
       font-weight: 600;
     }
 
@@ -695,6 +737,13 @@
                 class="product-card enhanced-card"
                 onclick="window.location.href='/products/<%= product._id %>'"
               >
+                <!-- Offer badge - Show only if there's an admin offer -->
+                <% if (product.offerDiscount && product.offerDiscount > 0) { %>
+                  <div class="offer-badge">
+                    <%= Math.round(product.offerDiscount) %>%
+                  </div>
+                <% } %>
+
                 <!-- Wishlist button -->
                 <button
                   type="button"
@@ -725,21 +774,9 @@
                   <div class="product-meta"><%= product.product_type %></div>
 
                   <div class="product-price-row">
-                    <% if (product.discount_percentage && product.discount_percentage > 0) { %>
-                      <span class="product-price">
-                        ₹ <%= (product.price * (1 - product.discount_percentage / 100)).toLocaleString() %>
-                      </span>
-                      <span class="product-original-price">
-                        ₹ <%= product.price.toLocaleString() %>
-                      </span>
-                      <span class="product-discount">
-                        (<%= Math.round(product.discount_percentage) %>% OFF)
-                      </span>
-                    <% } else { %>
-                      <span class="product-price">
-                        ₹ <%= product.price.toLocaleString() %>
-                      </span>
-                    <% } %>
+                    <span class="product-price">
+                      ₹ <%= product.price.toLocaleString() %>
+                    </span>
                   </div>
                 </div>
               </div>
