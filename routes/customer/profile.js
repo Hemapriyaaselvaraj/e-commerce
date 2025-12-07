@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const profileController = require('../../controllers/customer/profile.controller');
 const uploadProfile = require('../../utils/profileUploader');
+const {isCustomerAccessible} = require('../../middlewares/auth');
+
+
+router.use(isCustomerAccessible);
 
 router.get('/',profileController.getProfile);
 router.post('/', profileController.updateProfile);

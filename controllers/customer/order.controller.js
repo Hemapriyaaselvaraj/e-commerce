@@ -145,7 +145,6 @@ const placeOrder = async (req, res) => {
     if (req.session.appliedCoupon) {
       couponDiscount = req.session.appliedCoupon.discount || 0;
       appliedCouponCode = req.session.appliedCoupon.code;
-      console.log('💰 Coupon Applied:', appliedCouponCode, '| Discount:', couponDiscount);
     }
     
     const total = subtotal + shipping_charge - couponDiscount;
@@ -195,16 +194,21 @@ const placeOrder = async (req, res) => {
       // Update coupon usage
       if (appliedCouponCode) {
         const Coupon = require('../../models/couponModel');
-        await Coupon.findOneAndUpdate(
-          { code: appliedCouponCode, 'usedBy.userId': userId },
-          { $inc: { 'usedBy.$.count': 1 } }
-        );
+        const coupon = await Coupon.findOne({ code: appliedCouponCode });
         
-        // If user hasn't used this coupon before, add them
-        await Coupon.findOneAndUpdate(
-          { code: appliedCouponCode, 'usedBy.userId': { $ne: userId } },
-          { $push: { usedBy: { userId, count: 1 } } }
-        );
+        if (coupon) {
+          const userUsageIndex = coupon.usedBy.findIndex(u => u.userId && u.userId.toString() === userId.toString());
+          
+          if (userUsageIndex >= 0) {
+            // User has used this coupon before, increment count
+            coupon.usedBy[userUsageIndex].count += 1;
+          } else {
+            // First time using this coupon
+            coupon.usedBy.push({ userId, count: 1 });
+          }
+          
+          await coupon.save();
+        }
       }
       
       // Clear applied coupon from session
@@ -246,16 +250,21 @@ if (paymentMethod === 'WALLET') {
   // Update coupon usage
   if (appliedCouponCode) {
     const Coupon = require('../../models/couponModel');
-    await Coupon.findOneAndUpdate(
-      { code: appliedCouponCode, 'usedBy.userId': userId },
-      { $inc: { 'usedBy.$.count': 1 } }
-    );
+    const coupon = await Coupon.findOne({ code: appliedCouponCode });
     
-    // If user hasn't used this coupon before, add them
-    await Coupon.findOneAndUpdate(
-      { code: appliedCouponCode, 'usedBy.userId': { $ne: userId } },
-      { $push: { usedBy: { userId, count: 1 } } }
-    );
+    if (coupon) {
+      const userUsageIndex = coupon.usedBy.findIndex(u => u.userId && u.userId.toString() === userId.toString());
+      
+      if (userUsageIndex >= 0) {
+        // User has used this coupon before, increment count
+        coupon.usedBy[userUsageIndex].count += 1;
+      } else {
+        // First time using this coupon
+        coupon.usedBy.push({ userId, count: 1 });
+      }
+      
+      await coupon.save();
+    }
   }
   
   // Clear applied coupon from session
@@ -552,16 +561,21 @@ const verifyPayment = async (req, res) => {
     // Update coupon usage
     if (order.applied_coupon_code) {
       const Coupon = require('../../models/couponModel');
-      await Coupon.findOneAndUpdate(
-        { code: order.applied_coupon_code, 'usedBy.userId': userId },
-        { $inc: { 'usedBy.$.count': 1 } }
-      );
+      const coupon = await Coupon.findOne({ code: order.applied_coupon_code });
       
-      // If user hasn't used this coupon before, add them
-      await Coupon.findOneAndUpdate(
-        { code: order.applied_coupon_code, 'usedBy.userId': { $ne: userId } },
-        { $push: { usedBy: { userId, count: 1 } } }
-      );
+      if (coupon) {
+        const userUsageIndex = coupon.usedBy.findIndex(u => u.userId && u.userId.toString() === userId.toString());
+        
+        if (userUsageIndex >= 0) {
+          // User has used this coupon before, increment count
+          coupon.usedBy[userUsageIndex].count += 1;
+        } else {
+          // First time using this coupon
+          coupon.usedBy.push({ userId, count: 1 });
+        }
+        
+        await coupon.save();
+      }
     }
     
     // Clear applied coupon from session

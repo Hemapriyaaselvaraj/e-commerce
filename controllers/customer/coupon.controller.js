@@ -23,7 +23,7 @@ const applyCoupon = async (req, res) => {
 
     // Usage limit check (if usedBy field exists)
     if (coupon.usedBy && coupon.usedBy.length > 0) {
-      const usedData = coupon.usedBy.find(u => u.userId.toString() === userId.toString());
+      const usedData = coupon.usedBy.find(u => u.userId && u.userId.toString() === userId.toString());
       if (usedData && usedData.count >= coupon.usageLimitPerUser) {
         return res.json({ success: false, message: "You have already used this coupon maximum times" });
       }

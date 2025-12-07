@@ -203,7 +203,7 @@ const getAvailableCoupons = async (req, res) => {
     
     // Check usage for each coupon
     const couponsWithUsage = coupons.map(coupon => {
-      const userUsage = coupon.usedBy?.find(u => u.userId.toString() === userId?.toString());
+      const userUsage = coupon.usedBy?.find(u => u.userId && u.userId.toString() === userId?.toString());
       const timesUsed = userUsage ? userUsage.count : 0;
       const isUsed = timesUsed >= coupon.usageLimitPerUser;
       

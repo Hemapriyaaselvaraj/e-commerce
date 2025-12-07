@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const wishlistController = require('../../controllers/customer/wishlist.controller');
+const {isCustomerAccessible} = require('../../middlewares/auth');
+
+
+router.use(isCustomerAccessible);
 
 router.post('/toggle', wishlistController.toggleWishlist);
 

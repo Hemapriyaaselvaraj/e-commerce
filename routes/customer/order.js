@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../../controllers/customer/order.controller');
 const couponController = require('../../controllers/customer/coupon.controller')
+const {isCustomerAccessible} = require('../../middlewares/auth');
 
+router.use(isCustomerAccessible);
 
 router.post('/place-order', orderController.placeOrder );
 router.post('/verifyPayment', orderController.verifyPayment);

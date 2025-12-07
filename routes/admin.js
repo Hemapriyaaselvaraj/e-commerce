@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const {isAdminAccessible} = require('../middlewares/auth')
 const dashboardController = require('../controllers/admin/dashboard.controller')
 const productController = require('../controllers/admin/product.controller')
 const orderController = require('../controllers/admin/order-management.controller')
@@ -8,6 +9,7 @@ const offerController = require('../controllers/admin/offer-management.controlle
 const couponController = require('../controllers/admin/coupon.management.controller')
 const upload = require('../utils/imageUploader');
 
+router.use(isAdminAccessible);
 
 router.get('/dashboard', dashboardController.getDashboard)
 router.get('/products/configuration' , productController.getProductConfiguration)
