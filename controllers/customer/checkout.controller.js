@@ -2,6 +2,9 @@ const userModel = require("../../models/userModel");
 const Address = require("../../models/addressModel");
 const Cart = require("../../models/cartModel");
 const Offer = require("../../models/offerModel");
+const Coupon = require('../../models/couponModel');
+const { calculateBestOffer } = require("../../utils/offerCalculator");
+
 
 const checkout = async (req, res) => {
   const userId = req.session.userId;
@@ -14,7 +17,6 @@ const checkout = async (req, res) => {
     populate: { path: "product_id", model: "product" },
   });
 
-  // Get all active offers
   const now = new Date();
   const activeOffers = await Offer.find({
     isActive: true,
@@ -28,45 +30,10 @@ const checkout = async (req, res) => {
     const product = item.product_variation_id.product_id;
     let priceBefore = product.price;
 
-    // Calculate maximum offer discount for this product
-    let maxOfferDiscount = 0;
-
-    if (product) {
-      // Check product-specific offers
-      const productOffers = activeOffers.filter(offer => 
-        offer.product.some(prodId => prodId.toString() === product._id.toString())
-      );
-      productOffers.forEach(offer => {
-        if (offer.discountPercentage > maxOfferDiscount) {
-          maxOfferDiscount = offer.discountPercentage;
-        }
-      });
-
-      // Check category-specific offers
-      const categoryOffers = activeOffers.filter(offer => 
-        offer.category && offer.category.length > 0 &&
-        offer.category.some(cat => cat && cat.category === product.product_category)
-      );
-      categoryOffers.forEach(offer => {
-        if (offer.discountPercentage > maxOfferDiscount) {
-          maxOfferDiscount = offer.discountPercentage;
-        }
-      });
-
-      // Check general offers
-      const generalOffers = activeOffers.filter(offer => 
-        offer.product.length === 0 && offer.category.length === 0
-      );
-      generalOffers.forEach(offer => {
-        if (offer.discountPercentage > maxOfferDiscount) {
-          maxOfferDiscount = offer.discountPercentage;
-        }
-      });
-    }
-
-    let priceAfter = maxOfferDiscount > 0
-      ? priceBefore * (1 - maxOfferDiscount / 100)
-      : priceBefore;
+    // ⭐ Use centralized offer calculation for consistency
+    const offerResult = calculateBestOffer(product, activeOffers);
+    const maxOfferDiscount = offerResult.discountPercentage;
+    const priceAfter = offerResult.finalPrice;
 
     return {
       name: product.name,
@@ -75,7 +42,7 @@ const checkout = async (req, res) => {
       quantity: item.quantity,
       priceBefore,
       priceAfter,
-      discount: maxOfferDiscount, // Show offer discount
+      discount: maxOfferDiscount,
       isActive: product.is_active,
       stock: item.product_variation_id.stock_quantity
     };
@@ -85,19 +52,16 @@ const checkout = async (req, res) => {
     (item) => item.isActive && item.stock > 0
   );
 
-  // Calculate original subtotal (before offers)
   const originalSubtotal = filteredItems.reduce(
     (sum, p) => sum + p.priceBefore * p.quantity,
     0
   );
 
-  // Calculate offer discount amount
   const offerDiscount = filteredItems.reduce(
     (sum, p) => sum + (p.priceBefore - p.priceAfter) * p.quantity,
     0
   );
 
-  // Calculate subtotal after offers
   const subtotal = filteredItems.reduce(
     (sum, p) => sum + p.priceAfter * p.quantity,
     0
@@ -192,7 +156,6 @@ const checkout = async (req, res) => {
 
 const getAvailableCoupons = async (req, res) => {
   try {
-    const Coupon = require('../../models/couponModel');
     const userId = req.session.userId;
     const now = new Date();
     

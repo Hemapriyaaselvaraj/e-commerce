@@ -566,11 +566,9 @@ const postEditProduct = async (req, res) => {
   try {
     const productId = req.params.id;
 
-    // Fetch product and validate presence
     const product = await Product.findById(productId);
     if (!product) return res.status(404).send('Product not found');
 
-    // Update basic product fields
     const {
       name,
       price,
@@ -589,23 +587,18 @@ const postEditProduct = async (req, res) => {
     });
     const savedProduct = await product.save();
 
-    // Pull existing variations once for lookup
     const existingVariations = await ProductVariation.find({ product_id: productId });
 
-    // Helper to match by size & color
     const findExistingVar = (size, color) =>
       existingVariations.find(v => v.product_size === size && v.product_color === color);
 
-    // Manage images
     const files = req.files || [];
     const getVariationImages = index =>
       files.filter(file => file.fieldname === `variationImages_${index}`).map(file => file.path);
 
-    // Track submitted variation keys
     const submittedKeys = new Set();
     const changes = [];
 
-    // Handle submitted variations
     for (let i = 0; i < variations.length; i++) {
       const { size, color, stock } = variations[i];
       const key = `${size}__${color}`;
@@ -617,7 +610,6 @@ const postEditProduct = async (req, res) => {
       const existing = findExistingVar(size, color);
 
       if (existing) {
-        // Update variation
         existing.stock_quantity = stock;
         existing.images = [
           ...newImageUrls,
@@ -626,7 +618,6 @@ const postEditProduct = async (req, res) => {
         existing.updated_at = new Date();
         changes.push(existing.save());
       } else {
-        // Create new variation
         changes.push(
           new ProductVariation({
             product_id: savedProduct._id,
@@ -641,7 +632,6 @@ const postEditProduct = async (req, res) => {
       }
     }
 
-    // Delete variations not in submission
     for (const v of existingVariations) {
       const key = `${v.product_size}__${v.product_color}`;
       if (!submittedKeys.has(key)) {
@@ -649,10 +639,8 @@ const postEditProduct = async (req, res) => {
       }
     }
 
-    // Wait for all DB ops
     await Promise.all(changes);
 
-    // Success response
     res.status(200).json({ success: true });
   } catch (err) {
     console.error("Error updating product:", err);

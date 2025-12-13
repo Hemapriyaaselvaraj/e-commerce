@@ -5,9 +5,10 @@ const {isCustomerAccessible} = require('../../middlewares/auth');
 
 
 router.get('/',isCustomerAccessible, cartController.getCartPage)
-router.post('/updateQuantity',isCustomerAccessible, cartController.updateCartQuantity);
-router.post('/remove', isCustomerAccessible,cartController.removeFromCart);
+router.patch('/updateQuantity',isCustomerAccessible, cartController.updateCartQuantity);
+router.delete('/remove', isCustomerAccessible,cartController.removeFromCart);
 router.post('/add', isCustomerAccessible,cartController.addToCart);
+router.get('/count', cartController.getCartCount);
 
 
 module.exports = router;

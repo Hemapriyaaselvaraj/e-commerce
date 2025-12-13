@@ -8,14 +8,14 @@ const {isCustomerAccessible} = require('../../middlewares/auth');
 router.use(isCustomerAccessible);
 
 router.get('/',profileController.getProfile);
-router.post('/', profileController.updateProfile);
+router.patch('/', profileController.updateProfile);
 router.get('/edit', profileController.getEditProfile);
-router.post('/edit', profileController.postEditProfile);
+router.patch('/edit', profileController.postEditProfile);
 router.get('/referAndEarn', profileController.getReferAndEarn);
 
 
 // UPDATE PROFILE IMAGE
-router.post(
+router.patch(
   '/update-image',
   uploadProfile.single('profileImage'),
   profileController.updateProfileImage

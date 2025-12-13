@@ -36,35 +36,37 @@ router.get('/products/addProduct', productController.getAddProduct)
 router.post('/products/add', upload.any(), productController.createProduct);
 
 router.get('/products/edit/:id', productController.getEditProduct);
-router.post('/products/edit/:id', upload.any(),productController.postEditProduct)
-router.post('/products/:id/toggle-active', productController.toggleActive);
+router.patch('/products/edit/:id', upload.any(),productController.postEditProduct)
+router.patch('/products/:id/toggle-active', productController.toggleActive);
 
 router.get('/orders', orderController.getOrderList)
 router.get('/orders/:id', orderController.getOrderDetail)
-router.post('/orders/:id/cancel', orderController.cancelOrder)
-router.post('/orders/:id/return',orderController.returnProduct)
-router.post('/orders/:id/status',orderController.updateOrderStatus)
-router.post('/orders/:id/return/verify', orderController.verifyReturn)
+router.patch('/orders/:id/cancel', orderController.cancelOrder)
+router.patch('/orders/:id/return',orderController.returnProduct)
+router.patch('/orders/:id/status',orderController.updateOrderStatus)
+router.patch('/orders/:id/product-status', orderController.updateProductStatus)
+router.patch('/orders/:id/return/verify', orderController.verifyReturn)
 
 router.get('/customers', customerController.getCustomers)
-router.post('/customers/:id/block-unblock', customerController.blockUnblockCustomer)
+router.patch('/customers/:id/block-unblock', customerController.blockUnblockCustomer)
 
 router.get("/offers", offerController.getOffersList)
 router.get("/add-offer", offerController.getAddOffer)
 router.post("/add-offer", offerController.postAddOffer)
 
 router.get('/edit-offer/:id', offerController.getEditOffer)
-router.post('/edit-offer/:id', offerController.postEditOffer)
-router.post('/toggle-offer/:id', offerController.toggleOfferStatus)
+router.patch('/edit-offer/:id', offerController.postEditOffer)
+router.patch('/toggle-offer/:id', offerController.toggleOfferStatus)
 router.get('/delete-offer/:id', offerController.deleteOffer)
-router.post('/delete/:id', offerController.deleteOffer)
+router.delete('/delete-offer/:id', offerController.deleteOffer)
 
 router.get('/coupons', couponController.getCoupons)
 router.get('/add-coupon', couponController.getAddCoupon)
 router.post('/add-coupon', couponController.postAddCoupon)
 router.get('/edit-coupon/:id', couponController.getEditCoupon)
 router.post('/edit-coupon/:id', couponController.postEditCoupon)
-router.post('/delete-coupon/:id', couponController.deleteCoupon)
+router.patch('/edit-coupon/:id', couponController.postEditCoupon)
+router.delete('/delete-coupon/:id', couponController.deleteCoupon)
 
 router.get('/sales-report', reportController.getSalesReportPage)
 router.get('/sales-report/data',reportController.getSalesReportData);

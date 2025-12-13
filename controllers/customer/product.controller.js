@@ -7,11 +7,11 @@ const Product = require("../../models/productModel");
 const ProductVariation = require("../../models/productVariationModel");
 const Wishlist = require("../../models/wishlistModel");
 const Offer = require("../../models/offerModel");
+const { calculateBestOffer } = require("../../utils/offerCalculator");
 
 
 const productList = async (req, res) => {
 
-// Parse filters & query parameters
   const {
     category: selectedCategory = null,
     type,
@@ -82,44 +82,11 @@ const productList = async (req, res) => {
   .populate('category', 'category')
   .lean();
 
-  // Calculate max offer for each product
+  // ⭐ Calculate max offer for each product using centralized function
   products.forEach(p => {
-    let maxOfferDiscount = 0;
-
-    // Check product-specific offers
-    const productOffers = activeOffers.filter(offer => 
-      offer.product.some(prodId => prodId.toString() === p._id.toString())
-    );
-    productOffers.forEach(offer => {
-      if (offer.discountPercentage > maxOfferDiscount) {
-        maxOfferDiscount = offer.discountPercentage;
-      }
-    });
-
-    // Check category-specific offers (match by category name)
-    const categoryOffers = activeOffers.filter(offer => 
-      offer.category && offer.category.length > 0 &&
-      offer.category.some(cat => cat && cat.category === p.product_category)
-    );
-    categoryOffers.forEach(offer => {
-      if (offer.discountPercentage > maxOfferDiscount) {
-        maxOfferDiscount = offer.discountPercentage;
-      }
-    });
-
-    // Check offers that apply to all products (no product or category specified)
-    const generalOffers = activeOffers.filter(offer => 
-      offer.product.length === 0 && offer.category.length === 0
-    );
-    generalOffers.forEach(offer => {
-      if (offer.discountPercentage > maxOfferDiscount) {
-        maxOfferDiscount = offer.discountPercentage;
-      }
-    });
-
-    // Store offer discount - only show badge if there's an actual offer
-    p.offerDiscount = maxOfferDiscount; // This will be 0 if no offers apply
-    p.afterDiscountPrice = p.price * (1 - maxOfferDiscount / 100);
+    const offerResult = calculateBestOffer(p, activeOffers);
+    p.offerDiscount = offerResult.discountPercentage; 
+    p.afterDiscountPrice = offerResult.finalPrice;
   });
 
   products = sortProducts(products, sort);
@@ -168,7 +135,6 @@ const productList = async (req, res) => {
     }
   }
 
-  // 9. Get filter dropdown options
   const [categories, types, sizes, colors] = await Promise.all([
     productCategoryModel.find({}).lean(),
     productTypeModel.find({}).lean(),
@@ -183,7 +149,7 @@ const productList = async (req, res) => {
     { label: "5000 - 10000", min: 5000, max: 10000 }
   ];
 
-  // 10. Render main page
+
   return res.render("user/productList", {
     products,
     categories,
@@ -205,7 +171,6 @@ const productList = async (req, res) => {
     wishlistMap
   });
 
-  // Helper: render empty list if no matching variations
   function renderEmpty() {
     return res.render("user/productList", {
       products: [],
@@ -229,7 +194,6 @@ const productList = async (req, res) => {
     });
   }
 
-  // Helper: sort products by UI control
   function sortProducts(products, order) {
     switch (order) {
       case "asc":
@@ -241,7 +205,6 @@ const productList = async (req, res) => {
       case "nameDesc":
         return products.sort((a, b) => b.name.localeCompare(a.name));
       default:
-        // "newest"
         return products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
   }
@@ -256,7 +219,6 @@ const productDetail = async (req, res) => {
       return res.status(404).send("Product not found");
     }
 
-    // Calculate offer for this product
     const now = new Date();
     const activeOffers = await Offer.find({
       isActive: true,
@@ -266,52 +228,20 @@ const productDetail = async (req, res) => {
     .populate('category', 'category')
     .lean();
 
-    let maxOfferDiscount = 0;
-
-    // Check product-specific offers
-    const productOffers = activeOffers.filter(offer => 
-      offer.product.some(prodId => prodId.toString() === product._id.toString())
-    );
-    productOffers.forEach(offer => {
-      if (offer.discountPercentage > maxOfferDiscount) {
-        maxOfferDiscount = offer.discountPercentage;
-      }
-    });
-
-    // Check category-specific offers
-    const categoryOffers = activeOffers.filter(offer => 
-      offer.category && offer.category.length > 0 &&
-      offer.category.some(cat => cat && cat.category === product.product_category)
-    );
-    categoryOffers.forEach(offer => {
-      if (offer.discountPercentage > maxOfferDiscount) {
-        maxOfferDiscount = offer.discountPercentage;
-      }
-    });
-
-    // Check general offers
-    const generalOffers = activeOffers.filter(offer => 
-      offer.product.length === 0 && offer.category.length === 0
-    );
-    generalOffers.forEach(offer => {
-      if (offer.discountPercentage > maxOfferDiscount) {
-        maxOfferDiscount = offer.discountPercentage;
-      }
-    });
-
-    product.offerDiscount = maxOfferDiscount;
+    // ⭐ Use centralized offer calculation for consistency
+    const offerResult = calculateBestOffer(product, activeOffers);
+    product.offerDiscount = offerResult.discountPercentage;
 
     const variations = await ProductVariation.find({ product_id: productId }).lean();
 
-    // Default variation selection
+  
     let initialImages = [];
     let selectedSize = null;
     let selectedColor = null;
     let selectedVariationId = null;
-    let selectedStock = 0; // track stock for front-end
+    let selectedStock = 0; 
 
     if (variations && variations.length) {
-      // Pick first in-stock variation, otherwise first variation
       const defaultVariation = variations.find(v => v.stock_quantity > 0) || variations[0];
 
       if (defaultVariation) {
@@ -319,11 +249,10 @@ const productDetail = async (req, res) => {
         selectedSize = defaultVariation.product_size;
         selectedColor = defaultVariation.product_color;
         selectedVariationId = defaultVariation._id;
-        selectedStock = defaultVariation.stock_quantity || 0; // pass stock
+        selectedStock = defaultVariation.stock_quantity || 0; 
       }
     }
 
-    // Collect unique sizes and colors
     const sizes = [];
     const colors = [];
     variations.forEach(v => {
@@ -331,7 +260,7 @@ const productDetail = async (req, res) => {
       if (!colors.includes(v.product_color)) colors.push(v.product_color);
     });
 
-    // Map size -> colors/images
+  
     const sizeColorMap = {};
     variations.forEach(v => {
       if (!sizeColorMap[v.product_size]) sizeColorMap[v.product_size] = [];
@@ -367,7 +296,7 @@ const productDetail = async (req, res) => {
       p.image = relatedImageMap[p._id.toString()] || null;
     });
 
-    // Render page
+    
     return res.render("user/productDetail", {
       product,
       images: initialImages,
@@ -379,7 +308,7 @@ const productDetail = async (req, res) => {
       selectedSize,
       selectedColor,
       selectedVariationId,
-      selectedStock // pass stock to front-end
+      selectedStock 
     });
 
   } catch (err) {

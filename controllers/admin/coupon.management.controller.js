@@ -12,7 +12,6 @@ const getCoupons = async(req,res) => {
 
 const getAddCoupon = async (req, res) => {
     try {
-      // Empty coupon → for create mode
       res.render("admin/couponForm", { coupon: null });
     } catch (error) {
       console.log("Error loading coupon form:", error);
@@ -34,8 +33,63 @@ const getAddCoupon = async (req, res) => {
         usageLimitPerUser
       } = req.body;
 
+      // Validation
+      if (!code || !code.trim()) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon code is required' 
+        });
+      }
+
+      if (!discountValue || discountValue <= 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Discount value must be greater than 0' 
+        });
+      }
+
+      if (discountType === 'PERCENTAGE' && discountValue > 100) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Percentage discount cannot exceed 100%' 
+        });
+      }
+
+      if (code.trim().length < 3) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon code must be at least 3 characters long' 
+        });
+      }
+
+      if (!validFrom || !validTo) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Valid from and valid to dates are required' 
+        });
+      }
+
+      if (new Date(validTo) <= new Date(validFrom)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Valid to date must be after valid from date' 
+        });
+      }
+
+      // Check for duplicate coupon code
+      const existingCoupon = await Coupon.findOne({ 
+        code: code.trim().toUpperCase() 
+      });
+
+      if (existingCoupon) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon code already exists. Please choose a different code.' 
+        });
+      }
+
       await Coupon.create({
-        code,
+        code: code.trim().toUpperCase(),
         description,
         discountType,
         discountValue,
@@ -46,10 +100,16 @@ const getAddCoupon = async (req, res) => {
         usageLimitPerUser
       });
 
-      res.redirect("/admin/coupons");
+      res.json({ 
+        success: true, 
+        message: 'Coupon created successfully' 
+      });
     } catch (err) {
-      console.log(err);
-      res.status(500).send("Server Error");
+      console.error('Error creating coupon:', err);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Server error. Please try again.' 
+      });
     }
   }
 
@@ -68,9 +128,18 @@ const getAddCoupon = async (req, res) => {
   const deleteCoupon = async (req, res) => {
     try {
       await Coupon.findByIdAndDelete(req.params.id);
+      
+      // Check if request expects JSON response (for DELETE requests)
+      if (req.method === 'DELETE') {
+        return res.json({ success: true, message: 'Coupon deleted successfully' });
+      }
+      
       res.redirect("/admin/coupons");
     } catch (err) {
-      console.log(err);
+      console.error('Error deleting coupon:', err);
+      if (req.method === 'DELETE') {
+        return res.status(500).json({ success: false, message: 'Failed to delete coupon' });
+      }
       res.status(500).send("Server Error");
     }
   }
@@ -91,8 +160,64 @@ const postEditCoupon = async (req, res) => {
         usageLimitPerUser
       } = req.body;
 
-      await Coupon.findByIdAndUpdate(id, {
-        code,
+      // Validation
+      if (!code || !code.trim()) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon code is required' 
+        });
+      }
+
+      if (!discountValue || discountValue <= 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Discount value must be greater than 0' 
+        });
+      }
+
+      if (discountType === 'PERCENTAGE' && discountValue > 100) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Percentage discount cannot exceed 100%' 
+        });
+      }
+
+      if (code.trim().length < 3) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon code must be at least 3 characters long' 
+        });
+      }
+
+      if (!validFrom || !validTo) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Valid from and valid to dates are required' 
+        });
+      }
+
+      if (new Date(validTo) <= new Date(validFrom)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Valid to date must be after valid from date' 
+        });
+      }
+
+      // Check for duplicate coupon code (excluding current coupon)
+      const existingCoupon = await Coupon.findOne({ 
+        code: code.trim().toUpperCase(),
+        _id: { $ne: id }
+      });
+
+      if (existingCoupon) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon code already exists. Please choose a different code.' 
+        });
+      }
+
+      const updatedCoupon = await Coupon.findByIdAndUpdate(id, {
+        code: code.trim().toUpperCase(),
         description,
         discountType,
         discountValue,
@@ -101,12 +226,26 @@ const postEditCoupon = async (req, res) => {
         validFrom,
         validTo,
         usageLimitPerUser
-      });
+      }, { new: true });
 
-      res.redirect("/admin/coupons");
+      if (!updatedCoupon) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Coupon not found' 
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Coupon updated successfully', 
+        coupon: updatedCoupon 
+      });
     } catch (err) {
-      console.log(err);
-      res.status(500).send("Server Error");
+      console.error("Error updating coupon:", err);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Server error. Please try again.' 
+      });
     }
   }
 

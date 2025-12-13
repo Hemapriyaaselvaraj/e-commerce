@@ -351,7 +351,7 @@
       const statusBadge = btn.closest('tr').querySelector('.badge');
       
       fetch(`/admin/toggle-offer/${id}`, {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -408,7 +408,37 @@
         cancelButtonText: 'Cancel'
       }).then((result) => {
         if (result.isConfirmed) {
-          window.location.href = `/admin/delete-offer/${id}`;
+          fetch(`/admin/delete-offer/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          .then(response => {
+            if (response.ok) {
+              Swal.fire({
+                icon: 'success',
+                title: 'Deleted!',
+                text: 'Offer has been deleted successfully.',
+                showConfirmButton: false,
+                timer: 2000,
+                didClose: () => {
+                  location.reload();
+                }
+              });
+            } else {
+              throw new Error('Failed to delete offer');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: 'Failed to delete offer. Please try again.',
+              confirmButtonColor: '#dc3545'
+            });
+          });
         }
       });
     }

@@ -494,7 +494,7 @@
         btn.addEventListener("click", function () {
           if (btn.disabled) return;
           fetch("/cart/updateQuantity", {
-            method: "POST",
+            method: "PATCH",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ cartItemId, action: "increment" }),
           })
@@ -543,7 +543,7 @@
           const qtySpan = document.querySelector('.cart-quantity[data-cart-item-id="' + cartItemId + '"]');
           const limitMsg = document.getElementById("cart-qty-limit-message-" + cartItemId);
           fetch("/cart/updateQuantity", {
-            method: "POST",
+            method: "PATCH",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ cartItemId, action: "decrement" }),
           })
@@ -589,7 +589,7 @@
         icon.addEventListener("click", function () {
           const cartItemId = this.getAttribute("data-cart-item-id");
           fetch("/cart/remove", {
-            method: "POST",
+            method: "DELETE",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ cartItemId }),
           })

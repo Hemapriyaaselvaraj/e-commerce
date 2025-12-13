@@ -32,7 +32,6 @@ const offerSchema = new mongoose.Schema(
       },
     ],
 
-    // Admin can enable/disable an offer
     isActive: {
       type: Boolean,
       default: true,
@@ -51,7 +50,6 @@ const offerSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Method to check if offer is valid and active
 offerSchema.methods.isValid = function () {
   const now = new Date();
   return (

@@ -10,8 +10,9 @@ router.post('/toggle', wishlistController.toggleWishlist);
 
 router.get('/',wishlistController.getWishlist);
 router.post('/add',wishlistController.addToWishlist);
-router.post('/remove',wishlistController.removeFromWishlist);
-router.post('/addToCart',wishlistController.moveToCart)
+router.delete('/remove',wishlistController.removeFromWishlist);
+router.patch('/addToCart',wishlistController.moveToCart);
+router.get('/count', wishlistController.getWishlistCount);
 
 
 module.exports = router;

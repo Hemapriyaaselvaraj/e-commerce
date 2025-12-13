@@ -276,7 +276,7 @@ main {
         btn.addEventListener('click', function() {
           const wishlistId = this.getAttribute('wishlist-entry-id');
           fetch('/wishlist/remove', {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json'
@@ -288,6 +288,12 @@ main {
             if (data.success) {
               this.closest('.wishlist-item').remove();
               const countElem = document.querySelector('.wishlist-header p');
+              
+              // Update navbar counts
+              if (window.updateNavbarCounts) {
+                window.updateNavbarCounts();
+              }
+              
               if (countElem) {
                 let count = parseInt(countElem.textContent);
                 if (!isNaN(count) && count > 0) {
@@ -321,7 +327,7 @@ main {
             return;
           }
           fetch('/wishlist/addToCart', {
-            method: 'POST',
+            method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json'
@@ -333,6 +339,12 @@ main {
             if (data.success) {
               this.closest('.wishlist-item').remove();
               const countElem = document.querySelector('.wishlist-header p');
+              
+              // Update navbar counts (both cart and wishlist)
+              if (window.updateNavbarCounts) {
+                window.updateNavbarCounts();
+              }
+              
               if (countElem) {
                 let count = parseInt(countElem.textContent);
                 if (!isNaN(count) && count > 0) {
@@ -343,10 +355,16 @@ main {
                 location.reload();
               }
             } else {
-              if (typeof Swal !== 'undefined' && (data.message || '').toLowerCase().includes('stock')) {
+              if (typeof Swal !== 'undefined') {
+                let title = 'Error';
+                if ((data.message || '').toLowerCase().includes('stock')) {
+                  title = 'Out of Stock';
+                } else if ((data.message || '').includes('5') || (data.message || '').toLowerCase().includes('maximum')) {
+                  title = 'Quantity Limit Exceeded';
+                }
                 Swal.fire({
-                  title: 'Out of Stock',
-                  text: data.message,
+                  title: title,
+                  text: data.message || 'Could not add to cart.',
                   icon: 'error'
                 });
               } else {

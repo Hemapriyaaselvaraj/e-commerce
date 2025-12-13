@@ -2,6 +2,7 @@ const Cart = require('../../models/cartModel');
 const ProductVariation = require('../../models/productVariationModel');
 const User = require('../../models/userModel');
 const Offer = require('../../models/offerModel');
+const { calculateBestOffer } = require('../../utils/offerCalculator');
 
 const getCartPage = async (req, res) => {
   try {
@@ -15,7 +16,7 @@ const getCartPage = async (req, res) => {
         populate: { path: "product_id" }  
       });
 
-    // Get all active offers
+    
     const now = new Date();
     const activeOffers = await Offer.find({
       isActive: true,
@@ -32,45 +33,10 @@ const getCartPage = async (req, res) => {
 
       const originalPrice = product?.price || 0;
 
-      // Calculate maximum offer discount for this product
-      let maxOfferDiscount = 0;
-
-      if (product) {
-        // Check product-specific offers
-        const productOffers = activeOffers.filter(offer => 
-          offer.product.some(prodId => prodId.toString() === product._id.toString())
-        );
-        productOffers.forEach(offer => {
-          if (offer.discountPercentage > maxOfferDiscount) {
-            maxOfferDiscount = offer.discountPercentage;
-          }
-        });
-
-        // Check category-specific offers
-        const categoryOffers = activeOffers.filter(offer => 
-          offer.category && offer.category.length > 0 &&
-          offer.category.some(cat => cat && cat.category === product.product_category)
-        );
-        categoryOffers.forEach(offer => {
-          if (offer.discountPercentage > maxOfferDiscount) {
-            maxOfferDiscount = offer.discountPercentage;
-          }
-        });
-
-        // Check general offers
-        const generalOffers = activeOffers.filter(offer => 
-          offer.product.length === 0 && offer.category.length === 0
-        );
-        generalOffers.forEach(offer => {
-          if (offer.discountPercentage > maxOfferDiscount) {
-            maxOfferDiscount = offer.discountPercentage;
-          }
-        });
-      }
-
-      const finalPrice = maxOfferDiscount > 0
-        ? originalPrice * (1 - maxOfferDiscount / 100)
-        : originalPrice;
+      // ⭐ Use centralized offer calculation for consistency
+      const offerResult = calculateBestOffer(product, activeOffers);
+      const maxOfferDiscount = offerResult.discountPercentage;
+      const finalPrice = offerResult.finalPrice;
 
       return {
         _id: cart._id,
@@ -81,7 +47,7 @@ const getCartPage = async (req, res) => {
         quantity: cart.quantity,
         priceBefore: Math.round(originalPrice),
         priceAfter: Math.round(finalPrice),
-        discount: maxOfferDiscount, // Show offer discount instead of product discount
+        discount: maxOfferDiscount, 
         total: Math.round(finalPrice * cart.quantity),
         stock: variation.stock_quantity,
         isActive: product?.is_active
@@ -228,9 +194,25 @@ const addToCart = async (req, res) => {
 
 
 
+const getCartCount = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.json({ success: true, count: 0 });
+
+    const cartItems = await Cart.find({ user_id: userId });
+    const count = cartItems.reduce((total, item) => total + item.quantity, 0);
+    
+    res.json({ success: true, count });
+  } catch (err) {
+    console.error('Get cart count error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
     getCartPage,
     updateCartQuantity,
     removeFromCart,
-    addToCart
+    addToCart,
+    getCartCount
 }

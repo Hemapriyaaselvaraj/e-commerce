@@ -1,5 +1,8 @@
 const Coupon = require("../../models/couponModel");
 const Cart = require("../../models/cartModel");
+const Offer = require("../../models/offerModel");
+const { calculateBestOffer } = require("../../utils/offerCalculator");
+
 
 const applyCoupon = async (req, res) => {
   try {
@@ -15,13 +18,11 @@ const applyCoupon = async (req, res) => {
       return res.json({ success: false, message: "Invalid coupon code" });
     }
 
-    // Validate active
     const now = new Date();
     if (now < coupon.validFrom || now > coupon.validTo) {
       return res.json({ success: false, message: "Coupon expired or not yet valid" });
     }
 
-    // Usage limit check (if usedBy field exists)
     if (coupon.usedBy && coupon.usedBy.length > 0) {
       const usedData = coupon.usedBy.find(u => u.userId && u.userId.toString() === userId.toString());
       if (usedData && usedData.count >= coupon.usageLimitPerUser) {
@@ -29,7 +30,6 @@ const applyCoupon = async (req, res) => {
       }
     }
 
-    // Get cart items
     const cartItems = await Cart.find({ user_id: userId })
       .populate({
         path: "product_variation_id",
@@ -40,8 +40,6 @@ const applyCoupon = async (req, res) => {
       return res.json({ success: false, message: "Cart is empty" });
     }
 
-    // Calculate cart total (with offers already applied)
-    const Offer = require("../../models/offerModel");
     const activeOffers = await Offer.find({
       isActive: true,
       validFrom: { $lte: now },
@@ -49,50 +47,18 @@ const applyCoupon = async (req, res) => {
     }).populate('category', 'category').lean();
 
     let cartTotal = 0;
-    cartItems.forEach(item => {
+    cartItems.forEach((item, index) => {
       const product = item.product_variation_id?.product_id;
       if (product && product.is_active) {
-        let price = product.price;
-        
-        // Apply offer discount
-        let maxOfferDiscount = 0;
-        const productOffers = activeOffers.filter(offer => 
-          offer.product.some(prodId => prodId.toString() === product._id.toString())
-        );
-        productOffers.forEach(offer => {
-          if (offer.discountPercentage > maxOfferDiscount) {
-            maxOfferDiscount = offer.discountPercentage;
-          }
-        });
+        // ⭐ Use centralized offer calculation for consistency
+        const offerResult = calculateBestOffer(product, activeOffers);
+        const price = offerResult.finalPrice;
 
-        const categoryOffers = activeOffers.filter(offer => 
-          offer.category && offer.category.length > 0 &&
-          offer.category.some(cat => cat && cat.category === product.product_category)
-        );
-        categoryOffers.forEach(offer => {
-          if (offer.discountPercentage > maxOfferDiscount) {
-            maxOfferDiscount = offer.discountPercentage;
-          }
-        });
-
-        const generalOffers = activeOffers.filter(offer => 
-          offer.product.length === 0 && offer.category.length === 0
-        );
-        generalOffers.forEach(offer => {
-          if (offer.discountPercentage > maxOfferDiscount) {
-            maxOfferDiscount = offer.discountPercentage;
-          }
-        });
-
-        if (maxOfferDiscount > 0) {
-          price = price * (1 - maxOfferDiscount / 100);
-        }
-
-        cartTotal += price * item.quantity;
+        const itemTotal = price * item.quantity;
+        cartTotal += itemTotal;
       }
     });
 
-    // Min purchase check
     if (cartTotal < (coupon.minimumPurchase || 0)) {
       return res.json({
         success: false,
@@ -100,7 +66,7 @@ const applyCoupon = async (req, res) => {
       });
     }
 
-    // Calculate discount
+
     let discount = 0;
 
     if (coupon.discountType === "PERCENTAGE") {
@@ -113,11 +79,12 @@ const applyCoupon = async (req, res) => {
       discount = coupon.discountValue;
     }
 
-    // Calculate shipping
+  
     const shipping = cartTotal > 1000 ? 0 : 50;
     const grandTotal = Math.round(cartTotal + shipping - discount);
 
-    // Save coupon in session
+
+  
     req.session.appliedCoupon = {
       couponId: coupon._id,
       code: coupon.code,
@@ -145,7 +112,7 @@ const removeCoupon = async (req, res) => {
       return res.json({ success: false, message: "Login required" });
     }
 
-    // Remove coupon from session
+
     delete req.session.appliedCoupon;
 
     return res.json({

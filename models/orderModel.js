@@ -31,6 +31,9 @@ const orderSchema = new Schema({
       size: String,
       images: [String],
 
+      // Coupon discount allocated to this specific product
+      coupon_discount_allocated: { type: Number, default: 0 },
+
       // Product-wise status
       status: {
         type: String,
@@ -71,7 +74,10 @@ const orderSchema = new Schema({
       'OUT_FOR_DELIVERY',
       'DELIVERED',
       'CANCELLED',
-      'RETURNED'
+      'RETURNED',
+      'IN_PROGRESS',
+      'PARTIALLY_DELIVERED',
+      'PARTIALLY_SHIPPED'
     ],
     default: 'ORDERED'
   },

@@ -31,7 +31,7 @@ const postAddAddress = async (req, res) => {
       isDefault 
     } = req.body;
 
-    // Validate required fields
+    
     if (!name || !house_number || !locality || !city || !state || !pincode || !phone_number) {
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
@@ -75,31 +75,88 @@ const getEditAddress = async (req, res) => {
 };
 
 const postEditAddress = async (req, res) => {
-  if (!req.session || !req.session.userId) 
-    return res.redirect('/login');
-  
-  await Address.findOneAndUpdate({ _id: req.params.id, user_id: req.session.userId }, req.body);
-  res.redirect('/addresses');
+  try {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { 
+      name,
+      label,
+      type,
+      house_number,
+      locality,
+      city,
+      state,
+      pincode,
+      phone_number 
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !house_number || !locality || !city || !state || !pincode || !phone_number) {
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
+    const address = await Address.findOne({ _id: req.params.id, user_id: req.session.userId });
+    
+    if (!address) {
+      return res.status(404).json({ success: false, message: 'Address not found' });
+    }
+
+    await Address.findOneAndUpdate(
+      { _id: req.params.id, user_id: req.session.userId }, 
+      {
+        name,
+        label: label || 'Home',
+        type: type || 'HOME',
+        house_number,
+        locality,
+        city,
+        state,
+        pincode,
+        phone_number
+      }
+    );
+
+    return res.json({ success: true, message: 'Address updated successfully' });
+
+  } catch (error) {
+    console.error('Error updating address:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update address. Please try again.' });
+  }
 };
 
 const deleteAddress = async (req, res) => {
-  if (!req.session || !req.session.userId)
-    return res.redirect('/login');
-  
-  const address = await Address.findOne({ _id: req.params.id, user_id: req.session.userId });
-  const isDefault = address ? address.isDefault : false;
-  
-  await Address.deleteOne({ _id: req.params.id, user_id: req.session.userId });
-  
-  if (isDefault) {
-    const anotherAddress = await Address.findOne({ user_id: req.session.userId });
-    if (anotherAddress) {
-      anotherAddress.isDefault = true;
-      await anotherAddress.save();
+  try {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
+    
+    const address = await Address.findOne({ _id: req.params.id, user_id: req.session.userId });
+    
+    if (!address) {
+      return res.status(404).json({ success: false, message: 'Address not found' });
+    }
+    
+    const isDefault = address.isDefault;
+    
+    await Address.deleteOne({ _id: req.params.id, user_id: req.session.userId });
+    
+    // If deleted address was default, set another address as default
+    if (isDefault) {
+      const anotherAddress = await Address.findOne({ user_id: req.session.userId });
+      if (anotherAddress) {
+        anotherAddress.isDefault = true;
+        await anotherAddress.save();
+      }
+    }
+    
+    return res.json({ success: true, message: 'Address deleted successfully' });
+    
+  } catch (error) {
+    console.error('Error deleting address:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete address. Please try again.' });
   }
-  
-  res.redirect('/addresses');
 };
 
 const setDefaultAddress = async (req, res) => {

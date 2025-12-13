@@ -169,20 +169,42 @@ const moveToCart = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product variation not found' });
     }
 
-    if (variation.stock_quantity < 1) {
-      return res.status(400).json({ success: false, message: 'Out of stock' });
-    }
-
     let cartItem = await Cart.findOne({
       user_id: req.session.userId,
       product_variation_id: variation._id
     });
 
+    const MAX_QTY = 5;
+
     if (cartItem) {
+      // Check if adding 1 more would exceed the maximum quantity limit
+      if (cartItem.quantity + 1 > MAX_QTY) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'You cannot add more than 5 of this product to your cart.' 
+        });
+      }
+      
+      // Check if adding 1 more would exceed available stock
+      if (cartItem.quantity + 1 > variation.stock_quantity) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Quantity exceeds available stock' 
+        });
+      }
+      
       cartItem.quantity += 1;
       cartItem.updated_at = Date.now();
       await cartItem.save();
     } else {
+      // For new cart items, quantity will be 1, so just check stock
+      if (variation.stock_quantity < 1) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Out of stock' 
+        });
+      }
+      
       await Cart.create({
         user_id: req.session.userId,
         product_variation_id: variation._id,
@@ -206,11 +228,24 @@ const moveToCart = async (req, res) => {
 
 
 
+const getWishlistCount = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.json({ success: true, count: 0 });
+
+    const count = await Wishlist.countDocuments({ user_id: userId });
+    res.json({ success: true, count });
+  } catch (err) {
+    console.error('Get wishlist count error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   toggleWishlist ,
   getWishlist,
   removeFromWishlist,
   addToWishlist,
-  moveToCart
-
+  moveToCart,
+  getWishlistCount
  };

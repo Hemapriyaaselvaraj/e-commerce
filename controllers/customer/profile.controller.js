@@ -107,13 +107,10 @@ const getReferAndEarn = async (req, res) => {
     const user = await userModel.findById(userId).lean();
     if (!user) return res.redirect("/user/login");
 
-    // Count referrals
     const totalReferrals = await userModel.countDocuments({ referredBy: userId });
 
-    // Total earnings
     const totalReferralEarnings = totalReferrals * 100;
 
-    // Get the referral code that THIS user entered during signup
     let appliedReferralCode = null;
 
     if (user.referredBy) {
@@ -127,7 +124,7 @@ const getReferAndEarn = async (req, res) => {
       user,
       totalReferrals,
       totalReferralEarnings,
-      appliedReferralCode     // <-- IMPORTANT
+      appliedReferralCode     
     });
 
   } catch (err) {

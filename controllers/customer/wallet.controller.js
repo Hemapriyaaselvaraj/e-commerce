@@ -52,15 +52,15 @@ const createOrder = async (req, res) => {
     }
 
     const options = {
-      amount: amount * 100, // paise
+      amount: amount * 100, 
       currency: 'INR',
       receipt: 'wallet_topup_' + Date.now(),
-      notes: { purpose: 'wallet_topup' } // optional
+      notes: { purpose: 'wallet_topup' } 
     };
 
     const order = await razorpay.orders.create(options);
 
-    // send order details to frontend
+  
     return res.json({ success: true, order });
   } catch (err) {
     console.error('createOrder error:', err);

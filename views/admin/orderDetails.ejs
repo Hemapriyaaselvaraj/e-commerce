@@ -117,6 +117,69 @@
       padding: 0.25rem 0.5rem;
     }
 
+    /* Product Cards */
+    .products-section .card {
+      border: 1px solid #dee2e6;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .products-section .card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .products-section .card-header {
+      border-bottom: 1px solid #dee2e6;
+      padding: 1rem 1.25rem;
+    }
+
+    .products-section .card-body {
+      padding: 1.25rem;
+    }
+
+    /* Financial Summary Cards */
+    .card-header.bg-primary,
+    .card-header.bg-info {
+      border: none;
+    }
+
+    .card-header h6 {
+      margin: 0;
+      font-weight: 600;
+    }
+
+    /* Pricing Table */
+    .table-borderless td {
+      border: none;
+      padding: 0.5rem 0;
+    }
+
+    .table-borderless .border-top td {
+      border-top: 2px solid #dee2e6 !important;
+      padding-top: 0.75rem;
+    }
+
+    /* Status Alerts */
+    .alert {
+      border: none;
+      border-radius: 8px;
+    }
+
+    .alert-warning {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .alert-info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .alert-success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
     /* Popover Button */
     .btn-info[data-bs-toggle="popover"] {
       border: none;
@@ -309,126 +372,437 @@
 
         <!-- Order Summary -->
         <div class="order-summary mb-4">
-          <p><strong>Status:</strong> <%= order.status %></p>
-          <p><strong>Date:</strong> <%= new Date(order.createdAt).toLocaleDateString() %></p>
-          <p><strong>Total:</strong> ₹ <%= order.total %></p>
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Order Status:</strong> 
+                <% if (order.status === 'PENDING') { %>
+                  <span class="badge bg-secondary">Pending</span>
+                <% } else if (order.status === 'IN_PROGRESS') { %>
+                  <span class="badge bg-primary">In Progress</span>
+                <% } else if (order.status === 'DELIVERED') { %>
+                  <span class="badge bg-success">Delivered</span>
+                <% } else if (order.status === 'CANCELLED') { %>
+                  <span class="badge bg-danger">Cancelled</span>
+                <% } else if (order.status === 'PARTIALLY_DELIVERED') { %>
+                  <span class="badge bg-warning">Partially Delivered</span>
+                <% } else if (order.status === 'PARTIALLY_SHIPPED') { %>
+                  <span class="badge bg-info">Partially Shipped</span>
+                <% } else if (order.status === 'RETURNED') { %>
+                  <span class="badge bg-dark">Returned</span>
+                <% } else { %>
+                  <span class="badge bg-secondary"><%= order.status %></span>
+                <% } %>
+              </p>
+              <p><strong>Order Date:</strong> <%= new Date(order.ordered_at || order.createdAt).toLocaleDateString() %></p>
+              <% if (order.delivered_at) { %>
+                <p><strong>Delivered Date:</strong> <%= new Date(order.delivered_at).toLocaleDateString() %></p>
+              <% } %>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Customer:</strong> <%= order.user_id ? order.user_id.firstName + ' ' + (order.user_id.lastName || '') : 'Guest' %></p>
+              <p><strong>Payment Method:</strong> <%= order.payment_method || 'N/A' %></p>
+              <p><strong>Total Amount:</strong> Rs<%= order.total.toLocaleString() %></p>
+            </div>
+          </div>
         </div>
 
-        <!-- Status Update Form -->
-        <form action="/admin/orders/<%= order._id %>/status" method="POST" class="status-form mb-4">
-          <label for="status"><strong>Change Status:</strong></label>
-          <select name="status" id="status" class="form-select d-inline w-auto" onchange="this.form.submit()">
-            <option value="ORDERED" <%= order.status === 'ORDERED' ? 'selected' : '' %>>Ordered</option>
-            <option value="SHIPPED" <%= order.status === 'SHIPPED' ? 'selected' : '' %>>Shipped</option>
-            <option value="OUT_FOR_DELIVERY" <%= order.status === 'OUT_FOR_DELIVERY' ? 'selected' : '' %>>Out for Delivery</option>
-            <option value="DELIVERED" <%= order.status === 'DELIVERED' ? 'selected' : '' %>>Delivered</option>
-            <option value="RETURNED" <%= order.status === 'RETURNED' ? 'selected' : '' %>>Returned</option>
-            <option value="CANCELLED" <%= order.status === 'CANCELLED' ? 'selected' : '' %>>Cancelled</option>
-          </select>
-        </form>
-
-        <!-- Products Table -->
-        <div class="products-section">
-          <h5>Products</h5>
-          <table class="table table-bordered">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% order.products.forEach(p => { %>
-                <tr>
-                  <td data-label="Product"><%= p.name %></td>
-                  <td data-label="Quantity"><%= p.quantity %></td>
-                  <td data-label="Price">₹ <%= p.price %></td>
-                  <td data-label="Status">
-                    <% if (p.status === 'RETURN_REQUESTED') { %>
-                      <span class="badge bg-warning">Return Requested</span>
-                    <% } else if (p.status === 'RETURNED') { %>
-                      <span class="badge bg-info">Returned</span>
-                    <% } else { %>
-                      <span class="badge bg-<%= p.status === 'DELIVERED' ? 'success' : 'dark' %>">
-                        <%= p.status %>
-                      </span>
+        <!-- Financial Summary -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-receipt me-2"></i>Order Financial Summary</h6>
+              </div>
+              <div class="card-body">
+                <% 
+                  let totalOriginalPrice = 0;
+                  let totalOfferDiscount = 0;
+                  let totalCouponDiscount = 0;
+                  let totalFinalAmount = 0;
+                  
+                  order.products.forEach(p => {
+                    const originalPrice = (p.original_price || p.price) * p.quantity;
+                    const offerDiscount = p.original_price ? (p.original_price - p.price) * p.quantity : 0;
+                    const couponDiscount = p.coupon_discount_allocated || 0;
+                    const finalAmount = (p.price * p.quantity) - couponDiscount;
+                    
+                    totalOriginalPrice += originalPrice;
+                    totalOfferDiscount += offerDiscount;
+                    totalCouponDiscount += couponDiscount;
+                    totalFinalAmount += finalAmount;
+                  });
+                %>
+                
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <td><strong>Original Subtotal:</strong></td>
+                    <td class="text-end">Rs<%= totalOriginalPrice.toLocaleString() %></td>
+                  </tr>
+                  <% if (totalOfferDiscount > 0) { %>
+                    <tr>
+                      <td><strong>Offer Discounts:</strong></td>
+                      <td class="text-end text-success">-Rs<%= totalOfferDiscount.toLocaleString() %></td>
+                    </tr>
+                  <% } %>
+                  <% if (totalCouponDiscount > 0) { %>
+                    <tr>
+                      <td><strong>Coupon Discount:</strong></td>
+                      <td class="text-end text-success">-Rs<%= totalCouponDiscount.toLocaleString() %></td>
+                    </tr>
+                    <% if (order.applied_coupon_code) { %>
+                      <tr>
+                        <td><small class="text-muted">Coupon Code:</small></td>
+                        <td class="text-end"><small class="badge bg-secondary"><%= order.applied_coupon_code %></small></td>
+                      </tr>
                     <% } %>
-                  </td>
-                  <td data-label="Actions">
-                    <% if (p.status === 'RETURN_REQUESTED' || p.status === 'RETURNED' || (p.return_details && p.return_details.status === 'REJECTED')) { %>
-                      <div class="d-flex gap-2 btn-group-sm">
-                        <button type="button" class="btn btn-sm btn-info" 
-                                data-bs-toggle="popover" 
-                                data-bs-title="Return Request Details"
-                                data-bs-content="Reason: <%= p.return_details.reason %><br>Comments: <%= p.return_details.comments || 'No comments' %><br>Requested on: <%= new Date(p.return_details.requested_at).toLocaleDateString() %><br>Refund Amount: ₹<%= p.return_details.refundAmount %><br>Status: <%= p.return_details.status %>">
-                          <i class="fas fa-info-circle"></i>
-                        </button>
-                        <% if (p.status === 'RETURN_REQUESTED') { %>
-                          <form method="POST" action="/admin/orders/<%= order._id %>/return/verify" class="d-inline">
-                            <input type="hidden" name="productId" value="<%= p._id %>">
-                            <button class="btn btn-success btn-sm" name="action" value="approve" title="Approve Return">
-                              <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm" name="action" value="reject" title="Reject Return">
-                              <i class="fas fa-times"></i>
-                            </button>
-                          </form>
-                        <% } else if (p.status === 'RETURNED') { %>
-                          <span class="badge bg-success">Approved & Refunded</span>
-                        <% } else if (p.return_details.status === 'REJECTED') { %>
-                          <span class="badge bg-danger">Return Rejected</span>
+                  <% } %>
+                  <tr>
+                    <td><strong>Subtotal After Discounts:</strong></td>
+                    <td class="text-end">Rs<%= totalFinalAmount.toLocaleString() %></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Shipping Charge:</strong></td>
+                    <td class="text-end">Rs<%= (order.shipping_charge || 0).toLocaleString() %></td>
+                  </tr>
+                  <% if (order.tax && order.tax > 0) { %>
+                    <tr>
+                      <td><strong>Tax:</strong></td>
+                      <td class="text-end">Rs<%= order.tax.toLocaleString() %></td>
+                    </tr>
+                  <% } %>
+                  <tr class="border-top">
+                    <td><strong>Total Paid:</strong></td>
+                    <td class="text-end"><strong class="text-primary fs-5">Rs<%= order.total.toLocaleString() %></strong></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-wallet me-2"></i>Refund Summary</h6>
+              </div>
+              <div class="card-body">
+                <% 
+                  let totalRefunded = 0;
+                  let cancelledItems = 0;
+                  let returnedItems = 0;
+                  
+                  order.products.forEach(p => {
+                    if (p.status === 'CANCELLED') {
+                      cancelledItems++;
+                      totalRefunded += (p.price * p.quantity) - (p.coupon_discount_allocated || 0);
+                    } else if (p.status === 'RETURNED' && p.return_details) {
+                      returnedItems++;
+                      totalRefunded += p.return_details.refundAmount || 0;
+                    }
+                  });
+                %>
+                
+                <% if (totalRefunded > 0) { %>
+                  <table class="table table-sm table-borderless">
+                    <% if (cancelledItems > 0) { %>
+                      <tr>
+                        <td><strong>Cancelled Items:</strong></td>
+                        <td class="text-end"><%= cancelledItems %></td>
+                      </tr>
+                    <% } %>
+                    <% if (returnedItems > 0) { %>
+                      <tr>
+                        <td><strong>Returned Items:</strong></td>
+                        <td class="text-end"><%= returnedItems %></td>
+                      </tr>
+                    <% } %>
+                    <tr class="border-top">
+                      <td><strong>Total Refunded:</strong></td>
+                      <td class="text-end"><strong class="text-danger fs-5">Rs<%= totalRefunded.toLocaleString() %></strong></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Refund Method:</strong></td>
+                      <td class="text-end"><small class="badge bg-success">Wallet Credit</small></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Net Revenue:</strong></td>
+                      <td class="text-end"><strong class="text-success fs-5">Rs<%= (order.total - totalRefunded).toLocaleString() %></strong></td>
+                    </tr>
+                  </table>
+                <% } else { %>
+                  <div class="text-center text-muted py-3">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <p class="mb-0">No refunds processed</p>
+                    <small>All items are active</small>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Status Info -->
+        <div class="alert alert-secondary mb-4">
+          <h6><i class="fas fa-info-circle me-2"></i>Order Status Management</h6>
+          <p class="mb-0">The overall order status is automatically calculated based on individual product statuses. Update each product's status below to manage the order.</p>
+        </div>
+
+        <!-- Products Table with Detailed Pricing -->
+        <div class="products-section">
+          <h5>Products & Pricing Details</h5>
+          
+          <% order.products.forEach((p, index) => { %>
+            <div class="card mb-4">
+              <div class="card-header bg-light">
+                <div class="row align-items-center">
+                  <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                      <% if (p.images && p.images.length > 0) { %>
+                        <img src="<%= p.images[0] %>" alt="<%= p.name %>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
+                      <% } %>
+                      <div>
+                        <h6 class="mb-1"><%= p.name %></h6>
+                        <% if (p.color || p.size) { %>
+                          <small class="text-muted">
+                            <% if (p.color) { %>Color: <%= p.color %><% } %>
+                            <% if (p.color && p.size) { %> | <% } %>
+                            <% if (p.size) { %>Size: <%= p.size %><% } %>
+                          </small>
                         <% } %>
                       </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4 text-end">
+                    <% if (p.status === 'RETURN_REQUESTED') { %>
+                      <span class="badge bg-warning fs-6">Return Requested</span>
+                    <% } else if (p.status === 'RETURNED') { %>
+                      <span class="badge bg-info fs-6">Returned</span>
+                    <% } else if (p.status === 'CANCELLED') { %>
+                      <span class="badge bg-danger fs-6">Cancelled</span>
+                    <% } else if (p.status === 'DELIVERED') { %>
+                      <span class="badge bg-success fs-6">Delivered</span>
+                    <% } else if (p.status === 'OUT_FOR_DELIVERY') { %>
+                      <span class="badge bg-primary fs-6">Out for Delivery</span>
+                    <% } else if (p.status === 'SHIPPED') { %>
+                      <span class="badge bg-secondary fs-6">Shipped</span>
+                    <% } else { %>
+                      <span class="badge bg-dark fs-6">Ordered</span>
                     <% } %>
-                  </td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card-body">
+                <div class="row">
+                  <!-- Pricing Breakdown -->
+                  <div class="col-md-6">
+                    <h6 class="text-primary mb-3"><i class="fas fa-calculator me-2"></i>Pricing Breakdown</h6>
+                    <table class="table table-sm table-borderless">
+                      <tr>
+                        <td><strong>Quantity:</strong></td>
+                        <td class="text-end"><%= p.quantity %></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Original Price:</strong></td>
+                        <td class="text-end">
+                          <% if (p.original_price && p.original_price > p.price) { %>
+                            <span class="text-decoration-line-through text-muted">Rs<%= (p.original_price * p.quantity).toLocaleString() %></span>
+                          <% } else { %>
+                            Rs<%= (p.price * p.quantity).toLocaleString() %>
+                          <% } %>
+                        </td>
+                      </tr>
+                      <% if (p.original_price && p.original_price > p.price) { %>
+                        <tr>
+                          <td><strong>Offer Discount:</strong></td>
+                          <td class="text-end text-success">
+                            -Rs<%= ((p.original_price - p.price) * p.quantity).toLocaleString() %>
+                            <% if (p.discount_percentage) { %>
+                              (<%= p.discount_percentage %>% off)
+                            <% } %>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><strong>After Offer:</strong></td>
+                          <td class="text-end">Rs<%= (p.price * p.quantity).toLocaleString() %></td>
+                        </tr>
+                      <% } %>
+                      <tr>
+                        <td><strong>Coupon Discount:</strong></td>
+                        <td class="text-end text-success">
+                          <% if (p.coupon_discount_allocated && p.coupon_discount_allocated > 0) { %>
+                            -Rs<%= p.coupon_discount_allocated.toLocaleString() %>
+                          <% } else { %>
+                            Rs0
+                          <% } %>
+                        </td>
+                      </tr>
+                      <tr class="border-top">
+                        <td><strong>Final Amount Paid:</strong></td>
+                        <td class="text-end">
+                          <strong class="text-primary">
+                            Rs<%= ((p.price * p.quantity) - (p.coupon_discount_allocated || 0)).toLocaleString() %>
+                          </strong>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                  
+                  <!-- Status & Actions -->
+                  <div class="col-md-6">
+                    <h6 class="text-success mb-3"><i class="fas fa-cogs me-2"></i>Status & Actions</h6>
+                    
+                    <!-- Status Change -->
+                    <div class="mb-3">
+                      <label class="form-label"><strong>Change Status:</strong></label>
+                      <% if (p.status !== 'RETURN_REQUESTED' && p.status !== 'RETURNED' && p.status !== 'CANCELLED') { %>
+                        <form class="product-status-form" data-order-id="<%= order._id %>" data-product-id="<%= p._id %>">
+                          <select name="status" class="form-select form-select-sm" onchange="updateProductStatus(this)">
+                            <option value="ORDERED" <%= p.status === 'ORDERED' || !p.status ? 'selected' : '' %>>Ordered</option>
+                            <option value="SHIPPED" <%= p.status === 'SHIPPED' ? 'selected' : '' %>>Shipped</option>
+                            <option value="OUT_FOR_DELIVERY" <%= p.status === 'OUT_FOR_DELIVERY' ? 'selected' : '' %>>Out for Delivery</option>
+                            <option value="DELIVERED" <%= p.status === 'DELIVERED' ? 'selected' : '' %>>Delivered</option>
+                          </select>
+                        </form>
+                      <% } else { %>
+                        <div class="alert alert-warning py-2">
+                          <small><i class="fas fa-lock me-1"></i>Status locked - Product is <%= p.status.toLowerCase().replace('_', ' ') %></small>
+                        </div>
+                      <% } %>
+                    </div>
+
+                    <!-- Refund Information -->
+                    <% if (p.status === 'CANCELLED' || p.status === 'RETURNED') { %>
+                      <div class="alert alert-info py-2">
+                        <h6 class="mb-2"><i class="fas fa-wallet me-2"></i>Refund Details</h6>
+                        <% 
+                          let refundAmount = 0;
+                          if (p.status === 'RETURNED' && p.return_details && p.return_details.refundAmount) {
+                            refundAmount = p.return_details.refundAmount;
+                          } else if (p.status === 'CANCELLED') {
+                            refundAmount = (p.price * p.quantity) - (p.coupon_discount_allocated || 0);
+                          }
+                        %>
+                        <small>
+                          <strong>Amount Refunded:</strong> Rs<%= refundAmount.toLocaleString() %><br>
+                          <strong>Refund Method:</strong> Wallet Credit<br>
+                          <% if (p.status === 'RETURNED' && p.return_details) { %>
+                            <strong>Reason:</strong> <%= p.return_details.reason %><br>
+                            <strong>Date:</strong> <%= new Date(p.return_details.requested_at).toLocaleDateString() %>
+                          <% } %>
+                        </small>
+                      </div>
+                    <% } %>
+
+                    <!-- Return Request Actions -->
+                    <% if (p.status === 'RETURN_REQUESTED') { %>
+                      <div class="alert alert-warning py-2">
+                        <h6 class="mb-2"><i class="fas fa-undo me-2"></i>Return Request</h6>
+                        <% if (p.return_details) { %>
+                          <small class="d-block mb-2">
+                            <strong>Reason:</strong> <%= p.return_details.reason %><br>
+                            <strong>Comments:</strong> <%= p.return_details.comments || 'No comments' %><br>
+                            <strong>Requested:</strong> <%= new Date(p.return_details.requested_at).toLocaleDateString() %><br>
+                            <strong>Refund Amount:</strong> Rs<%= p.return_details.refundAmount.toLocaleString() %>
+                          </small>
+                        <% } %>
+                        <div class="d-flex gap-2">
+                          <button class="btn btn-success btn-sm" onclick="verifyReturn('<%= order._id %>', '<%= p._id %>', 'approve')" title="Approve Return">
+                            <i class="fas fa-check me-1"></i>Approve
+                          </button>
+                          <button class="btn btn-danger btn-sm" onclick="verifyReturn('<%= order._id %>', '<%= p._id %>', 'reject')" title="Reject Return">
+                            <i class="fas fa-times me-1"></i>Reject
+                          </button>
+                        </div>
+                      </div>
+                    <% } else if (p.status === 'RETURNED') { %>
+                      <div class="alert alert-success py-2">
+                        <small><i class="fas fa-check-circle me-1"></i>Return approved and refunded to wallet</small>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }) %>
         </div>
+
+        <!-- Shipping Address -->
+        <% if (order.shipping_address) { %>
+          <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+              <h6 class="mb-0"><i class="fas fa-shipping-fast me-2"></i>Shipping Address</h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <p class="mb-1"><strong><%= order.shipping_address.name %></strong></p>
+                  <% if (order.shipping_address.house_number) { %>
+                    <p class="mb-1"><%= order.shipping_address.house_number %></p>
+                  <% } %>
+                  <% if (order.shipping_address.street) { %>
+                    <p class="mb-1"><%= order.shipping_address.street %></p>
+                  <% } %>
+                  <% if (order.shipping_address.locality) { %>
+                    <p class="mb-1"><%= order.shipping_address.locality %></p>
+                  <% } %>
+                  <p class="mb-1"><%= order.shipping_address.city %>, <%= order.shipping_address.state %></p>
+                  <p class="mb-1"><strong>PIN:</strong> <%= order.shipping_address.pincode %></p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Phone:</strong> <%= order.shipping_address.phone_number %></p>
+                  <% if (order.shipping_address.type) { %>
+                    <p class="mb-1"><strong>Address Type:</strong> 
+                      <span class="badge bg-outline-secondary"><%= order.shipping_address.type %></span>
+                    </p>
+                  <% } %>
+                  <% if (order.shipping_address.label) { %>
+                    <p class="mb-1"><strong>Label:</strong> <%= order.shipping_address.label %></p>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% } %>
 
         <!-- Cancel Modal -->
         <div class="modal fade" id="cancelModal" tabindex="-1">
           <div class="modal-dialog">
-            <form class="modal-content" action="/admin/orders/<%= order._id %>/cancel" method="POST">
+            <div class="modal-content">
               <div class="modal-header">
                 <h5 class="modal-title">Cancel Order</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
-                <input type="hidden" name="productId" id="cancelProductId">
+                <input type="hidden" id="cancelProductId">
                 <label for="cancelReason" class="form-label">Reason (optional)</label>
-                <textarea class="form-control" name="reason" id="cancelReason" rows="3"></textarea>
+                <textarea class="form-control" id="cancelReason" rows="3"></textarea>
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-danger">Submit</button>
+                <button type="button" class="btn btn-danger" onclick="submitCancel()">Submit</button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
 
         <!-- Return Modal -->
         <div class="modal fade" id="returnModal" tabindex="-1">
           <div class="modal-dialog">
-            <form class="modal-content" action="/admin/orders/<%= order._id %>/return" method="POST">
+            <div class="modal-content">
               <div class="modal-header">
                 <h5 class="modal-title">Return Product</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
-                <input type="hidden" name="productId" id="returnProductId">
+                <input type="hidden" id="returnProductId">
                 <label for="returnReason" class="form-label">Reason <span class="text-danger">*</span></label>
-                <textarea class="form-control" name="reason" id="returnReason" rows="3" required></textarea>
+                <textarea class="form-control" id="returnReason" rows="3" required></textarea>
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-warning">Submit</button>
+                <button type="button" class="btn btn-warning" onclick="submitReturn()">Submit</button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       </div>
@@ -445,6 +819,144 @@
     function openReturnModal(productId) {
       document.getElementById('returnProductId').value = productId;
       new bootstrap.Modal(document.getElementById('returnModal')).show();
+    }
+
+    // Update product status with PATCH method
+    function updateProductStatus(selectElement) {
+      const form = selectElement.closest('.product-status-form');
+      const orderId = form.dataset.orderId;
+      const productId = form.dataset.productId;
+      const status = selectElement.value;
+
+      // Show loading state
+      selectElement.disabled = true;
+
+      fetch(`/admin/orders/${orderId}/product-status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          productId: productId,
+          status: status
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Success - reload page to show updated status
+          location.reload();
+        } else {
+          // Show specific error message
+          alert(data.message || 'Failed to update status');
+          selectElement.disabled = false;
+          // Reset to previous value if needed
+          location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Network error: Failed to update status');
+        selectElement.disabled = false;
+        location.reload();
+      });
+    }
+
+    // Submit cancel request with PATCH method
+    function submitCancel() {
+      const productId = document.getElementById('cancelProductId').value;
+      const reason = document.getElementById('cancelReason').value;
+
+      if (!reason.trim()) {
+        alert('Please provide a cancellation reason');
+        return;
+      }
+
+      fetch(`/admin/orders/<%= order._id %>/cancel`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          productId: productId,
+          reason: reason
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
+          location.reload();
+        } else {
+          alert(data.message || 'Failed to cancel order');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Network error: Failed to cancel order');
+      });
+    }
+
+    // Submit return request with PATCH method
+    function submitReturn() {
+      const productId = document.getElementById('returnProductId').value;
+      const reason = document.getElementById('returnReason').value;
+
+      if (!reason.trim()) {
+        alert('Please provide a reason for return');
+        return;
+      }
+
+      fetch(`/admin/orders/<%= order._id %>/return`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          productId: productId,
+          reason: reason
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('returnModal')).hide();
+          location.reload();
+        } else {
+          alert(data.message || 'Failed to process return');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Network error: Failed to process return');
+      });
+    }
+
+    // Verify return with PATCH method
+    function verifyReturn(orderId, productId, action) {
+      fetch(`/admin/orders/${orderId}/return/verify`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          productId: productId,
+          action: action
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert(data.message);
+          location.reload();
+        } else {
+          alert(data.message || 'Failed to verify return');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Network error: Failed to verify return');
+      });
     }
 
     // Initialize popovers

@@ -33,14 +33,12 @@ const getCustomers = async (req, res) => {
     .skip((currentPage - 1) * pageSize)
     .limit(pageSize);
 
-  // Get order counts for all users
   const userIds = users.map(u => u._id);
   const orderCounts = await Order.aggregate([
     { $match: { user_id: { $in: userIds } } },
     { $group: { _id: '$user_id', count: { $sum: 1 } } }
   ]);
   
-  // Create a map for quick lookup
   const orderCountMap = {};
   orderCounts.forEach(oc => {
     orderCountMap[oc._id.toString()] = oc.count;

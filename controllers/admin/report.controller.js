@@ -3,7 +3,6 @@ const User = require('../../models/userModel');
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
 
-// Load Sales Report Page
 const getSalesReportPage = async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
@@ -19,11 +18,13 @@ const getSalesReportPage = async (req, res) => {
   }
 };
 
-
-// Helper function to get sales data
-const getSalesReportDataInternal = async (query) => {
-  const { filterType, startDate, endDate } = query;
-  let matchQuery = { status: "DELIVERED" };
+const getSalesReportDataInternal = async (query, forDownload = false) => {
+  const { filterType, startDate, endDate, page = 1 } = query;
+  
+  // Match orders that have at least one delivered product
+  let matchQuery = {
+    products: { $elemMatch: { status: "DELIVERED" } }
+  };
 
   let from, to;
   const now = new Date();
@@ -66,39 +67,130 @@ const getSalesReportDataInternal = async (query) => {
 
   matchQuery.ordered_at = { $gte: from, $lte: to };
 
-  const orders = await Order.find(matchQuery)
-    .populate("user_id", "firstName email")
-    .lean();
+  // Get total count for summary and pagination
+  const deliveredOrderCount = await Order.countDocuments(matchQuery);
 
-  // Calculate totals
-  let totalSalesCount = orders.length;
+  // For downloads, get all orders; for display, get paginated orders
+  let orders;
+  let pagination = {};
+
+  if (forDownload) {
+    orders = await Order.find(matchQuery)
+      .populate("user_id", "firstName email")
+      .sort({ ordered_at: -1 })
+      .lean();
+  } else {
+    // For display, implement pagination
+    const limit = 10; // Orders per page
+    const skip = (parseInt(page) - 1) * limit;
+    const totalPages = Math.ceil(deliveredOrderCount / limit);
+
+    orders = await Order.find(matchQuery)
+      .populate("user_id", "firstName email")
+      .sort({ ordered_at: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    pagination = {
+      currentPage: parseInt(page),
+      totalPages,
+      deliveredOrderCount,
+      hasNextPage: parseInt(page) < totalPages,
+      hasPrevPage: parseInt(page) > 1,
+      nextPage: parseInt(page) + 1,
+      prevPage: parseInt(page) - 1
+    };
+  }
+
+  // Use the same orders for summary calculation to avoid duplicate query
+  const allOrdersForSummary = forDownload ? orders : await Order.find(matchQuery).lean();
+  
+  let totalSalesCount = 0; // Count of delivered products
   let totalAmount = 0;
   let totalDiscount = 0;
   let totalCouponDeduction = 0;
 
-  orders.forEach(order => {
-    totalAmount += order.total || 0;
-    // Calculate discount from products
+  allOrdersForSummary.forEach(order => {
+    // Only count delivered products
+    const deliveredProducts = order.products.filter(p => p.status === 'DELIVERED');
+    totalSalesCount += deliveredProducts.length;
+    
+    // Calculate amounts only for delivered products
+    let orderSubtotal = 0;
     let orderDiscount = 0;
-    if (order.products && order.products.length > 0) {
-      order.products.forEach(product => {
-        if (product.original_price && product.price) {
-          orderDiscount += (product.original_price - product.price) * product.quantity;
-        }
-      });
-    }
+    let orderCouponDiscount = 0;
+    
+    deliveredProducts.forEach(product => {
+      orderSubtotal += product.price * product.quantity;
+      
+      // Product-level offer discount
+      if (product.original_price && product.price) {
+        orderDiscount += (product.original_price - product.price) * product.quantity;
+      }
+      
+      // ⭐ Use allocated coupon discount (no more proportional calculation!)
+      orderCouponDiscount += product.coupon_discount_allocated || 0;
+    });
+    
+    // Calculate proportional shipping for delivered products (shipping still needs proportional split)
+    const totalProducts = order.products.length;
+    const deliveredProductsCount = deliveredProducts.length;
+    const deliveredRatio = deliveredProductsCount / totalProducts;
+    const proportionalShipping = (order.shipping_charge || 0) * deliveredRatio;
+    
+    totalAmount += orderSubtotal + proportionalShipping;
     totalDiscount += orderDiscount;
-    totalCouponDeduction += order.coupon_discount || 0;
+    totalCouponDeduction += orderCouponDiscount;
+  });
+
+  // Process orders to show only delivered products data
+  const processedOrders = orders.map(order => {
+    const deliveredProducts = order.products.filter(p => p.status === 'DELIVERED');
+    
+    let orderSubtotal = 0;
+    let orderDiscount = 0;
+    let orderCouponDiscount = 0;
+    
+    deliveredProducts.forEach(product => {
+      orderSubtotal += product.price * product.quantity;
+      
+      // Product-level offer discount
+      if (product.original_price && product.price) {
+        orderDiscount += (product.original_price - product.price) * product.quantity;
+      }
+      
+      // ⭐ Use allocated coupon discount (accurate per-product amount)
+      orderCouponDiscount += product.coupon_discount_allocated || 0;
+    });
+    
+    // Calculate proportional shipping for delivered products (shipping still needs proportional split)
+    const totalProducts = order.products.length;
+    const deliveredProductsCount = deliveredProducts.length;
+    const deliveredRatio = deliveredProductsCount / totalProducts;
+    const proportionalShipping = (order.shipping_charge || 0) * deliveredRatio;
+    const proportionalTotal = orderSubtotal + proportionalShipping;
+    
+    return {
+      ...order,
+      deliveredProductsCount,
+      subtotal: orderSubtotal,
+      total: proportionalTotal,
+      coupon_discount: orderCouponDiscount,
+      shipping_charge: proportionalShipping,
+      product_discount: orderDiscount
+    };
   });
 
   return {
-    orders,
+    orders: processedOrders,
     summary: {
-      totalSalesCount,
+      totalSalesCount, // Now counts delivered products, not orders
       totalAmount,
       totalDiscount,
       totalCouponDeduction
-    }
+    },
+    pagination
   };
 };
 
@@ -115,7 +207,7 @@ const getSalesReportData = async (req, res) => {
 const downloadPDF = async (req, res) => {
   try {
     const { filterType, startDate, endDate } = req.query;
-    const response = await getSalesReportDataInternal({ filterType, startDate, endDate });
+    const response = await getSalesReportDataInternal({ filterType, startDate, endDate }, true);
     const { orders, summary } = response;
 
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
@@ -138,7 +230,7 @@ const downloadPDF = async (req, res) => {
     doc.rect(summaryBoxLeft, summaryBoxTop, summaryBoxWidth, 35).stroke();
     
     const totalDiscount = summary.totalDiscount + summary.totalCouponDeduction;
-    const summaryText = `Total Orders: ${summary.totalSalesCount}  |  Total Revenue: Rs${summary.totalAmount.toLocaleString()}  |  Total Discount: Rs${totalDiscount.toLocaleString()}`;
+    const summaryText = `Delivered Products: ${summary.totalSalesCount}  |  Total Revenue: Rs${summary.totalAmount.toLocaleString()}  |  Total Discount: Rs${totalDiscount.toLocaleString()}`;
     
     doc.fontSize(11).font('Helvetica-Bold');
     doc.text(summaryText, summaryBoxLeft + 15, summaryBoxTop + 12, { 
@@ -206,15 +298,8 @@ const downloadPDF = async (req, res) => {
 
       const customerName = order.user_id ? order.user_id.firstName : 'Guest';
       
-      let productDiscount = 0;
-      if (order.products && order.products.length > 0) {
-        order.products.forEach(product => {
-          if (product.original_price && product.price) {
-            productDiscount += (product.original_price - product.price) * product.quantity;
-          }
-        });
-      }
-      
+      // Use the pre-calculated values from processedOrders
+      const productDiscount = order.product_discount || 0;
       const totalDiscount = productDiscount + (order.coupon_discount || 0);
       const orderDate = new Date(order.ordered_at).toLocaleString('en-IN', {
         day: '2-digit',
@@ -275,7 +360,7 @@ const downloadPDF = async (req, res) => {
 const downloadExcel = async (req, res) => {
   try {
     const { filterType, startDate, endDate } = req.query;
-    const response = await getSalesReportDataInternal({ filterType, startDate, endDate });
+    const response = await getSalesReportDataInternal({ filterType, startDate, endDate }, true);
     const { orders, summary } = response;
 
     const workbook = new ExcelJS.Workbook();
@@ -301,7 +386,7 @@ const downloadExcel = async (req, res) => {
     const totalDiscount = summary.totalDiscount + summary.totalCouponDeduction;
     sheet.mergeCells('A4:G4');
     const summaryRow = sheet.getRow(4);
-    summaryRow.getCell(1).value = `Total Orders: ${summary.totalSalesCount}  |  Total Revenue: Rs${summary.totalAmount.toLocaleString()}  |  Total Discount: Rs${totalDiscount.toLocaleString()}`;
+    summaryRow.getCell(1).value = `Delivered Products: ${summary.totalSalesCount}  |  Total Revenue: Rs${summary.totalAmount.toLocaleString()}  |  Total Discount: Rs${totalDiscount.toLocaleString()}`;
     summaryRow.getCell(1).font = { size: 11, bold: true };
     summaryRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
     summaryRow.height = 25;
@@ -340,15 +425,8 @@ const downloadExcel = async (req, res) => {
     orders.forEach((order) => {
       const customerName = order.user_id ? order.user_id.firstName : 'Guest';
       
-      let productDiscount = 0;
-      if (order.products && order.products.length > 0) {
-        order.products.forEach(product => {
-          if (product.original_price && product.price) {
-            productDiscount += (product.original_price - product.price) * product.quantity;
-          }
-        });
-      }
-      
+      // Use the pre-calculated values from processedOrders
+      const productDiscount = order.product_discount || 0;
       const totalDiscount = productDiscount + (order.coupon_discount || 0);
       const orderDate = new Date(order.ordered_at).toLocaleString('en-IN', {
         day: '2-digit',

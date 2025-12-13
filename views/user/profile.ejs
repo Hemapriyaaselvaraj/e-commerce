@@ -484,7 +484,7 @@
 
       try {
         const response = await fetch('/profile/update-image', {
-          method: 'POST',
+          method: 'PATCH',
           credentials: 'same-origin',
           body: formData
         });

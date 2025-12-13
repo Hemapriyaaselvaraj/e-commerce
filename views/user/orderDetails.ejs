@@ -142,6 +142,11 @@
       min-width: 100px;
     }
 
+    /* Utility Classes */
+    .opacity-50 {
+      opacity: 0.5;
+    }
+
     /* Mobile Responsive */
     @media (max-width: 768px) {
       .table thead {
@@ -244,19 +249,31 @@
                 </thead>
                 <tbody>
                   <% order.items.forEach(function(item) { %>
-                    <tr>
+                    <tr class="<%= item.status === 'CANCELLED' ? 'table-secondary' : '' %>">
                       <td>
                         <div class="d-flex align-items-center">
-                          <img src="<%= item.image %>" alt="<%= item.name %>" class="me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                          <img src="<%= item.image %>" alt="<%= item.name %>" class="me-3 <%= item.status === 'CANCELLED' ? 'opacity-50' : '' %>" style="width: 60px; height: 60px; object-fit: cover;">
                           <div>
-                            <h6 class="mb-0"><%= item.name %></h6>
-                            <small>Size: <%= item.size %>, Color: <%= item.color %></small>
+                            <h6 class="mb-0 <%= item.status === 'CANCELLED' ? 'text-muted' : '' %>"><%= item.name %></h6>
+                            <small class="<%= item.status === 'CANCELLED' ? 'text-muted' : '' %>">Size: <%= item.size %>, Color: <%= item.color %></small>
                           </div>
                         </div>
                       </td>
-                      <td>₹<%= item.price %></td>
-                      <td><%= item.quantity %></td>
-                      <td>₹<%= item.price * item.quantity %></td>
+                      <td class="<%= item.status === 'CANCELLED' ? 'text-muted' : '' %>">
+                        <% if (item.status === 'CANCELLED') { %>
+                          <s>₹<%= item.price %></s>
+                        <% } else { %>
+                          ₹<%= item.price %>
+                        <% } %>
+                      </td>
+                      <td class="<%= item.status === 'CANCELLED' ? 'text-muted' : '' %>"><%= item.quantity %></td>
+                      <td class="<%= item.status === 'CANCELLED' ? 'text-muted' : '' %>">
+                        <% if (item.status === 'CANCELLED') { %>
+                          <s>₹<%= item.price * item.quantity %></s>
+                        <% } else { %>
+                          ₹<%= item.price * item.quantity %>
+                        <% } %>
+                      </td>
                       <td>
                         <span class="badge bg-<%= item.status === 'RETURNED' ? 'warning' : 
                           (item.status === 'RETURN_REQUESTED' ? 'info' : 
@@ -268,7 +285,7 @@
   <% if (item.status === 'CANCELLED') { %>
     <span class="text-muted">Cancelled</span>
 
-  <% } else if (order.status === 'ORDERED') { %>
+  <% } else if (item.status === 'ORDERED' || (order.status === 'ORDERED' && !item.status)) { %>
     <button class="btn btn-danger btn-sm"
             onclick="cancelProduct('<%= order._id %>', '<%= item._id %>')">
       Cancel Item
@@ -280,7 +297,7 @@
   <% } else if (item.status === 'RETURNED') { %>
     <span class="text-muted">Returned</span>
 
-  <% } else if (order.status === 'DELIVERED') { %>
+  <% } else if (item.status === 'DELIVERED' || (order.status === 'DELIVERED' && !item.status)) { %>
     <button class="btn btn-warning btn-sm"
             onclick="requestReturn('<%= order._id %>', '<%= item._id %>')">
       Request Return
@@ -300,18 +317,69 @@
               <div class="col-md-6 ms-auto">
                 <table class="table table-bordered">
                   <tbody>
-                    <tr>
-                      <td><strong>Subtotal</strong></td>
-                      <td class="text-end">₹<%= order.subtotal %></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Shipping</strong></td>
-                      <td class="text-end">₹<%= order.shipping_charge %></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Total</strong></td>
-                      <td class="text-end"><strong>₹<%= order.total %></strong></td>
-                    </tr>
+                    <%
+                      // Calculate original totals based on all items (including cancelled)
+                      let allItems = order.items;
+                      let originalSubtotal = allItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                      let originalShipping = originalSubtotal > 1000 ? 0 : 50;
+                      let originalTotal = originalSubtotal + originalShipping + (order.tax || 0) - (order.coupon_discount || 0);
+                      
+                      // Check if there are cancelled items to show original vs current
+                      let hasCancelledItems = order.items.some(item => item.status === 'CANCELLED');
+                    %>
+                    
+                    <% if (hasCancelledItems) { %>
+                      <tr>
+                        <td><strong>Original Subtotal</strong></td>
+                        <td class="text-end text-muted"><s>₹<%= originalSubtotal %></s></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Current Subtotal</strong></td>
+                        <td class="text-end">₹<%= order.subtotal %></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Original Shipping</strong></td>
+                        <td class="text-end text-muted"><s>₹<%= originalShipping %></s></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Current Shipping</strong></td>
+                        <td class="text-end">₹<%= order.shipping_charge %></td>
+                      </tr>
+                      <% if (order.coupon_discount > 0) { %>
+                        <tr>
+                          <td><strong>Coupon Discount</strong></td>
+                          <td class="text-end text-success">-₹<%= order.coupon_discount %></td>
+                        </tr>
+                      <% } %>
+                      <tr>
+                        <td><strong>Original Total</strong></td>
+                        <td class="text-end text-muted"><s>₹<%= originalTotal %></s></td>
+                      </tr>
+                      <tr class="table-success">
+                        <td><strong>Current Total</strong></td>
+                        <td class="text-end"><strong>₹<%= order.total %></strong></td>
+                      </tr>
+                    <% } else { %>
+                      <tr>
+                        <td><strong>Subtotal</strong></td>
+                        <td class="text-end">₹<%= order.subtotal %></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Shipping</strong></td>
+                        <td class="text-end">₹<%= order.shipping_charge %></td>
+                      </tr>
+                      <% if (order.coupon_discount > 0) { %>
+                        <tr>
+                          <td><strong>Coupon Discount</strong></td>
+                          <td class="text-end text-success">-₹<%= order.coupon_discount %></td>
+                        </tr>
+                      <% } %>
+                      <tr>
+                        <td><strong>Total</strong></td>
+                        <td class="text-end"><strong>₹<%= order.total %></strong></td>
+                      </tr>
+                    <% } %>
+                    
                     <tr>
                       <td colspan="2" style="font-size: 0.85rem; color: #666; padding-top: 0.5rem;">* All prices include applicable taxes</td>
                     </tr>
@@ -347,7 +415,7 @@
       
       try {
         const response = await fetch(`/order/cancel/${orderId}`, {
-          method: 'POST',
+          method: 'DELETE',
           headers: {
             'Content-Type': 'application/json'
           },
@@ -487,7 +555,7 @@ async function cancelProduct(orderId, itemId) {
 
   try {
     const response = await fetch(`/order/cancel/${orderId}/product`, {
-  method: "POST",
+  method: "DELETE",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ productId: itemId, reason })
 });

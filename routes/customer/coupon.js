@@ -5,8 +5,8 @@ const {isCustomerAccessible} = require('../../middlewares/auth');
 
 router.use(isCustomerAccessible);
 
-router.post('/apply-coupon', couponController.applyCoupon);
-router.post('/remove-coupon', couponController.removeCoupon)
+router.patch('/apply-coupon', couponController.applyCoupon);
+router.delete('/remove-coupon', couponController.removeCoupon)
 
 
 module.exports = {

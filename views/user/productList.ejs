@@ -871,6 +871,11 @@
           btn.classList.remove('active');
           if (icon) { icon.classList.remove('fas'); icon.classList.add('far'); }
         }
+        
+        // Update navbar wishlist count
+        if (window.updateNavbarCounts) {
+          window.updateNavbarCounts();
+        }
       } catch (err) {
         console.error('Wishlist toggle failed', err);
         alert('Network error. Please try again.');

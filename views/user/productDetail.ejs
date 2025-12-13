@@ -911,6 +911,11 @@
             qtyInput.value = 1;
           }
           updateQtyButtons();
+          
+          // Update navbar cart count
+          if (window.updateNavbarCounts) {
+            window.updateNavbarCounts();
+          }
         } else {
           Swal.fire({
             title: 'Error',
@@ -985,6 +990,11 @@
               timer: 2000,
               showConfirmButton: false
             });
+            
+            // Update navbar wishlist count
+            if (window.updateNavbarCounts) {
+              window.updateNavbarCounts();
+            }
           } else {
             Swal.fire({
               title: 'Error',

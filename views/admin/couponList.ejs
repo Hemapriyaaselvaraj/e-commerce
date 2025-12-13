@@ -379,12 +379,37 @@
         cancelButtonText: 'Cancel'
       }).then((result) => {
         if (result.isConfirmed) {
-          // Create a form and submit it
-          const form = document.createElement('form');
-          form.method = 'POST';
-          form.action = `/admin/delete-coupon/${id}`;
-          document.body.appendChild(form);
-          form.submit();
+          fetch(`/admin/delete-coupon/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          .then(response => {
+            if (response.ok) {
+              Swal.fire({
+                icon: 'success',
+                title: 'Deleted!',
+                text: 'Coupon has been deleted successfully.',
+                showConfirmButton: false,
+                timer: 2000,
+                didClose: () => {
+                  location.reload();
+                }
+              });
+            } else {
+              throw new Error('Failed to delete coupon');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: 'Failed to delete coupon. Please try again.',
+              confirmButtonColor: '#dc3545'
+            });
+          });
         }
       });
     }

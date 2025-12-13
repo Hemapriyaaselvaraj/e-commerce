@@ -67,50 +67,82 @@ const getOrderDetail = async (req, res) => {
 };
 
 const cancelOrder = async (req, res) => {
-  const { productId, reason } = req.body;
-  const order = await Order.findById(req.params.id).populate('products.variation');
+  try {
+    const { productId, reason } = req.body;
+    
+    if (!productId || !reason) {
+      return res.status(400).json({ success: false, message: 'Product ID and reason are required' });
+    }
 
-  if (productId === 'full') {
-    order.status = 'CANCELLED';
-    for (let item of order.products) {
-      const variation = await ProductVariation.findById(item.variation._id);
-      variation.stock_quantity += item.quantity;
-      await variation.save();
-      item.status = 'CANCELLED';
+    const order = await Order.findById(req.params.id).populate('products.variation');
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
     }
-  } else {
-    const item = order.products.find(p => p._id.toString() === productId);
-    if (item) {
-      const variation = await ProductVariation.findById(item.variation);
-      variation.stock_quantity += item.quantity;
-      await variation.save();
-      item.status = 'CANCELLED';
+
+    if (productId === 'full') {
+      order.status = 'CANCELLED';
+      for (let item of order.products) {
+        const variation = await ProductVariation.findById(item.variation._id);
+        variation.stock_quantity += item.quantity;
+        await variation.save();
+        item.status = 'CANCELLED';
+      }
+    } else {
+      const item = order.products.find(p => p._id.toString() === productId);
+      if (item) {
+        const variation = await ProductVariation.findById(item.variation);
+        variation.stock_quantity += item.quantity;
+        await variation.save();
+        item.status = 'CANCELLED';
+      } else {
+        return res.status(404).json({ success: false, message: 'Product not found in order' });
+      }
     }
+
+    order.cancellationReason = reason || '';
+    await order.save();
+    
+    res.json({ success: true, message: 'Order cancelled successfully' });
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    res.status(500).json({ success: false, message: 'Failed to cancel order' });
   }
-
-  order.cancellationReason = reason || '';
-  await order.save();
-  res.redirect('/admin/orders/' + req.params.id);
 };
 
 const returnProduct = async (req, res) => {
-  const { productId, reason } = req.body;
-  if (!reason) return res.redirect('/admin/orders/' + req.params.id);
+  try {
+    const { productId, reason } = req.body;
+    
+    if (!reason) {
+      return res.status(400).json({ success: false, message: 'Reason is required' });
+    }
 
-  const order = await Order.findById(req.params.id);
-  const productItem = order.products.find(p => p.variation.toString() === productId);
+    const order = await Order.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
 
-  if (productItem) {
-    order.returns.push({
-      product: productId,
-      reason,
-      status: 'Requested',
-      refundAmount: productItem.price * productItem.quantity
-    });
-    await order.save();
+    const productItem = order.products.find(p => p.variation.toString() === productId);
+
+    if (productItem) {
+      order.returns.push({
+        product: productId,
+        reason,
+        status: 'Requested',
+        refundAmount: productItem.price * productItem.quantity
+      });
+      await order.save();
+      
+      res.json({ success: true, message: 'Return request processed successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Product not found in order' });
+    }
+  } catch (error) {
+    console.error('Error processing return:', error);
+    res.status(500).json({ success: false, message: 'Failed to process return' });
   }
-
-  res.redirect('/admin/orders/' + req.params.id);
 };
 
 
@@ -119,8 +151,11 @@ const updateOrderStatus = async (req, res) => {
     const { status } = req.body;
     const orderId = req.params.id;
 
-    
-    await Order.findByIdAndUpdate(
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+
+    const order = await Order.findByIdAndUpdate(
       orderId,
       {
         $set: {
@@ -131,10 +166,103 @@ const updateOrderStatus = async (req, res) => {
       { new: true } 
     );
 
-    res.redirect('/admin/orders/' + orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Check if request expects JSON response (AJAX) or redirect (form submission)
+    if (req.headers['content-type'] === 'application/json') {
+      res.json({ success: true, message: 'Order status updated successfully' });
+    } else {
+      res.redirect('/admin/orders/' + orderId);
+    }
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: 'Failed to update order status' });
+  }
+};
+
+const updateProductStatus = async (req, res) => {
+  try {
+    const { status, productId } = req.body;
+    const orderId = req.params.id;
+
+    if (!status || !productId) {
+      return res.status(400).json({ success: false, message: 'Status and productId are required' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Find and update the specific product
+    const product = order.products.id(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found in order' });
+    }
+
+    // Check if product is cancelled by user (should not be changeable)
+    if (product.status === 'CANCELLED') {
+      return res.status(400).json({ success: false, message: 'Cannot change status of cancelled product' });
+    }
+
+    // Update product status (set default if empty)
+    product.status = status || 'ORDERED';
+
+    // If product is delivered, set delivered_at timestamp
+    if (status === 'DELIVERED') {
+      product.delivered_at = new Date();
+    }
+
+    // Update overall order status based on product statuses using the rules
+    const productStatuses = order.products.map(p => p.status);
+    const uniqueStatuses = [...new Set(productStatuses)];
+    
+    // Rule 1: If all items are ORDERED (Pending)
+    if (productStatuses.every(s => s === 'ORDERED')) {
+      order.status = 'PENDING';
+    }
+    // Rule 2: If any item is SHIPPED or OUT_FOR_DELIVERY
+    else if (productStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY')) {
+      order.status = 'IN_PROGRESS';
+    }
+    // Rule 3: If all items are DELIVERED
+    else if (productStatuses.every(s => s === 'DELIVERED')) {
+      order.status = 'DELIVERED';
+      order.delivered_at = new Date();
+    }
+    // Rule 4: If all items are CANCELLED
+    else if (productStatuses.every(s => s === 'CANCELLED')) {
+      order.status = 'CANCELLED';
+    }
+    // Rule 5: If mix of DELIVERED + CANCELLED
+    else if (uniqueStatuses.length === 2 && 
+             uniqueStatuses.includes('DELIVERED') && 
+             uniqueStatuses.includes('CANCELLED')) {
+      order.status = 'PARTIALLY_DELIVERED';
+    }
+    // Rule 6: If mix of SHIPPED + CANCELLED
+    else if (uniqueStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY') && 
+             uniqueStatuses.includes('CANCELLED')) {
+      order.status = 'PARTIALLY_SHIPPED';
+    }
+    // Rule 7: If all items are RETURNED
+    else if (productStatuses.every(s => s === 'RETURNED')) {
+      order.status = 'RETURNED';
+    }
+    // Default: Mixed statuses - In Progress
+    else {
+      order.status = 'IN_PROGRESS';
+    }
+
+    await order.save();
+
+    // ✅ Return JSON response instead of redirect for AJAX calls
+    res.json({ success: true, message: 'Product status updated successfully' });
+  } catch (error) {
+    console.error('Error updating product status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update product status' });
   }
 };
 
@@ -162,12 +290,10 @@ const verifyReturn = async (req, res) => {
       product.status = 'RETURNED';
       product.return_details.status = 'APPROVED';
 
-      // Add refund amount to user's wallet
       const refundAmount = product.return_details.refundAmount;
       order.user_id.wallet = (order.user_id.wallet || 0) + refundAmount;
       await order.user_id.save();
 
-      // Log wallet transaction
       await WalletTransaction.create({
         user_id: order.user_id._id,
         amount: refundAmount,
@@ -175,13 +301,11 @@ const verifyReturn = async (req, res) => {
         description: `Refund for returned product: ${product.name} (Order #${order.order_number})`
       });
 
-      // Restore product stock
       await ProductVariation.findByIdAndUpdate(
         product.variation._id,
         { $inc: { stock_quantity: product.quantity } }
       );
 
-      // Check if all products are returned
       const allProductsReturned = order.products.every(p => p.status === 'RETURNED');
       if (allProductsReturned) {
         order.status = 'RETURNED';
@@ -194,12 +318,16 @@ const verifyReturn = async (req, res) => {
 
     await order.save();
 
-    req.flash('success', `Return request ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
-    res.redirect('/admin/orders/' + orderId);
+    res.json({ 
+      success: true, 
+      message: `Return request ${action === 'approve' ? 'approved' : 'rejected'} successfully` 
+    });
   } catch (error) {
     console.error('Error processing return request:', error);
-    req.flash('error', error.message || 'Failed to process return request');
-    res.redirect('/admin/orders/' + req.params.id);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Failed to process return request' 
+    });
   }
 };
 
@@ -210,5 +338,6 @@ module.exports =
     cancelOrder,
     returnProduct,
     updateOrderStatus,
+    updateProductStatus,
     verifyReturn
 }

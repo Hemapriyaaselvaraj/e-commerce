@@ -1,3 +1,46 @@
+<style>
+  .nav-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 10;
+  }
+  
+  .nav-icon-container {
+    position: relative;
+    display: inline-block;
+    margin-right: 15px;
+    transition: transform 0.2s ease;
+  }
+  
+  .nav-icon-container:hover {
+    transform: scale(1.1);
+  }
+  
+  .nav-icon-container i {
+    cursor: pointer;
+    font-size: 18px;
+    color: #333;
+    transition: color 0.2s ease;
+  }
+  
+  .nav-icon-container:hover i {
+    color: #000;
+  }
+</style>
+
 <header class="navbar" style="padding-top: 20px; padding-bottom: 20px;">
   <a href="/" class="logo" style="text-decoration:none;color:inherit;font-size:20px;color:#230215;"><strong>ToughToes</strong></a>
   <nav class="nav-links">
@@ -21,8 +64,18 @@
         <i class="fas fa-search"></i>
       </button>
     </form>
-    <i class="fas fa-shopping-cart" onclick="window.location.href='/cart'" style="cursor:pointer;"></i>
-    <i class="fas fa-heart" onclick="window.location.href='/wishlist'" style="cursor:pointer;"></i>
+    <div class="nav-icon-container">
+      <i class="fas fa-shopping-cart" onclick="window.location.href='/cart'"></i>
+      <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+        <span class="nav-badge"><%= cartCount > 99 ? '99+' : cartCount %></span>
+      <% } %>
+    </div>
+    <div class="nav-icon-container">
+      <i class="fas fa-heart" onclick="window.location.href='/wishlist'"></i>
+      <% if (typeof wishlistCount !== 'undefined' && wishlistCount > 0) { %>
+        <span class="nav-badge"><%= wishlistCount > 99 ? '99+' : wishlistCount %></span>
+      <% } %>
+    </div>
     <i class="fas fa-user" id="profileIcon" style="cursor:pointer;"></i>
     <% if (typeof name === 'string' && name.trim().length > 0) { %>
       <span><%= name %></span>
@@ -87,5 +140,68 @@
         window.location.href = "/user/login";
       }
     });
+  }
+
+  // Function to update navbar counts
+  window.updateNavbarCounts = async function() {
+    try {
+      // Update cart count
+      const cartResponse = await fetch('/cart/count');
+      const cartData = await cartResponse.json();
+      if (cartData.success) {
+        updateCartBadge(cartData.count);
+      }
+
+      // Update wishlist count
+      const wishlistResponse = await fetch('/wishlist/count');
+      const wishlistData = await wishlistResponse.json();
+      if (wishlistData.success) {
+        updateWishlistBadge(wishlistData.count);
+      }
+    } catch (error) {
+      console.error('Error updating navbar counts:', error);
+    }
+  };
+
+  // Function to update cart badge
+  function updateCartBadge(count) {
+    const cartContainer = document.querySelector('.nav-icon-container:has(.fa-shopping-cart)');
+    if (!cartContainer) return;
+
+    let badge = cartContainer.querySelector('.nav-badge');
+    
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'nav-badge';
+        cartContainer.appendChild(badge);
+      }
+      badge.textContent = count > 99 ? '99+' : count;
+    } else {
+      if (badge) {
+        badge.remove();
+      }
+    }
+  }
+
+  // Function to update wishlist badge
+  function updateWishlistBadge(count) {
+    const wishlistContainer = document.querySelector('.nav-icon-container:has(.fa-heart)');
+    if (!wishlistContainer) return;
+
+    let badge = wishlistContainer.querySelector('.nav-badge');
+    
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'nav-badge';
+        wishlistContainer.appendChild(badge);
+      }
+      badge.textContent = count > 99 ? '99+' : count;
+    } else {
+      if (badge) {
+        badge.remove();
+      }
+    }
   }
 </script>

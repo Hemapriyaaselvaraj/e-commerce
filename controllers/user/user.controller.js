@@ -29,7 +29,6 @@ const signup = async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, saltround);
 
-  // A) UNVERIFIED USER EXISTS
   if (user) {
 
     user.firstName = firstName;
@@ -37,19 +36,17 @@ const signup = async (req, res) => {
     user.phoneNumber = phoneNumber;
     user.password = hashedPassword;
 
-    // Generate referral code if missing
+    
     if (!user.referralCode) {
       user.referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
     }
 
-    // Referral handling only once
     if (!user.referredBy && referralCode) {
       const referrer = await userModel.findOne({ referralCode });
 
       if (referrer) {
         user.referredBy = referrer._id;
 
-        // Give ₹50 to new user immediately
         user.wallet += 50;
 
         await WalletTransaction.create({
@@ -65,7 +62,6 @@ const signup = async (req, res) => {
 
   } else {
 
-    // B) CREATE NEW USER
     user = new userModel({
       firstName,
       lastName,
@@ -79,14 +75,12 @@ const signup = async (req, res) => {
       referredBy: null
     });
 
-    // Referral code entered
     if (referralCode) {
       const referrer = await userModel.findOne({ referralCode });
 
       if (referrer) {
         user.referredBy = referrer._id;
-
-        // Give ₹50 to new user
+        
         user.wallet = 50;
 
         await WalletTransaction.create({
@@ -101,7 +95,6 @@ const signup = async (req, res) => {
     await user.save();
   }
 
-  // Send OTP
   await sendOtpToVerifyEmail(email);
 
   return res.render("user/verifyOtp", { error: null, email, flow: "sign-up" });
@@ -179,7 +172,6 @@ if (otpVerification.otp !== otp || otpVerification.expiry < new Date()) {
     const referrer = await userModel.findById(user.referredBy);
 
     if (referrer) {
-      // Give ₹100 to the person who referred
       referrer.wallet += 100;
 
       await WalletTransaction.create({
@@ -191,7 +183,6 @@ if (otpVerification.otp !== otp || otpVerification.expiry < new Date()) {
 
       await referrer.save();
 
-      // Mark reward as given so it never happens twice
       user.isReferralRewarded = true;
       await user.save();
     }

@@ -170,10 +170,19 @@ const toggleOfferStatus = async (req, res) => {
 const deleteOffer = async (req, res) => {
   try {
     await Offer.findByIdAndDelete(req.params.id);
+    
+    // Check if request expects JSON response (for DELETE requests)
+    if (req.method === 'DELETE') {
+      return res.json({ success: true, message: 'Offer deleted successfully' });
+    }
+    
     res.redirect("/admin/offers");
 
   } catch (error) {
-    console.log(error);
+    console.error('Error deleting offer:', error);
+    if (req.method === 'DELETE') {
+      return res.status(500).json({ success: false, message: 'Failed to delete offer' });
+    }
     res.status(500).send("Server Error");
   }
 };

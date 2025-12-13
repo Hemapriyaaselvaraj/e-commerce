@@ -408,7 +408,7 @@
         const action = button.classList.contains('block') ? 'block' : 'unblock';
         if (confirm(`Are you sure you want to ${action} this customer?`)) {
           fetch(`/admin/customers/${id}/block-unblock`, {
-            method: 'POST',
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
           })
           .then(res => res.json())

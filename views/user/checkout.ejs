@@ -1002,7 +1002,7 @@ async function applyCoupon() {
   }
 
   const res = await fetch("/order/apply-coupon", {
-    method: "POST",
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ couponCode: code })
   });
@@ -1029,7 +1029,7 @@ async function removeCoupon() {
   const code = document.getElementById("couponInput").value;
 
   const res = await fetch("/order/remove-coupon", {
-    method: "POST",
+    method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ couponCode: code })
   });
