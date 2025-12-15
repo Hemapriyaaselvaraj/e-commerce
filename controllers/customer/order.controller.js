@@ -157,6 +157,14 @@ const placeOrder = async (req, res) => {
     
     const total = subtotal + shipping_charge - couponDiscount;
 
+    // Validate COD restriction for orders above Rs 1000
+    if (paymentMethod === 'COD' && total > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cash on Delivery is not available for orders above Rs 1000. Please choose another payment method.'
+      });
+    }
+
     const orderNumber = await generateOrderNumber();
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 3);

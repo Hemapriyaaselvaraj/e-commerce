@@ -352,7 +352,7 @@
               
               const delInput = document.createElement('input');
               delInput.type = 'hidden';
-              delInput.name = `variations[${index}][deleteImages][]`;
+              delInput.name = `deletedVariationImage_${index}`;
               delInput.value = data.images[imgIdx];
               container.appendChild(delInput);
             });
@@ -422,17 +422,30 @@
 
         
         variationBoxes.forEach((box, idx) => {
-          const deletedInputs = box.querySelectorAll('input[name^="variations[' + idx + '][deleteImages]"]');
+          const deletedInputs = box.querySelectorAll('input[name^="deletedVariationImage_"]');
           deletedInputs.forEach(input => {
             formData.append(`deletedVariationImage_${idx}`, input.value);
           });
         });
 
+        const method = '<%= mode %>' === 'edit' ? 'PATCH' : 'POST';
+        console.log('🚀 Submitting form:', { action: this.action, method: method });
+        
         fetch(this.action, {
-          method: this.method,
+          method: method,
           body: formData,
-        }).then((res) => {
+        }).then(async (res) => {
+          console.log('📥 Response received:', { status: res.status, ok: res.ok });
+          
           if (res.ok) {
+            // Try to parse JSON response
+            let responseData = {};
+            try {
+              responseData = await res.json();
+            } catch (e) {
+              console.log('Response is not JSON, likely a redirect');
+            }
+            
             Swal.fire({
               icon: 'success',
               title: '<%= mode === "edit" ? "Product Updated!" : "Product Added!" %>',
@@ -443,14 +456,24 @@
               window.location = "/admin/products";
             });
           } else {
+            // Try to get error message from response
+            let errorMessage = 'There was an error saving the product. Please try again.';
+            try {
+              const errorData = await res.json();
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            } catch (e) {
+              console.log('Could not parse error response');
+            }
+            
             Swal.fire({
               icon: 'error',
               title: 'Submission Failed',
-              text: 'There was an error saving the product. Please try again.',
+              text: errorMessage,
               confirmButtonText: 'OK'
             });
           }
-        }).catch(() => {
+        }).catch((error) => {
+          console.error('❌ Fetch error:', error);
           Swal.fire({
             icon: 'error',
             title: 'Connection Error',

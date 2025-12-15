@@ -547,8 +547,9 @@ const getEditProduct = async(req,res) => {
     const sizes = await productSizeModel.find({}).lean();
     const colors = await productColorModel.find({}).lean();
 
+    const user = await userModel.findById(req.session.userId);
     res.render("admin/addProduct", {
-      name: req.user?.firstName || "",
+      name: user?.firstName || "",
       product,
       categories,
       types,
@@ -564,6 +565,12 @@ const getEditProduct = async(req,res) => {
 
 const postEditProduct = async (req, res) => {
   try {
+    console.log('📝 Product update request received:', {
+      method: req.method,
+      productId: req.params.id,
+      contentType: req.headers['content-type']
+    });
+    
     const productId = req.params.id;
 
     const product = await Product.findById(productId);
@@ -641,10 +648,21 @@ const postEditProduct = async (req, res) => {
 
     await Promise.all(changes);
 
-    res.status(200).json({ success: true });
+    // Handle both AJAX and form submissions
+    if (req.method === 'PATCH' || req.headers['content-type']?.includes('application/json')) {
+      res.status(200).json({ success: true, message: 'Product updated successfully' });
+    } else {
+      res.redirect('/admin/products');
+    }
   } catch (err) {
     console.error("Error updating product:", err);
-    res.status(500).json({ success: false, error: err.message });
+    
+    // Handle both AJAX and form submissions
+    if (req.method === 'PATCH' || req.headers['content-type']?.includes('application/json')) {
+      res.status(500).json({ success: false, error: err.message });
+    } else {
+      res.status(500).send(`Error updating product: ${err.message}`);
+    }
   }
 };
 

@@ -13,6 +13,7 @@ const upload = require('../utils/imageUploader');
 router.use(isAdminAccessible);
 
 router.get('/dashboard', dashboardController.getDashboard)
+router.get('/dashboard-details', dashboardController.getDashboardDetails)
 router.get('/products/configuration' , productController.getProductConfiguration)
 
 router.post('/products/category', productController.createCategory)
@@ -36,7 +37,8 @@ router.get('/products/addProduct', productController.getAddProduct)
 router.post('/products/add', upload.any(), productController.createProduct);
 
 router.get('/products/edit/:id', productController.getEditProduct);
-router.patch('/products/edit/:id', upload.any(),productController.postEditProduct)
+router.patch('/products/edit/:id', upload.any(),productController.postEditProduct);
+router.post('/products/edit/:id', upload.any(),productController.postEditProduct);
 router.patch('/products/:id/toggle-active', productController.toggleActive);
 
 router.get('/orders', orderController.getOrderList)
@@ -73,6 +75,7 @@ router.get('/sales-report/data',reportController.getSalesReportData);
 
 router.get('/sales-report/download/pdf', reportController.downloadPDF);
 router.get('/sales-report/download/excel', reportController.downloadExcel);
+
 
 
 router.get('/logout', productController.logout);
