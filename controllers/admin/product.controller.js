@@ -686,13 +686,12 @@ const logout = (req, res) => {
   req.session.destroy(err => {
     if (err) {
       console.error("Logout failed:", err);
-      return res.status(500).json({ success: false, message: 'Logout failed' });
+      return res.redirect('/admin/dashboard');
     }
-    res.clearCookie('connect.sid'); 
-    res.status(200).json({ success: true, message: 'Logged out successfully' });
+    res.clearCookie('connect.sid');
+    return res.redirect('/user/login');
   });
 };
-
 
 
 module.exports = {
