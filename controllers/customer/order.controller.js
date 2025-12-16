@@ -75,7 +75,6 @@ const placeOrder = async (req, res) => {
 
       const original_price = product.price;
 
-      // ⭐ Use centralized offer calculation for consistency
       const offerResult = calculateBestOffer(product, activeOffers);
       const discount_percentage = offerResult.discountPercentage;
       const price = offerResult.finalPrice;
@@ -95,8 +94,8 @@ const placeOrder = async (req, res) => {
         size: variation.product_size,
         images: variation.images && variation.images.length > 0 ? variation.images : [],
         status: 'ORDERED',
-        coupon_discount_allocated: 0 // Initialize to 0, will be updated if coupon is applied
-      });
+        coupon_discount_allocated: 0 
+            });
 
       stockUpdates.push({
         updateOne: {
@@ -119,7 +118,6 @@ const placeOrder = async (req, res) => {
       appliedCouponCode = req.session.appliedCoupon.code;
     }
 
-    // ⭐ ALLOCATE COUPON DISCOUNT TO EACH PRODUCT
     if (couponDiscount > 0 && orderProducts.length > 0) {
       // Calculate total order value (sum of all product subtotals)
       const totalOrderValue = orderProducts.reduce((sum, product) => {
@@ -204,9 +202,8 @@ const placeOrder = async (req, res) => {
 
     
     if (paymentMethod === 'COD') {
-      // Update payment status to COMPLETED for COD orders
       await Order.findByIdAndUpdate(savedOrder._id, {
-        payment_status: "COMPLETED"
+        payment_status: "PENDING"
       });
       
       await ProductVariation.bulkWrite(stockUpdates);
@@ -611,26 +608,21 @@ const getUserOrders = async(req,res) => {
     const userId = req.session.userId;
     const user = await userModel.findById(userId);
 
-    // Pagination parameters
     const page = parseInt(req.query.page) || 1;
-    const limit = 5; // Orders per page
+    const limit = 5; 
     const skip = (page - 1) * limit;
 
-    // Filter parameters
     const { search, status, dateFilter } = req.query;
     let filter = { user_id: userId };
 
-    // Apply search filter
     if (search) {
       filter.order_number = { $regex: search, $options: 'i' };
     }
 
-    // Apply status filter
     if (status) {
       filter.status = status;
     }
 
-    // Apply date filter
     if (dateFilter) {
       const days = parseInt(dateFilter);
       const dateThreshold = new Date();
@@ -638,11 +630,9 @@ const getUserOrders = async(req,res) => {
       filter.createdAt = { $gte: dateThreshold };
     }
 
-    // Get total count for pagination
     const totalOrders = await Order.countDocuments(filter);
     const totalPages = Math.ceil(totalOrders / limit);
 
-    // Get orders with pagination
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -791,7 +781,6 @@ const requestReturn = async (req, res) => {
       });
     }
 
-    // ⭐ Calculate refund amount: product price - allocated coupon discount
     const refundAmount = (productItem.price * productItem.quantity) - (productItem.coupon_discount_allocated || 0);
 
     productItem.status = 'RETURN_REQUESTED';

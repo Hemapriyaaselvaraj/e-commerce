@@ -33,7 +33,6 @@ const getAddCoupon = async (req, res) => {
         usageLimitPerUser
       } = req.body;
 
-      // Validation
       if (!code || !code.trim()) {
         return res.status(400).json({ 
           success: false, 
@@ -76,7 +75,6 @@ const getAddCoupon = async (req, res) => {
         });
       }
 
-      // Check for duplicate coupon code
       const existingCoupon = await Coupon.findOne({ 
         code: code.trim().toUpperCase() 
       });
@@ -129,7 +127,6 @@ const getAddCoupon = async (req, res) => {
     try {
       await Coupon.findByIdAndDelete(req.params.id);
       
-      // Check if request expects JSON response (for DELETE requests)
       if (req.method === 'DELETE') {
         return res.json({ success: true, message: 'Coupon deleted successfully' });
       }
@@ -160,7 +157,7 @@ const postEditCoupon = async (req, res) => {
         usageLimitPerUser
       } = req.body;
 
-      // Validation
+      
       if (!code || !code.trim()) {
         return res.status(400).json({ 
           success: false, 
@@ -203,7 +200,6 @@ const postEditCoupon = async (req, res) => {
         });
       }
 
-      // Check for duplicate coupon code (excluding current coupon)
       const existingCoupon = await Coupon.findOne({ 
         code: code.trim().toUpperCase(),
         _id: { $ne: id }

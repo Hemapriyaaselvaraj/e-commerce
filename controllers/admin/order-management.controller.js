@@ -170,7 +170,6 @@ const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Check if request expects JSON response (AJAX) or redirect (form submission)
     if (req.headers['content-type'] === 'application/json') {
       res.json({ success: true, message: 'Order status updated successfully' });
     } else {
@@ -196,67 +195,53 @@ const updateProductStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Find and update the specific product
     const product = order.products.id(productId);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found in order' });
     }
 
-    // Check if product is cancelled by user (should not be changeable)
     if (product.status === 'CANCELLED') {
       return res.status(400).json({ success: false, message: 'Cannot change status of cancelled product' });
     }
 
-    // Update product status (set default if empty)
     product.status = status || 'ORDERED';
 
-    // If product is delivered, set delivered_at timestamp
     if (status === 'DELIVERED') {
       product.delivered_at = new Date();
     }
 
-    // Update overall order status based on product statuses using the rules
     const productStatuses = order.products.map(p => p.status);
     const uniqueStatuses = [...new Set(productStatuses)];
     
-    // Rule 1: If all items are ORDERED (Pending)
     if (productStatuses.every(s => s === 'ORDERED')) {
       order.status = 'PENDING';
     }
-    // Rule 2: If all items are DELIVERED
     else if (productStatuses.every(s => s === 'DELIVERED')) {
       order.status = 'DELIVERED';
       order.delivered_at = new Date();
     }
-    // Rule 3: If all items are CANCELLED
     else if (productStatuses.every(s => s === 'CANCELLED')) {
       order.status = 'CANCELLED';
     }
-    // Rule 4: If all items are RETURNED
     else if (productStatuses.every(s => s === 'RETURNED')) {
       order.status = 'RETURNED';
     }
-    // Rule 5: If some items are DELIVERED but not all (partial delivery)
     else if (productStatuses.some(s => s === 'DELIVERED') && !productStatuses.every(s => s === 'DELIVERED')) {
       order.status = 'PARTIALLY_DELIVERED';
     }
-    // Rule 6: If any item is SHIPPED or OUT_FOR_DELIVERY
     else if (productStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY')) {
       order.status = 'IN_PROGRESS';
     }
-    // Rule 7: If mix of SHIPPED + CANCELLED
     else if (uniqueStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY') && 
              uniqueStatuses.includes('CANCELLED')) {
       order.status = 'PARTIALLY_SHIPPED';
     }
-    // Default: Mixed statuses - In Progress
     else {
       order.status = 'IN_PROGRESS';
     }
 
     await order.save();
 
-    // ✅ Return JSON response instead of redirect for AJAX calls
     res.json({ success: true, message: 'Product status updated successfully' });
   } catch (error) {
     console.error('Error updating product status:', error);

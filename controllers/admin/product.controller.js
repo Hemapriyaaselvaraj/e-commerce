@@ -664,7 +664,6 @@ const postEditProduct = async (req, res) => {
 
     await Promise.all(changes);
 
-    // Handle both AJAX and form submissions
     if (req.method === 'PATCH' || req.headers['content-type']?.includes('application/json')) {
       res.status(200).json({ success: true, message: 'Product updated successfully' });
     } else {
@@ -673,7 +672,6 @@ const postEditProduct = async (req, res) => {
   } catch (err) {
     console.error("Error updating product:", err);
     
-    // Handle both AJAX and form submissions
     if (req.method === 'PATCH' || req.headers['content-type']?.includes('application/json')) {
       res.status(500).json({ success: false, error: err.message });
     } else {

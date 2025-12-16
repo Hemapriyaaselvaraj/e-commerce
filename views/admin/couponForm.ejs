@@ -421,7 +421,7 @@
         Swal.fire({
           icon: 'error',
           title: 'Validation Error',
-          text: 'Coupon code is required and cannot be empty',
+          text: 'Coupon code is required and cannot be empty or contain only spaces',
           confirmButtonColor: '#343a40'
         });
         document.getElementById('code').focus();
@@ -542,14 +542,20 @@
       const originalValue = this.value;
       this.value = originalValue.toUpperCase();
       
-      // Remove any non-alphanumeric characters except hyphens and underscores
-      this.value = this.value.replace(/[^A-Z0-9_-]/g, '');
+      // Allow spaces for testing validation (comment out the filter for now)
+      // this.value = this.value.replace(/[^A-Z0-9_-]/g, '');
+      
+      console.log('Coupon code input:', `"${this.value}"`);
       
       // Visual feedback for code length
-      if (this.value.length < 3) {
+      const trimmedValue = this.value.trim();
+      if (!this.value || !trimmedValue) {
+        this.style.borderColor = '#dc3545';
+        this.title = 'Code cannot be empty or only spaces';
+      } else if (trimmedValue.length < 3) {
         this.style.borderColor = '#dc3545';
         this.title = 'Code must be at least 3 characters';
-      } else if (this.value.length >= 3 && this.value.length <= 20) {
+      } else if (trimmedValue.length >= 3 && trimmedValue.length <= 20) {
         this.style.borderColor = '#28a745';
         this.title = 'Valid code format';
       } else {

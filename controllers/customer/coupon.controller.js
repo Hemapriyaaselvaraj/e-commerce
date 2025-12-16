@@ -50,7 +50,6 @@ const applyCoupon = async (req, res) => {
     cartItems.forEach((item, index) => {
       const product = item.product_variation_id?.product_id;
       if (product && product.is_active) {
-        // ⭐ Use centralized offer calculation for consistency
         const offerResult = calculateBestOffer(product, activeOffers);
         const price = offerResult.finalPrice;
 

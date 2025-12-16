@@ -33,7 +33,6 @@ const getCartPage = async (req, res) => {
 
       const originalPrice = product?.price || 0;
 
-      // ⭐ Use centralized offer calculation for consistency
       const offerResult = calculateBestOffer(product, activeOffers);
       const maxOfferDiscount = offerResult.discountPercentage;
       const finalPrice = offerResult.finalPrice;

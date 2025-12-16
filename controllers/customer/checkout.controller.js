@@ -163,7 +163,6 @@ const getAvailableCoupons = async (req, res) => {
       validTo: { $gte: now }
     }).select('code description discountType discountValue minimumPurchase maxDiscount usageLimitPerUser usedBy').lean();
     
-    // Check usage for each coupon
     const couponsWithUsage = coupons.map(coupon => {
       const userUsage = coupon.usedBy?.find(u => u.userId && u.userId.toString() === userId?.toString());
       const timesUsed = userUsage ? userUsage.count : 0;

@@ -171,7 +171,6 @@ const deleteOffer = async (req, res) => {
   try {
     await Offer.findByIdAndDelete(req.params.id);
     
-    // Check if request expects JSON response (for DELETE requests)
     if (req.method === 'DELETE') {
       return res.json({ success: true, message: 'Offer deleted successfully' });
     }

@@ -69,6 +69,24 @@
       box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
     }
 
+    /* Validation states */
+    .form-control.is-invalid {
+      border-color: #dc3545;
+    }
+
+    .form-control.is-warning {
+      border-color: #ffc107;
+    }
+
+    .form-control.is-valid {
+      border-color: #28a745;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     /* Multi-select checkbox styles */
     .checkbox-list {
       border: 1px solid #dee2e6;
@@ -204,8 +222,11 @@
                   name="offerName" 
                   class="form-control" 
                   value="<%= offer ? offer.offerName : '' %>" 
-                  required 
+                  maxlength="100"
+                  placeholder="Enter a unique offer name"
+                  autocomplete="off"
                 />
+                <div class="form-text">Offer name must be unique and between 3-100 characters.</div>
               </div>
 
               <!-- Discount -->
@@ -327,6 +348,258 @@
       });
     </script>
   <% } %>
+
+  <script>
+    // Form validation and AJAX submission (matching coupon form style)
+    document.querySelector('form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const form = e.target;
+      const formData = new FormData(form);
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalText = submitButton.innerHTML;
+      
+      // Client-side validation
+      const offerName = formData.get('offerName');
+      const discountPercentage = formData.get('discountPercentage');
+      const validFrom = formData.get('validFrom');
+      const validTo = formData.get('validTo');
+      
+      // Check required fields
+      if (!offerName || !offerName.trim()) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Offer name is required and cannot be empty or contain only spaces',
+          confirmButtonColor: '#000'
+        });
+        document.querySelector('input[name="offerName"]').focus();
+        return;
+      }
+
+      if (offerName.trim().length < 3) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Offer name must be at least 3 characters long',
+          confirmButtonColor: '#000'
+        });
+        document.querySelector('input[name="offerName"]').focus();
+        return;
+      }
+
+      if (offerName.trim().length > 100) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Offer name cannot exceed 100 characters',
+          confirmButtonColor: '#000'
+        });
+        document.querySelector('input[name="offerName"]').focus();
+        return;
+      }
+      
+      if (!discountPercentage || parseFloat(discountPercentage) <= 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Discount percentage must be greater than 0',
+          confirmButtonColor: '#000'
+        });
+        document.querySelector('input[name="discountPercentage"]').focus();
+        return;
+      }
+
+      if (parseFloat(discountPercentage) > 90) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Discount percentage cannot exceed 90%',
+          confirmButtonColor: '#000'
+        });
+        document.querySelector('input[name="discountPercentage"]').focus();
+        return;
+      }
+      
+      if (!validFrom || !validTo) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Valid from and valid to dates are required',
+          confirmButtonColor: '#000'
+        });
+        return;
+      }
+      
+      // Date validation
+      if (new Date(validTo) <= new Date(validFrom)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Valid to date must be after valid from date',
+          confirmButtonColor: '#000'
+        });
+        return;
+      }
+
+      const isEdit = '<%= offer ? true : false %>';
+      if (!isEdit && new Date(validFrom) < new Date().setHours(0,0,0,0)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Valid from date cannot be in the past',
+          confirmButtonColor: '#000'
+        });
+        return;
+      }
+      
+      // Show loading state
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Processing...';
+      
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.redirected) {
+          // Success - redirect to offers list
+          window.location.href = response.url;
+          return;
+        }
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          
+          if (result.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: result.message || 'Offer saved successfully',
+              confirmButtonColor: '#000'
+            }).then(() => {
+              window.location.href = '/admin/offers';
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: result.error || result.message,
+              confirmButtonColor: '#000'
+            });
+          }
+        } else {
+          // If not JSON, assume success and redirect
+          if (response.ok) {
+            window.location.href = '/admin/offers';
+          } else {
+            throw new Error('Server error occurred');
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'An unexpected error occurred. Please try again.',
+          confirmButtonColor: '#000'
+        });
+      } finally {
+        // Restore button state
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+      }
+    });
+
+    // Real-time validation for offer name (matching coupon form style)
+    document.querySelector('input[name="offerName"]').addEventListener('input', function() {
+      const rawValue = this.value;
+      const trimmedValue = rawValue.trim();
+      
+      console.log('Offer name input:', `"${rawValue}"`, 'Trimmed:', `"${trimmedValue}"`);
+      
+      // Visual feedback for name validation
+      if (!rawValue || !trimmedValue) {
+        this.style.borderColor = '#dc3545';
+        this.title = 'Offer name cannot be empty or only spaces';
+      } else if (trimmedValue.length < 3) {
+        this.style.borderColor = '#dc3545';
+        this.title = 'Offer name must be at least 3 characters';
+      } else if (trimmedValue.length > 100) {
+        this.style.borderColor = '#dc3545';
+        this.title = 'Offer name cannot exceed 100 characters';
+      } else {
+        this.style.borderColor = '#28a745';
+        this.title = 'Valid offer name';
+      }
+    });
+
+    // Discount percentage validation
+    document.querySelector('input[name="discountPercentage"]').addEventListener('input', function() {
+      const value = parseFloat(this.value);
+      
+      if (value <= 0) {
+        this.style.borderColor = '#dc3545';
+        this.title = 'Discount must be greater than 0';
+      } else if (value > 90) {
+        this.style.borderColor = '#dc3545';
+        this.title = 'Discount cannot exceed 90%';
+      } else {
+        this.style.borderColor = '#28a745';
+        this.title = 'Valid discount percentage';
+      }
+    });
+
+    // Date validation
+    function validateDates() {
+      const validFrom = document.querySelector('input[name="validFrom"]');
+      const validTo = document.querySelector('input[name="validTo"]');
+      
+      if (validFrom.value && validTo.value) {
+        if (new Date(validTo.value) <= new Date(validFrom.value)) {
+          validTo.style.borderColor = '#dc3545';
+          validTo.title = 'End date must be after start date';
+        } else {
+          validTo.style.borderColor = '#28a745';
+          validTo.title = 'Valid date range';
+        }
+      }
+
+      // Check if start date is in the past (only for new offers)
+      const isEdit = '<%= offer ? true : false %>';
+      if (!isEdit && validFrom.value) {
+        if (new Date(validFrom.value) < new Date().setHours(0,0,0,0)) {
+          validFrom.style.borderColor = '#dc3545';
+          validFrom.title = 'Start date cannot be in the past';
+        } else {
+          validFrom.style.borderColor = '#28a745';
+          validFrom.title = 'Valid start date';
+        }
+      }
+    }
+
+    document.querySelector('input[name="validFrom"]').addEventListener('change', validateDates);
+    document.querySelector('input[name="validTo"]').addEventListener('change', validateDates);
+
+    // Initialize validation on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const offerNameInput = document.querySelector('input[name="offerName"]');
+      const discountInput = document.querySelector('input[name="discountPercentage"]');
+      
+      // Trigger validation on page load
+      if (offerNameInput) {
+        offerNameInput.dispatchEvent(new Event('input'));
+      }
+      if (discountInput) {
+        discountInput.dispatchEvent(new Event('input'));
+      }
+      
+      validateDates();
+    });
+  </script>
 
 </body>
 </html>

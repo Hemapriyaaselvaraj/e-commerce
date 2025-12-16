@@ -80,8 +80,7 @@ const getSalesReportDataInternal = async (query, forDownload = false) => {
       .sort({ ordered_at: -1 })
       .lean();
   } else {
-    // For display, implement pagination
-    const limit = 10; // Orders per page
+    const limit = 10; 
     const skip = (parseInt(page) - 1) * limit;
     const totalPages = Math.ceil(deliveredOrderCount / limit);
 
