@@ -165,7 +165,11 @@
   </style>
 </head>
 <body>
-  <%- include('../partials/userNavbar', { name: name }) %>
+  <%- include('../partials/userNavbar', { 
+    name: name, 
+    cartCount: 0, 
+    wishlistCount: 0 
+  }) %>
 
   <div class="container my-5 d-flex" style="margin-top: 90px !important;">
     
@@ -193,7 +197,7 @@
       <div class="profile-box border rounded p-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h4>My Orders <small class="text-muted">(<%= totalOrders %> total)</small></h4>
-          <form method="GET" action="/order/my-orders" class="d-flex gap-2"></form>
+          <form method="GET" action="/order/my-orders" class="d-flex gap-2">
             <input type="text" class="form-control form-control-sm" name="search" placeholder="Search order number..." style="width: 200px;" value="<%= search %>">
             <select class="form-select form-select-sm" name="status" style="width: 150px;">
               <option value="">All Status</option>
@@ -348,22 +352,47 @@
     // Auto-submit form when filters change
     document.addEventListener('DOMContentLoaded', function() {
       const form = document.querySelector('form[action="/order/my-orders"]');
-      const selects = form.querySelectorAll('select');
       
-      selects.forEach(select => {
+      if (!form) {
+        console.error('Form not found!');
+        return;
+      }
+      
+      console.log('Form found:', form);
+      
+      const selects = form.querySelectorAll('select');
+      const searchInput = form.querySelector('input[name="search"]');
+      
+      console.log('Found selects:', selects.length);
+      console.log('Found search input:', searchInput);
+      
+      selects.forEach((select, index) => {
         select.addEventListener('change', function() {
+          console.log(`Select ${index} changed to:`, this.value);
           form.submit();
         });
       });
 
       // Submit form on Enter key in search input
-      const searchInput = form.querySelector('input[name="search"]');
-      searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
+      if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            console.log('Enter pressed, submitting form with search:', this.value);
+            form.submit();
+          }
+        });
+      }
+
+      // Add click handler for search button
+      const searchButton = form.querySelector('button[type="submit"]');
+      if (searchButton) {
+        searchButton.addEventListener('click', function(e) {
           e.preventDefault();
+          console.log('Search button clicked');
           form.submit();
-        }
-      });
+        });
+      }
     });
   </script>
 </body>

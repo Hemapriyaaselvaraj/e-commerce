@@ -70,17 +70,33 @@ const updateProfileImage = async (req, res) => {
 
 const getEditProfile = async(req,res) => {
   try{
-
-if (!req.session || !req.session.userId) {
+    if (!req.session || !req.session.userId) {
       return res.redirect('/login');
     }
+    
     const user = await userModel.findById(req.session.userId).lean();
     if(!user) return res.redirect('/login');
-    res.render('user/editProfile', {user});
-}catch (err) {
+    
+    // Get cart and wishlist counts for navbar
+    const Cart = require('../../models/cartModel');
+    const Wishlist = require('../../models/wishlistModel');
+    
+    const cart = await Cart.findOne({ user: req.session.userId });
+    const cartCount = cart ? cart.items.length : 0;
+    
+    const wishlist = await Wishlist.findOne({ user: req.session.userId });
+    const wishlistCount = wishlist ? wishlist.products.length : 0;
+    
+    res.render('user/editProfile', {
+      user,
+      name: user.firstName,
+      cartCount,
+      wishlistCount
+    });
+  } catch (err) {
+    console.error('Error loading edit profile:', err);
     res.status(500).send('Error loading edit profile');
   }
-
 }
 
 const postEditProfile = async (req, res) => {
