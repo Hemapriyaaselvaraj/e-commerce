@@ -312,7 +312,7 @@ const productDetail = async (req, res) => {
     });
 
   } catch (err) {
-    console.log(err);
+    console.error("Product detail error:", err);
     return res.status(500).send("Error loading product detail");
   }
 };

@@ -318,9 +318,16 @@
     }
 
     .status-ordered { background-color: #e3f2fd; color: #1976d2; }
+    .status-pending { background-color: #fff3e0; color: #f57c00; }
+    .status-ordered { background-color: #fff3e0; color: #f57c00; }
+    .status-in-progress { background-color: #e3f2fd; color: #1976d2; }
     .status-shipped { background-color: #f3e5f5; color: #7b1fa2; }
+    .status-out-for-delivery { background-color: #e8eaf6; color: #3f51b5; }
     .status-delivered { background-color: #e8f5e8; color: #388e3c; }
     .status-cancelled { background-color: #ffebee; color: #d32f2f; }
+    .status-partially-delivered { background-color: #fff8e1; color: #f9a825; }
+    .status-partially-shipped { background-color: #fce4ec; color: #c2185b; }
+    .status-returned { background-color: #f1f8e9; color: #689f38; }
 
     /* Responsive Design */
     @media (max-width: 992px) {
@@ -419,9 +426,9 @@
           <div class="stat-card">
             <div class="stat-card-header">
               <div class="stat-card-content">
-                <div class="stat-card-title">Total Sales</div>
+                <div class="stat-card-title">Total Revenue</div>
                 <div class="stat-card-value">Rs<span id="total-sales">0</span></div>
-                <div class="stat-card-change">Revenue generated</div>
+                <div class="stat-card-change">Completed payments only</div>
               </div>
               <div class="stat-card-icon sales">
                 <i class="fas fa-rupee-sign"></i>
@@ -463,8 +470,9 @@
             <div class="chart-section">
               <div class="chart-header">
                 <h2 class="chart-title">
-                  <i class="fas fa-chart-area me-2"></i>Sales Overview
+                  <i class="fas fa-chart-area me-2"></i>Revenue Overview
                 </h2>
+                <small class="text-muted">Shows completed payments only (excludes pending COD orders)</small>
               </div>
               
               <!-- Filter Buttons -->
@@ -601,8 +609,8 @@
       }
 
       list.forEach(order => {
-        const status = order.items[0]?.status || 'PENDING';
-        const statusClass = `status-${status.toLowerCase()}`;
+        const status = order.status || 'PENDING';
+        const statusClass = `status-${status.toLowerCase().replace('_', '-')}`;
         
         tbody.innerHTML += `
           <tr>
@@ -610,7 +618,7 @@
             <td>${order.user?.name || "Unknown"}</td>
             <td>${formatDate(order.createdAt)}</td>
             <td><strong>Rs${order.totalAmount.toLocaleString()}</strong></td>
-            <td><span class="status-badge ${statusClass}">${status}</span></td>
+            <td><span class="status-badge ${statusClass}">${status.replace('_', ' ')}</span></td>
           </tr>
         `;
       });
@@ -708,7 +716,7 @@
             data: {
                 labels,
                 datasets: [{
-                    label: "Sales (Rs)",
+                    label: "Revenue (Rs)",
                     data,
                     borderColor: "#343a40",
                     backgroundColor: "rgba(52, 58, 64, 0.1)",

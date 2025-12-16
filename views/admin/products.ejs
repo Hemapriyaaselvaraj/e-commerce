@@ -209,7 +209,7 @@
           <table class="table table-hover">
             <thead>
               <tr>
-                <th><input type="checkbox" /></th>
+                <th>Image</th>
                 <th>Product</th>
                 <th>Product SKU</th>
                 <th>Price</th>
@@ -223,10 +223,18 @@
             <tbody>
               <% products.forEach(product => { %>
                 <tr data-id="<%= product._id %>">
-                  <td><input type="checkbox" /></td>
+                  <td>
+                    <% if (product.firstImage) { %>
+                      <img src="<%= product.firstImage %>" alt="<%= product.name %>" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <% } else { %>
+                      <div style="width: 50px; height: 50px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb;">
+                        <i class="fa fa-image text-muted"></i>
+                      </div>
+                    <% } %>
+                  </td>
                   <td>
                     <div><strong><%= product.name %></strong></div>
-                    <div class="text-muted"><%= product.brand %></div>
+                    <div class="text-muted"><%= product.brand || '' %></div>
                   </td>
                   <td>#<%= product.product_sku %></td>
                   <td>₹ <%= product.price.toFixed(2) %></td>

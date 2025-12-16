@@ -5,7 +5,7 @@ const getCoupons = async(req,res) => {
         const coupons = await Coupon.find().lean();
          res.render("admin/couponList", { coupons });
     }catch(err){
-        console.log(err);
+        console.error("Coupon list error:", err);
       res.status(500).send("Server Error");
     }
 }
@@ -14,7 +14,7 @@ const getAddCoupon = async (req, res) => {
     try {
       res.render("admin/couponForm", { coupon: null });
     } catch (error) {
-      console.log("Error loading coupon form:", error);
+      console.error("Error loading coupon form:", error);
       res.status(500).send("Server error");
     }
   }
@@ -120,7 +120,7 @@ const getAddCoupon = async (req, res) => {
 
       res.render("admin/couponForm", { coupon }); 
     } catch (err) {
-      console.log(err);
+      console.error("Edit coupon error:", err);
       res.status(500).send("Server error");
     }
   }

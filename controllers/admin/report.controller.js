@@ -199,7 +199,7 @@ const getSalesReportData = async (req, res) => {
     const data = await getSalesReportDataInternal(req.query);
     res.json({ success: true, ...data });
   } catch (err) {
-    console.log("SALES REPORT ERROR", err);
+    console.error("Sales report error:", err);
     res.json({ success: false, message: "Server Error" });
   }
 };
@@ -352,7 +352,7 @@ const downloadPDF = async (req, res) => {
     doc.end();
 
   } catch (err) {
-    console.log("PDF ERROR", err);
+    console.error("PDF generation error:", err);
     res.status(500).send("Error generating PDF");
   }
 };
@@ -487,7 +487,7 @@ const downloadExcel = async (req, res) => {
     res.end();
 
   } catch (err) {
-    console.log("EXCEL ERROR", err);
+    console.error("Excel generation error:", err);
     res.status(500).send("Excel download failed");
   }
 };

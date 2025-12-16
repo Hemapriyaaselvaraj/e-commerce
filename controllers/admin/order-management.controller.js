@@ -223,33 +223,31 @@ const updateProductStatus = async (req, res) => {
     if (productStatuses.every(s => s === 'ORDERED')) {
       order.status = 'PENDING';
     }
-    // Rule 2: If any item is SHIPPED or OUT_FOR_DELIVERY
-    else if (productStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY')) {
-      order.status = 'IN_PROGRESS';
-    }
-    // Rule 3: If all items are DELIVERED
+    // Rule 2: If all items are DELIVERED
     else if (productStatuses.every(s => s === 'DELIVERED')) {
       order.status = 'DELIVERED';
       order.delivered_at = new Date();
     }
-    // Rule 4: If all items are CANCELLED
+    // Rule 3: If all items are CANCELLED
     else if (productStatuses.every(s => s === 'CANCELLED')) {
       order.status = 'CANCELLED';
     }
-    // Rule 5: If mix of DELIVERED + CANCELLED
-    else if (uniqueStatuses.length === 2 && 
-             uniqueStatuses.includes('DELIVERED') && 
-             uniqueStatuses.includes('CANCELLED')) {
+    // Rule 4: If all items are RETURNED
+    else if (productStatuses.every(s => s === 'RETURNED')) {
+      order.status = 'RETURNED';
+    }
+    // Rule 5: If some items are DELIVERED but not all (partial delivery)
+    else if (productStatuses.some(s => s === 'DELIVERED') && !productStatuses.every(s => s === 'DELIVERED')) {
       order.status = 'PARTIALLY_DELIVERED';
     }
-    // Rule 6: If mix of SHIPPED + CANCELLED
+    // Rule 6: If any item is SHIPPED or OUT_FOR_DELIVERY
+    else if (productStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY')) {
+      order.status = 'IN_PROGRESS';
+    }
+    // Rule 7: If mix of SHIPPED + CANCELLED
     else if (uniqueStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY') && 
              uniqueStatuses.includes('CANCELLED')) {
       order.status = 'PARTIALLY_SHIPPED';
-    }
-    // Rule 7: If all items are RETURNED
-    else if (productStatuses.every(s => s === 'RETURNED')) {
-      order.status = 'RETURNED';
     }
     // Default: Mixed statuses - In Progress
     else {

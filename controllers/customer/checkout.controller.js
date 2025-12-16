@@ -89,7 +89,6 @@ const checkout = async (req, res) => {
 
 // const addAddress = async (req, res) => {
 //   try {
-//     console.log("➡️ addAddress() CALLED");
 //     const userId = req.session.userId;
 //     if (!userId) {
 //       return res.status(401).json({ success: false, message: "Please sign in to save an address." });

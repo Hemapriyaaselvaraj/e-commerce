@@ -128,7 +128,7 @@ const getReferAndEarn = async (req, res) => {
     });
 
   } catch (err) {
-    console.log("Refer & Earn page error:", err);
+    console.error("Refer & Earn page error:", err);
     res.status(500).send("Server error");
   }
 };

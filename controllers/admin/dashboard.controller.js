@@ -74,7 +74,8 @@ const getDashboardDetails = async (req, res) => {
       Order.aggregate([
         {
           $match: {
-            status: { $in: ['DELIVERED', 'SHIPPED', 'OUT_FOR_DELIVERY'] },
+            status: { $nin: ['CANCELLED'] },
+            payment_status: 'COMPLETED', // Only count completed payments as revenue
             createdAt: { $gte: startDate, $lt: endDate }
           }
         },
@@ -93,11 +94,12 @@ const getDashboardDetails = async (req, res) => {
 
     const totalSales = totalSalesResult[0]?.total || 0;
 
-    // Get time series data for chart
+    // Get time series data for chart (only completed payments - actual revenue)
     const timeSeriesData = await Order.aggregate([
       {
         $match: {
-          status: { $in: ['DELIVERED', 'SHIPPED', 'OUT_FOR_DELIVERY'] },
+          status: { $nin: ['CANCELLED'] },
+          payment_status: 'COMPLETED', // Only include orders with completed payments
           createdAt: { $gte: startDate, $lt: endDate }
         }
       },
@@ -205,23 +207,55 @@ const getDashboardDetails = async (req, res) => {
       .select('order_number user_id createdAt total products.status status')
       .lean();
 
-    const formattedRecentOrders = recentOrders.map(order => ({
-      orderNumber: order.order_number,
-      user: {
-        name: order.user_id ? `${order.user_id.firstName} ${order.user_id.lastName}` : 'Unknown'
-      },
-      createdAt: order.createdAt,
-      totalAmount: order.total,
-      items: order.products.map(product => ({
-        status: product.status || order.status
-      }))
-    }));
+    const formattedRecentOrders = recentOrders.map(order => {
+      // Calculate proper order status based on product statuses
+      const productStatuses = order.products.map(p => p.status || 'ORDERED');
+      const uniqueStatuses = [...new Set(productStatuses)];
+      
+      let calculatedStatus = order.status;
+      
+      // Apply the same logic as in order management
+      if (productStatuses.every(s => s === 'ORDERED')) {
+        calculatedStatus = 'PENDING';
+      } else if (productStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY')) {
+        calculatedStatus = 'IN_PROGRESS';
+      } else if (productStatuses.every(s => s === 'DELIVERED')) {
+        calculatedStatus = 'DELIVERED';
+      } else if (productStatuses.every(s => s === 'CANCELLED')) {
+        calculatedStatus = 'CANCELLED';
+      } else if (uniqueStatuses.length === 2 && 
+                 uniqueStatuses.includes('DELIVERED') && 
+                 uniqueStatuses.includes('CANCELLED')) {
+        calculatedStatus = 'PARTIALLY_DELIVERED';
+      } else if (uniqueStatuses.some(s => s === 'SHIPPED' || s === 'OUT_FOR_DELIVERY') && 
+                 uniqueStatuses.includes('CANCELLED')) {
+        calculatedStatus = 'PARTIALLY_SHIPPED';
+      } else if (productStatuses.every(s => s === 'RETURNED')) {
+        calculatedStatus = 'RETURNED';
+      } else {
+        calculatedStatus = 'IN_PROGRESS';
+      }
+      
+      return {
+        orderNumber: order.order_number,
+        user: {
+          name: order.user_id ? `${order.user_id.firstName} ${order.user_id.lastName}` : 'Unknown'
+        },
+        createdAt: order.createdAt,
+        totalAmount: order.total,
+        status: calculatedStatus,
+        items: order.products.map(product => ({
+          status: product.status || order.status
+        }))
+      };
+    });
 
-    // Get top selling products
+    // Get top selling products (only completed payments)
     const topProducts = await Order.aggregate([
       {
         $match: {
           status: { $in: ['DELIVERED', 'SHIPPED', 'OUT_FOR_DELIVERY'] },
+          payment_status: 'COMPLETED',
           createdAt: { $gte: startDate, $lt: endDate }
         }
       },
@@ -249,11 +283,12 @@ const getDashboardDetails = async (req, res) => {
       }
     ]);
 
-    // Get top selling categories
+    // Get top selling categories (only completed payments)
     const topCategories = await Order.aggregate([
       {
         $match: {
           status: { $in: ['DELIVERED', 'SHIPPED', 'OUT_FOR_DELIVERY'] },
+          payment_status: 'COMPLETED',
           createdAt: { $gte: startDate, $lt: endDate }
         }
       },
@@ -299,11 +334,12 @@ const getDashboardDetails = async (req, res) => {
       }
     ]);
 
-    // Get top selling product types (since brand field doesn't exist)
+    // Get top selling product types (only completed payments)
     const topBrands = await Order.aggregate([
       {
         $match: {
           status: { $in: ['DELIVERED', 'SHIPPED', 'OUT_FOR_DELIVERY'] },
+          payment_status: 'COMPLETED',
           createdAt: { $gte: startDate, $lt: endDate }
         }
       },

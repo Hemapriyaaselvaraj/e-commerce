@@ -429,13 +429,11 @@
         });
 
         const method = '<%= mode %>' === 'edit' ? 'PATCH' : 'POST';
-        console.log('🚀 Submitting form:', { action: this.action, method: method });
         
         fetch(this.action, {
           method: method,
           body: formData,
         }).then(async (res) => {
-          console.log('📥 Response received:', { status: res.status, ok: res.ok });
           
           if (res.ok) {
             // Try to parse JSON response
@@ -443,7 +441,7 @@
             try {
               responseData = await res.json();
             } catch (e) {
-              console.log('Response is not JSON, likely a redirect');
+              // Response is not JSON, likely a redirect
             }
             
             Swal.fire({
@@ -462,7 +460,7 @@
               const errorData = await res.json();
               errorMessage = errorData.error || errorData.message || errorMessage;
             } catch (e) {
-              console.log('Could not parse error response');
+              // Could not parse error response
             }
             
             Swal.fire({

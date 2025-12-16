@@ -13,10 +13,11 @@
     }
 
     body {
-      background-color: #f8f9fa;
+      background-color: #ffffff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
+      color: #000000;
     }
 
     .admin-layout {
@@ -35,7 +36,7 @@
     /* Page Header */
     h2 {
       font-weight: 600;
-      color: #343a40;
+      color: #000000;
       margin-bottom: 1.5rem;
     }
 
@@ -46,7 +47,7 @@
     }
 
     .order-summary strong {
-      color: #495057;
+      color: #000000;
     }
 
     /* Status Form */
@@ -57,7 +58,7 @@
     .status-form label {
       font-weight: 600;
       margin-right: 0.75rem;
-      color: #495057;
+      color: #000000;
     }
 
     .status-form select.form-select {
@@ -67,7 +68,7 @@
 
     /* Products Section */
     .products-section h5 {
-      color: #343a40;
+      color: #000000;
       margin-bottom: 1rem;
       font-weight: 600;
     }
@@ -82,8 +83,8 @@
     }
 
     .table th {
-      background-color: #343a40;
-      color: #fff;
+      background-color: #000000;
+      color: #ffffff;
       font-weight: 600;
       border: none;
       padding: 1rem;
@@ -92,11 +93,11 @@
     .table td {
       vertical-align: middle;
       padding: 1rem;
-      border-color: #dee2e6;
+      border-color: #000000;
     }
 
     .table tbody tr:hover {
-      background-color: #f8f9fa;
+      background-color: #f5f5f5;
     }
 
     /* Status Badges */
@@ -119,28 +120,43 @@
 
     /* Product Cards */
     .products-section .card {
-      border: 1px solid #dee2e6;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border: 2px solid #000000;
+      box-shadow: none;
       transition: box-shadow 0.3s ease;
+      background-color: #ffffff;
     }
 
     .products-section .card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
     .products-section .card-header {
-      border-bottom: 1px solid #dee2e6;
+      border-bottom: 2px solid #000000;
       padding: 1rem 1.25rem;
+      background-color: #f8f9fa;
     }
 
     .products-section .card-body {
       padding: 1.25rem;
     }
 
-    /* Financial Summary Cards */
-    .card-header.bg-primary,
+    /* Summary Cards */
+    .card {
+      border: 2px solid #000000;
+      background-color: #ffffff;
+    }
+    
+    .card-header.bg-primary {
+      background-color: #000000 !important;
+      color: #ffffff !important;
+      border-bottom: 2px solid #000000;
+    }
+    
     .card-header.bg-info {
-      border: none;
+      background-color: #ffffff !important;
+      color: #000000 !important;
+      border: 2px solid #000000;
+      border-bottom: 2px solid #000000;
     }
 
     .card-header h6 {
@@ -152,32 +168,44 @@
     .table-borderless td {
       border: none;
       padding: 0.5rem 0;
+      color: #000000;
     }
 
     .table-borderless .border-top td {
-      border-top: 2px solid #dee2e6 !important;
+      border-top: 2px solid #000000 !important;
       padding-top: 0.75rem;
     }
 
     /* Status Alerts */
     .alert {
-      border: none;
+      border: 2px solid #000000;
       border-radius: 8px;
+      background-color: #ffffff;
+      color: #000000;
     }
 
     .alert-warning {
-      background-color: #fff3cd;
-      color: #856404;
+      background-color: #ffffff;
+      color: #000000;
+      border-color: #000000;
     }
 
     .alert-info {
-      background-color: #d1ecf1;
-      color: #0c5460;
+      background-color: #f8f9fa;
+      color: #000000;
+      border-color: #000000;
     }
 
     .alert-success {
-      background-color: #d4edda;
-      color: #155724;
+      background-color: #f8f9fa;
+      color: #000000;
+      border-color: #000000;
+    }
+
+    .alert-secondary {
+      background-color: #f8f9fa;
+      color: #000000;
+      border-color: #000000;
     }
 
     /* Popover Button */
@@ -194,14 +222,18 @@
 
     /* Modal Customization */
     .modal-header {
-      background-color: #f8f9fa;
-      border-bottom: 1px solid #dee2e6;
+      background-color: #ffffff;
+      border-bottom: 2px solid #000000;
       padding: 1rem 1.5rem;
     }
 
     .modal-title {
       font-weight: 600;
-      color: #343a40;
+      color: #000000;
+    }
+    
+    .modal-content {
+      border: 2px solid #000000;
     }
 
     .modal-body {
@@ -210,7 +242,7 @@
 
     .modal-footer {
       padding: 1rem 1.5rem;
-      border-top: 1px solid #dee2e6;
+      border-top: 2px solid #000000;
     }
 
     .modal-footer .btn {
@@ -330,6 +362,97 @@
       max-width: 1200px;
     }
 
+    /* Button Styles */
+    .btn-success {
+      background-color: #000000;
+      border-color: #000000;
+      color: #ffffff;
+    }
+    
+    .btn-success:hover {
+      background-color: #333333;
+      border-color: #333333;
+    }
+    
+    .btn-danger {
+      background-color: #ffffff;
+      border: 2px solid #000000;
+      color: #000000;
+    }
+    
+    .btn-danger:hover {
+      background-color: #f5f5f5;
+      border-color: #000000;
+      color: #000000;
+    }
+    
+    .btn-secondary {
+      background-color: #f8f9fa;
+      border: 2px solid #000000;
+      color: #000000;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #e9ecef;
+      border-color: #000000;
+      color: #000000;
+    }
+
+    /* Badge Styles */
+    .badge {
+      border: 1px solid #000000;
+    }
+    
+    .badge.bg-success {
+      background-color: #000000 !important;
+      color: #ffffff;
+    }
+    
+    .badge.bg-warning {
+      background-color: #ffffff !important;
+      color: #000000;
+      border: 2px solid #000000;
+    }
+    
+    .badge.bg-danger {
+      background-color: #ffffff !important;
+      color: #000000;
+      border: 2px solid #000000;
+    }
+    
+    .badge.bg-info {
+      background-color: #f8f9fa !important;
+      color: #000000;
+      border: 2px solid #000000;
+    }
+    
+    .badge.bg-secondary {
+      background-color: #f8f9fa !important;
+      color: #000000;
+      border: 2px solid #000000;
+    }
+    
+    .badge.bg-primary {
+      background-color: #000000 !important;
+      color: #ffffff;
+    }
+    
+    .badge.bg-dark {
+      background-color: #000000 !important;
+      color: #ffffff;
+    }
+
+    /* Form Controls */
+    .form-select, .form-control {
+      border: 2px solid #000000;
+      color: #000000;
+    }
+    
+    .form-select:focus, .form-control:focus {
+      border-color: #000000;
+      box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.25);
+    }
+
     /* Print styles */
     @media print {
       .admin-layout {
@@ -364,7 +487,7 @@
     <div class="main-content">
       <%- include('../partials/adminNavbar', { pageTitle: 'Order Detail'}) %>
 
-      <a href="/admin/orders" class="btn btn-dark mt-2">Go to Orders</a>
+      <a href="/admin/orders" class="btn btn-outline-dark mt-2" style="border: 2px solid #000000; color: #000000; background-color: #ffffff;">Go to Orders</a>
 
       
       <div class="container py-3">
@@ -406,48 +529,23 @@
           </div>
         </div>
 
-        <!-- Financial Summary -->
+        <!-- Order Summary -->
         <div class="row mb-4">
           <div class="col-md-6">
             <div class="card">
               <div class="card-header bg-primary text-white">
-                <h6 class="mb-0"><i class="fas fa-receipt me-2"></i>Order Financial Summary</h6>
+                <h6 class="mb-0"><i class="fas fa-receipt me-2"></i>Order Summary</h6>
               </div>
               <div class="card-body">
-                <% 
-                  let totalOriginalPrice = 0;
-                  let totalOfferDiscount = 0;
-                  let totalCouponDiscount = 0;
-                  let totalFinalAmount = 0;
-                  
-                  order.products.forEach(p => {
-                    const originalPrice = (p.original_price || p.price) * p.quantity;
-                    const offerDiscount = p.original_price ? (p.original_price - p.price) * p.quantity : 0;
-                    const couponDiscount = p.coupon_discount_allocated || 0;
-                    const finalAmount = (p.price * p.quantity) - couponDiscount;
-                    
-                    totalOriginalPrice += originalPrice;
-                    totalOfferDiscount += offerDiscount;
-                    totalCouponDiscount += couponDiscount;
-                    totalFinalAmount += finalAmount;
-                  });
-                %>
-                
                 <table class="table table-sm table-borderless">
                   <tr>
-                    <td><strong>Original Subtotal:</strong></td>
-                    <td class="text-end">Rs<%= totalOriginalPrice.toLocaleString() %></td>
+                    <td><strong>Subtotal:</strong></td>
+                    <td class="text-end">Rs<%= (order.subtotal || 0).toLocaleString() %></td>
                   </tr>
-                  <% if (totalOfferDiscount > 0) { %>
-                    <tr>
-                      <td><strong>Offer Discounts:</strong></td>
-                      <td class="text-end text-success">-Rs<%= totalOfferDiscount.toLocaleString() %></td>
-                    </tr>
-                  <% } %>
-                  <% if (totalCouponDiscount > 0) { %>
+                  <% if (order.coupon_discount && order.coupon_discount > 0) { %>
                     <tr>
                       <td><strong>Coupon Discount:</strong></td>
-                      <td class="text-end text-success">-Rs<%= totalCouponDiscount.toLocaleString() %></td>
+                      <td class="text-end text-success">-Rs<%= order.coupon_discount.toLocaleString() %></td>
                     </tr>
                     <% if (order.applied_coupon_code) { %>
                       <tr>
@@ -457,11 +555,7 @@
                     <% } %>
                   <% } %>
                   <tr>
-                    <td><strong>Subtotal After Discounts:</strong></td>
-                    <td class="text-end">Rs<%= totalFinalAmount.toLocaleString() %></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Shipping Charge:</strong></td>
+                    <td><strong>Shipping:</strong></td>
                     <td class="text-end">Rs<%= (order.shipping_charge || 0).toLocaleString() %></td>
                   </tr>
                   <% if (order.tax && order.tax > 0) { %>
@@ -471,7 +565,7 @@
                     </tr>
                   <% } %>
                   <tr class="border-top">
-                    <td><strong>Total Paid:</strong></td>
+                    <td><strong>Total Amount:</strong></td>
                     <td class="text-end"><strong class="text-primary fs-5">Rs<%= order.total.toLocaleString() %></strong></td>
                   </tr>
                 </table>
@@ -482,73 +576,77 @@
           <div class="col-md-6">
             <div class="card">
               <div class="card-header bg-info text-white">
-                <h6 class="mb-0"><i class="fas fa-wallet me-2"></i>Refund Summary</h6>
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Order Status</h6>
               </div>
               <div class="card-body">
                 <% 
-                  let totalRefunded = 0;
                   let cancelledItems = 0;
                   let returnedItems = 0;
+                  let deliveredItems = 0;
+                  let totalItems = order.products.length;
                   
                   order.products.forEach(p => {
-                    if (p.status === 'CANCELLED') {
-                      cancelledItems++;
-                      totalRefunded += (p.price * p.quantity) - (p.coupon_discount_allocated || 0);
-                    } else if (p.status === 'RETURNED' && p.return_details) {
-                      returnedItems++;
-                      totalRefunded += p.return_details.refundAmount || 0;
-                    }
+                    if (p.status === 'CANCELLED') cancelledItems++;
+                    else if (p.status === 'RETURNED') returnedItems++;
+                    else if (p.status === 'DELIVERED') deliveredItems++;
                   });
                 %>
                 
-                <% if (totalRefunded > 0) { %>
-                  <table class="table table-sm table-borderless">
-                    <% if (cancelledItems > 0) { %>
-                      <tr>
-                        <td><strong>Cancelled Items:</strong></td>
-                        <td class="text-end"><%= cancelledItems %></td>
-                      </tr>
-                    <% } %>
-                    <% if (returnedItems > 0) { %>
-                      <tr>
-                        <td><strong>Returned Items:</strong></td>
-                        <td class="text-end"><%= returnedItems %></td>
-                      </tr>
-                    <% } %>
-                    <tr class="border-top">
-                      <td><strong>Total Refunded:</strong></td>
-                      <td class="text-end"><strong class="text-danger fs-5">Rs<%= totalRefunded.toLocaleString() %></strong></td>
-                    </tr>
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <td><strong>Total Items:</strong></td>
+                    <td class="text-end"><%= totalItems %></td>
+                  </tr>
+                  <% if (deliveredItems > 0) { %>
                     <tr>
-                      <td><strong>Refund Method:</strong></td>
-                      <td class="text-end"><small class="badge bg-success">Wallet Credit</small></td>
+                      <td><strong>Delivered:</strong></td>
+                      <td class="text-end text-success"><%= deliveredItems %></td>
                     </tr>
+                  <% } %>
+                  <% if (cancelledItems > 0) { %>
                     <tr>
-                      <td><strong>Net Revenue:</strong></td>
-                      <td class="text-end"><strong class="text-success fs-5">Rs<%= (order.total - totalRefunded).toLocaleString() %></strong></td>
+                      <td><strong>Cancelled:</strong></td>
+                      <td class="text-end text-danger"><%= cancelledItems %></td>
                     </tr>
-                  </table>
-                <% } else { %>
-                  <div class="text-center text-muted py-3">
-                    <i class="fas fa-check-circle fa-2x mb-2"></i>
-                    <p class="mb-0">No refunds processed</p>
-                    <small>All items are active</small>
-                  </div>
-                <% } %>
+                  <% } %>
+                  <% if (returnedItems > 0) { %>
+                    <tr>
+                      <td><strong>Returned:</strong></td>
+                      <td class="text-end text-warning"><%= returnedItems %></td>
+                    </tr>
+                  <% } %>
+                  <tr class="border-top">
+                    <td><strong>Payment Status:</strong></td>
+                    <td class="text-end">
+                      <% if (order.payment_status === 'COMPLETED') { %>
+                        <span class="badge bg-success">Paid</span>
+                      <% } else if (order.payment_status === 'PENDING') { %>
+                        <span class="badge bg-warning">Pending</span>
+                      <% } else { %>
+                        <span class="badge bg-danger">Failed</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                </table>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Order Status Info -->
+        <!-- Order Status Info
         <div class="alert alert-secondary mb-4">
           <h6><i class="fas fa-info-circle me-2"></i>Order Status Management</h6>
-          <p class="mb-0">The overall order status is automatically calculated based on individual product statuses. Update each product's status below to manage the order.</p>
-        </div>
+          <p class="mb-2">The overall order status is automatically calculated based on individual product statuses. Update each product's status below to manage the order.</p>
+          <% if (order.coupon_discount && order.coupon_discount > 0) { %>
+            <hr style="border-color: #000000;">
+            <h6><i class="fas fa-tag me-2"></i>Coupon Refund Policy</h6>
+            <p class="mb-0"><strong>Important:</strong> When a product is cancelled or returned, the coupon discount allocated to that specific product is automatically deducted from the refund amount. This ensures fair distribution of coupon benefits across remaining active products.</p>
+          <% } %>
+        </div> -->
 
-        <!-- Products Table with Detailed Pricing -->
+        <!-- Products Section -->
         <div class="products-section">
-          <h5>Products & Pricing Details</h5>
+          <h5>Order Products</h5>
           
           <% order.products.forEach((p, index) => { %>
             <div class="card mb-4">
@@ -593,57 +691,34 @@
               
               <div class="card-body">
                 <div class="row">
-                  <!-- Pricing Breakdown -->
+                  <!-- Product Details -->
                   <div class="col-md-6">
-                    <h6 class="text-primary mb-3"><i class="fas fa-calculator me-2"></i>Pricing Breakdown</h6>
+                    <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Product Details</h6>
                     <table class="table table-sm table-borderless">
                       <tr>
                         <td><strong>Quantity:</strong></td>
                         <td class="text-end"><%= p.quantity %></td>
                       </tr>
                       <tr>
-                        <td><strong>Original Price:</strong></td>
-                        <td class="text-end">
-                          <% if (p.original_price && p.original_price > p.price) { %>
-                            <span class="text-decoration-line-through text-muted">Rs<%= (p.original_price * p.quantity).toLocaleString() %></span>
-                          <% } else { %>
-                            Rs<%= (p.price * p.quantity).toLocaleString() %>
-                          <% } %>
-                        </td>
+                        <td><strong>Unit Price:</strong></td>
+                        <td class="text-end">Rs<%= p.price.toLocaleString() %></td>
                       </tr>
-                      <% if (p.original_price && p.original_price > p.price) { %>
+                      <tr>
+                        <td><strong>Total Amount:</strong></td>
+                        <td class="text-end"><strong class="text-primary">Rs<%= (p.price * p.quantity).toLocaleString() %></strong></td>
+                      </tr>
+                      <% if (p.appliedOfferType) { %>
                         <tr>
-                          <td><strong>Offer Discount:</strong></td>
-                          <td class="text-end text-success">
-                            -Rs<%= ((p.original_price - p.price) * p.quantity).toLocaleString() %>
-                            <% if (p.discount_percentage) { %>
-                              (<%= p.discount_percentage %>% off)
-                            <% } %>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><strong>After Offer:</strong></td>
-                          <td class="text-end">Rs<%= (p.price * p.quantity).toLocaleString() %></td>
+                          <td><strong>Applied Offer:</strong></td>
+                          <td class="text-end"><small style="color: #000000;"><%= p.appliedOfferType %></small></td>
                         </tr>
                       <% } %>
-                      <tr>
-                        <td><strong>Coupon Discount:</strong></td>
-                        <td class="text-end text-success">
-                          <% if (p.coupon_discount_allocated && p.coupon_discount_allocated > 0) { %>
-                            -Rs<%= p.coupon_discount_allocated.toLocaleString() %>
-                          <% } else { %>
-                            Rs0
-                          <% } %>
-                        </td>
-                      </tr>
-                      <tr class="border-top">
-                        <td><strong>Final Amount Paid:</strong></td>
-                        <td class="text-end">
-                          <strong class="text-primary">
-                            Rs<%= ((p.price * p.quantity) - (p.coupon_discount_allocated || 0)).toLocaleString() %>
-                          </strong>
-                        </td>
-                      </tr>
+                      <% if (p.coupon_discount_allocated && p.coupon_discount_allocated > 0) { %>
+                        <tr>
+                          <td><strong>Coupon Share:</strong></td>
+                          <td class="text-end"><small style="color: #000000;">Rs<%= p.coupon_discount_allocated.toLocaleString() %></small></td>
+                        </tr>
+                      <% } %>
                     </table>
                   </div>
                   
@@ -673,21 +748,26 @@
                     <!-- Refund Information -->
                     <% if (p.status === 'CANCELLED' || p.status === 'RETURNED') { %>
                       <div class="alert alert-info py-2">
-                        <h6 class="mb-2"><i class="fas fa-wallet me-2"></i>Refund Details</h6>
-                        <% 
-                          let refundAmount = 0;
-                          if (p.status === 'RETURNED' && p.return_details && p.return_details.refundAmount) {
-                            refundAmount = p.return_details.refundAmount;
-                          } else if (p.status === 'CANCELLED') {
-                            refundAmount = (p.price * p.quantity) - (p.coupon_discount_allocated || 0);
-                          }
-                        %>
                         <small>
-                          <strong>Amount Refunded:</strong> Rs<%= refundAmount.toLocaleString() %><br>
-                          <strong>Refund Method:</strong> Wallet Credit<br>
+                          <i class="fas fa-info-circle me-1"></i>
+                          <% 
+                            let refundAmount = 0;
+                            if (p.status === 'RETURNED' && p.return_details && p.return_details.refundAmount) {
+                              refundAmount = p.return_details.refundAmount;
+                            } else if (p.status === 'CANCELLED') {
+                              refundAmount = (p.price * p.quantity) - (p.coupon_discount_allocated || 0);
+                            }
+                          %>
+                          <% if (p.status === 'CANCELLED') { %>
+                            <strong>Cancelled:</strong> Rs<%= refundAmount.toLocaleString() %> refunded to wallet
+                          <% } else { %>
+                            <strong>Returned:</strong> Rs<%= refundAmount.toLocaleString() %> refunded to wallet
+                          <% } %>
+                          <% if (p.coupon_discount_allocated && p.coupon_discount_allocated > 0) { %>
+                            <br><strong>Note:</strong> Coupon discount (Rs<%= p.coupon_discount_allocated.toLocaleString() %>) deducted from refund
+                          <% } %>
                           <% if (p.status === 'RETURNED' && p.return_details) { %>
-                            <strong>Reason:</strong> <%= p.return_details.reason %><br>
-                            <strong>Date:</strong> <%= new Date(p.return_details.requested_at).toLocaleDateString() %>
+                            <br><strong>Reason:</strong> <%= p.return_details.reason %>
                           <% } %>
                         </small>
                       </div>
@@ -700,9 +780,7 @@
                         <% if (p.return_details) { %>
                           <small class="d-block mb-2">
                             <strong>Reason:</strong> <%= p.return_details.reason %><br>
-                            <strong>Comments:</strong> <%= p.return_details.comments || 'No comments' %><br>
-                            <strong>Requested:</strong> <%= new Date(p.return_details.requested_at).toLocaleDateString() %><br>
-                            <strong>Refund Amount:</strong> Rs<%= p.return_details.refundAmount.toLocaleString() %>
+                            <strong>Requested:</strong> <%= new Date(p.return_details.requested_at).toLocaleDateString() %>
                           </small>
                         <% } %>
                         <div class="d-flex gap-2">
@@ -716,7 +794,7 @@
                       </div>
                     <% } else if (p.status === 'RETURNED') { %>
                       <div class="alert alert-success py-2">
-                        <small><i class="fas fa-check-circle me-1"></i>Return approved and refunded to wallet</small>
+                        <small><i class="fas fa-check-circle me-1"></i>Return approved - Amount refunded to wallet</small>
                       </div>
                     <% } %>
                   </div>
@@ -750,13 +828,13 @@
                 </div>
                 <div class="col-md-6">
                   <p class="mb-1"><strong>Phone:</strong> <%= order.shipping_address.phone_number %></p>
-                  <% if (order.shipping_address.type) { %>
+                  <!-- <% if (order.shipping_address.type) { %>
                     <p class="mb-1"><strong>Address Type:</strong> 
                       <span class="badge bg-outline-secondary"><%= order.shipping_address.type %></span>
                     </p>
-                  <% } %>
-                  <% if (order.shipping_address.label) { %>
-                    <p class="mb-1"><strong>Label:</strong> <%= order.shipping_address.label %></p>
+                  <% } %> -->
+                  <% if (order.shipping_address.type) { %>
+                    <p class="mb-1"><strong>Address Type:</strong> <%= order.shipping_address.type %></p>
                   <% } %>
                 </div>
               </div>

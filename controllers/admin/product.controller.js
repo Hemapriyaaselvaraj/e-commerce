@@ -378,11 +378,33 @@ const getProducts = async (req, res) => {
     const totalResults = await Product.countDocuments(filter);
     const skipCount = (currentPage - 1) * pageSize;
 
-    const products = await Product.find(filter)
-      .sort(sortObj)
-      .skip(skipCount)
-      .limit(pageSize)
-      .lean();
+    // Use aggregation to get products with their first variation image
+    const products = await Product.aggregate([
+      { $match: filter },
+      { $sort: sortObj },
+      { $skip: skipCount },
+      { $limit: pageSize },
+      {
+        $lookup: {
+          from: "product_variations",
+          localField: "_id",
+          foreignField: "product_id",
+          as: "variations"
+        }
+      },
+      {
+        $addFields: {
+          firstImage: {
+            $arrayElemAt: [
+              {
+                $arrayElemAt: ["$variations.images", 0]
+              },
+              0
+            ]
+          }
+        }
+      }
+    ]);
 
     const totalPages = Math.ceil(totalResults / pageSize);
 
@@ -565,12 +587,6 @@ const getEditProduct = async(req,res) => {
 
 const postEditProduct = async (req, res) => {
   try {
-    console.log('📝 Product update request received:', {
-      method: req.method,
-      productId: req.params.id,
-      contentType: req.headers['content-type']
-    });
-    
     const productId = req.params.id;
 
     const product = await Product.findById(productId);

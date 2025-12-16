@@ -16,7 +16,7 @@ const getOffersList = async (req, res) => {
     res.render("admin/offersList", { offers, name });
 
   } catch (error) {
-    console.log(error);
+    console.error("Offers list error:", error);
     res.status(500).send("Server Error");
   }
 };
@@ -42,7 +42,7 @@ const getAddOffer = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error);
+    console.error("Add offer form error:", error);
     res.status(500).send("Server Error");
   }
 };
@@ -112,7 +112,7 @@ const getEditOffer = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error);
+    console.error("Edit offer form error:", error);
     res.status(500).send("Server Error");
   }
 };
@@ -145,7 +145,7 @@ const postEditOffer = async (req, res) => {
     res.redirect("/admin/offers");
 
   } catch (error) {
-    console.log(error);
+    console.error("Edit offer error:", error);
     res.status(500).send("Server Error");
   }
 };
@@ -162,7 +162,7 @@ const toggleOfferStatus = async (req, res) => {
     res.json({ success: true, isActive: offer.isActive });
 
   } catch (error) {
-    console.log(error);
+    console.error("Toggle offer status error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
