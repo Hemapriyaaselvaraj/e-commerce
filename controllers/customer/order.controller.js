@@ -11,11 +11,12 @@ const razorpayInstance = require('../../config/razorpay')
 const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
 const { calculateBestOffer } = require("../../utils/offerCalculator");
+const { calculateCartTotals } = require("../../utils/cartCalculator");
 
 
 const placeOrder = async (req, res) => {
   try {
-    const { addressId, paymentMethod = 'COD' } = req.body;
+    const { addressId, paymentMethod = 'COD', appliedCoupon } = req.body;
 
     if (!addressId || !paymentMethod) {
       return res.status(400).json({ 
@@ -33,127 +34,60 @@ const placeOrder = async (req, res) => {
       });
     }
 
-     const cartItems = await Cart.find({ user_id: userId })
-      .populate({
-        path: 'product_variation_id',
-        populate: { 
-          path: 'product_id',
-          select: 'name price discount_percentage is_active'
-        }
+    // Use centralized cart calculation
+    const cartCalculation = await calculateCartTotals(userId, req.session);
+    
+    if (!cartCalculation.success) {
+      return res.status(400).json({
+        success: false,
+        message: cartCalculation.message || 'Unable to calculate cart totals'
       });
+    }
 
-    if (!cartItems || cartItems.length === 0) {
-      throw new Error('Cart is empty');
+    if (cartCalculation.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No available products to order'
+      });
     }
 
     const address = await Address.findById(addressId);
     if (!address) {
-      throw new Error('Shipping address not found');
-    }
-
-  
-    const now = new Date();
-    const activeOffers = await Offer.find({
-      isActive: true,
-      validFrom: { $lte: now },
-      validTo: { $gte: now }
-    })
-    .populate('category', 'category')
-    .lean();
-
-    let subtotal = 0;
-    let orderProducts = [];
-    const stockUpdates = [];
-
-    for (const item of cartItems) {
-      const variation = item.product_variation_id;
-      const product = variation.product_id;
-
-      if (!product.is_active || variation.stock_quantity < item.quantity) {
-        continue;
-      }
-
-      const original_price = product.price;
-
-      const offerResult = calculateBestOffer(product, activeOffers);
-      const discount_percentage = offerResult.discountPercentage;
-      const price = offerResult.finalPrice;
-      const appliedOfferType = `${offerResult.appliedOfferType}: ${offerResult.appliedOfferName}`;
-      
-      subtotal += price * item.quantity;
-
-      orderProducts.push({
-        variation: variation._id,
-        name: product.name,
-        quantity: item.quantity,
-        price,
-        original_price,
-        discount_percentage,
-        appliedOfferType,
-        color: variation.product_color,
-        size: variation.product_size,
-        images: variation.images && variation.images.length > 0 ? variation.images : [],
-        status: 'ORDERED',
-        coupon_discount_allocated: 0 
-            });
-
-      stockUpdates.push({
-        updateOne: {
-          filter: { _id: variation._id },
-          update: { $inc: { stock_quantity: -item.quantity } }
-        }
+      return res.status(400).json({
+        success: false,
+        message: 'Shipping address not found'
       });
     }
 
-    if (orderProducts.length === 0) {
-      throw new Error('No available products to order');
-    }
+    const subtotal = cartCalculation.subtotal;
+    const shipping_charge = cartCalculation.shipping;
+    const couponDiscount = cartCalculation.couponDiscount;
+    const appliedCouponCode = cartCalculation.appliedCouponCode;
+    const total = cartCalculation.total;
 
-    const shipping_charge = subtotal > 1000 ? 0 : 50;
-    
-    let couponDiscount = 0;
-    let appliedCouponCode = null;
-    if (req.session.appliedCoupon) {
-      couponDiscount = req.session.appliedCoupon.discount || 0;
-      appliedCouponCode = req.session.appliedCoupon.code;
-    }
+    // Convert cart items to order products format
+    const orderProducts = cartCalculation.items.map(item => ({
+      variation: item.variation,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      original_price: item.originalPrice,
+      discount_percentage: Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100),
+      appliedOfferType: 'Calculated Offer',
+      color: item.color,
+      size: item.size,
+      images: item.images,
+      status: 'ORDERED',
+      coupon_discount_allocated: couponDiscount > 0 ? Math.round((couponDiscount * item.total) / subtotal * 100) / 100 : 0
+    }));
 
-    if (couponDiscount > 0 && orderProducts.length > 0) {
-      // Calculate total order value (sum of all product subtotals)
-      const totalOrderValue = orderProducts.reduce((sum, product) => {
-        return sum + (product.price * product.quantity);
-      }, 0);
-
-      // Allocate coupon discount proportionally to each product based on their value
-      orderProducts = orderProducts.map(product => {
-        const productSubtotal = product.price * product.quantity;
-        const productShare = productSubtotal / totalOrderValue; // Percentage of total order
-        const allocatedDiscount = Math.round(couponDiscount * productShare * 100) / 100; // Round to 2 decimal places
-        
-        return {
-          ...product,
-          coupon_discount_allocated: allocatedDiscount
-        };
-      });
-
-      // Ensure total allocated discount equals original coupon discount (handle rounding)
-      const totalAllocated = orderProducts.reduce((sum, product) => sum + product.coupon_discount_allocated, 0);
-      const roundingDifference = couponDiscount - totalAllocated;
-      
-      // Add any rounding difference to the first product
-      if (Math.abs(roundingDifference) > 0.01) {
-        orderProducts[0].coupon_discount_allocated += roundingDifference;
-        orderProducts[0].coupon_discount_allocated = Math.round(orderProducts[0].coupon_discount_allocated * 100) / 100;
+    // Prepare stock updates
+    const stockUpdates = cartCalculation.items.map(item => ({
+      updateOne: {
+        filter: { _id: item.variation },
+        update: { $inc: { stock_quantity: -item.quantity } }
       }
-    } else {
-      // ⭐ Ensure all products have coupon_discount_allocated field set to 0 when no coupon is applied
-      orderProducts = orderProducts.map(product => ({
-        ...product,
-        coupon_discount_allocated: 0
-      }));
-    }
-    
-    const total = subtotal + shipping_charge - couponDiscount;
+    }));
 
     // Validate COD restriction for orders above Rs 1000
     if (paymentMethod === 'COD' && total > 1000) {
@@ -342,15 +276,19 @@ const createRazorpayOrder = async (amount, orderId) => {
   }
 
   try {
+    const finalAmount = Math.round(amount);
+    const amountInPaise = finalAmount * 100;
+    
     const orderOptions = {
-      amount: Math.round(amount * 100), 
+      amount: amountInPaise, 
       currency: 'INR',
       receipt: orderId.toString()
     };
     const order = await razorpayInstance.orders.create(orderOptions);
+    
     return order;
   } catch (error) {
-    console.error('Razorpay order creation failed:', error);
+    console.error('❌ Razorpay order creation failed:', error);
     throw error;
   }
 };

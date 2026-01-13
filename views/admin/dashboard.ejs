@@ -477,19 +477,38 @@
               
               <!-- Filter Buttons -->
               <div class="filter-section mb-3">
-                <div class="filter-buttons">
-                  <button class="filter-btn" data-period="daily">
-                    <i class="fas fa-calendar-day me-1"></i>Daily
-                  </button>
-                  <button class="filter-btn" data-period="weekly">
-                    <i class="fas fa-calendar-week me-1"></i>Weekly
-                  </button>
-                  <button class="filter-btn active" data-period="monthly">
-                    <i class="fas fa-calendar-alt me-1"></i>Monthly
-                  </button>
-                  <button class="filter-btn" data-period="yearly">
-                    <i class="fas fa-calendar me-1"></i>Yearly
-                  </button>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                  <!-- Time Period Filters -->
+                  <div class="filter-buttons">
+                    <button class="filter-btn" data-period="daily">
+                      <i class="fas fa-calendar-day me-1"></i>Daily
+                    </button>
+                    <button class="filter-btn" data-period="weekly">
+                      <i class="fas fa-calendar-week me-1"></i>Weekly
+                    </button>
+                    <button class="filter-btn active" data-period="monthly">
+                      <i class="fas fa-calendar-alt me-1"></i>Monthly
+                    </button>
+                    <button class="filter-btn" data-period="yearly">
+                      <i class="fas fa-calendar me-1"></i>Yearly
+                    </button>
+                  </div>
+                  
+                  <!-- View Type Toggle -->
+                  <div class="view-type-toggle">
+                    <label class="form-label mb-0 me-2"><small>View:</small></label>
+                    <div class="btn-group" role="group">
+                      <input type="radio" class="btn-check" name="viewType" id="ordersView" value="orders" checked>
+                      <label class="btn btn-outline-primary btn-sm" for="ordersView">
+                        <i class="fas fa-shopping-cart me-1"></i>Orders
+                      </label>
+                      
+                      <input type="radio" class="btn-check" name="viewType" id="deliveriesView" value="deliveries">
+                      <label class="btn btn-outline-primary btn-sm" for="deliveriesView">
+                        <i class="fas fa-truck me-1"></i>Deliveries
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -581,8 +600,8 @@
       return d.toLocaleDateString("en-IN");
     }
 
-    async function fetchDashboard(period = "monthly") {
-      const res = await fetch(`/admin/dashboard-details?timeFilter=${period}`);
+    async function fetchDashboard(period = "monthly", viewType = "orders") {
+      const res = await fetch(`/admin/dashboard-details?timeFilter=${period}&viewType=${viewType}`);
       const result = await res.json();
       
       if (!res.ok) {
@@ -805,7 +824,11 @@
         });
     }
 
-    async function init(period = "monthly") {
+    // Global variables to track current state
+    let currentPeriod = 'monthly';
+    let currentViewType = 'orders';
+
+    async function init(period = "monthly", viewType = "orders") {
       try {
         // Show loading states
         document.getElementById("total-sales").innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -843,7 +866,7 @@
           </div>
         `;
 
-        const data = await fetchDashboard(period);
+        const data = await fetchDashboard(period, viewType);
 
         // Update stats
         document.getElementById("total-sales").textContent = data.totalSales.toLocaleString("en-IN");
@@ -862,8 +885,9 @@
         
         // Update dashboard subtitle with current filter
         const filterText = period.charAt(0).toUpperCase() + period.slice(1);
+        const viewText = viewType.charAt(0).toUpperCase() + viewType.slice(1);
         document.querySelector('.dashboard-subtitle').innerHTML = `
-          Monitor your business performance and key metrics (${filterText} view)
+          Monitor your business performance and key metrics (${filterText} ${viewText} view)
           <span class="text-muted ms-3">
             <i class="fas fa-clock me-1"></i>
             Last updated: <span id="last-updated">${new Date().toLocaleString()}</span>
@@ -890,6 +914,7 @@
       }
     }
 
+    // Time period filter event listeners
     document.querySelectorAll(".filter-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
         // Prevent multiple clicks
@@ -908,11 +933,22 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + btn.textContent.trim();
         
         try {
-          await init(btn.dataset.period);
+          currentPeriod = btn.dataset.period;
+          await init(currentPeriod, currentViewType);
         } finally {
           // Restore button state
           btn.innerHTML = originalText;
           btn.disabled = false;
+        }
+      });
+    });
+
+    // View type toggle event listeners
+    document.querySelectorAll('input[name="viewType"]').forEach(radio => {
+      radio.addEventListener('change', async () => {
+        if (radio.checked) {
+          currentViewType = radio.value;
+          await init(currentPeriod, currentViewType);
         }
       });
     });

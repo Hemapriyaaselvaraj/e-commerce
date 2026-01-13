@@ -688,6 +688,13 @@
           <span>₹<%= typeof shipping !== 'undefined' ? shipping : 0 %></span>
         </div>
         
+        <% if (typeof couponDiscount !== 'undefined' && couponDiscount > 0) { %>
+        <div class="summary-row" style="color: #16a34a;">
+          <span>Coupon Discount</span>
+          <span>- ₹<%= couponDiscount %></span>
+        </div>
+        <% } %>
+        
         <div class="summary-total">
           <span>Total</span>
           <span>₹<%= typeof total !== 'undefined' ? total : 0 %></span>
@@ -794,12 +801,41 @@
           placeOrderButton.disabled = true;
           placeOrderButton.textContent = "Processing...";
 
+          // First, verify the cart total with backend
+          const cartTotalRes = await fetch("/cart/total");
+          const cartTotalData = await cartTotalRes.json();
+          
+          if (cartTotalData.success) {
+            const frontendTotal = parseFloat(document.getElementById('grandTotal').textContent.replace('₹', '').replace(',', ''));
+            const backendTotal = cartTotalData.total;
+            
+            if (Math.abs(frontendTotal - backendTotal) > 0.01) {
+              Swal.fire({
+                icon: 'error',
+                title: 'Amount Mismatch',
+                text: `There's a discrepancy in the order amount. Frontend shows ₹${frontendTotal} but backend calculated ₹${backendTotal}. Please refresh and try again.`,
+                confirmButtonColor: '#0f172a'
+              });
+              isProcessing = false;
+              placeOrderButton.disabled = false;
+              placeOrderButton.textContent = "Place Order";
+              return;
+            }
+          }
 
           const res = await fetch("/order/place-order", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ paymentMethod, addressId }),
+            body: JSON.stringify({ 
+              paymentMethod, 
+              addressId,
+              // Include coupon information directly in the request
+              appliedCoupon: cartTotalData.success ? {
+                code: cartTotalData.appliedCouponCode,
+                discount: cartTotalData.couponDiscount
+              } : null
+            }),
           });
 
           let data;
@@ -1030,7 +1066,34 @@ async function applyCoupon() {
     document.getElementById("couponDiscountSection").style.display = "block";
     document.getElementById("appliedCouponCode").innerText = code;
     document.getElementById("discountValue").innerText = "-₹" + data.discount;
+    
+    // Update the grand total to match backend calculation
     document.getElementById("grandTotal").innerText = "₹" + data.grandTotal;
+    
+    // Also update the main total in summary if it exists
+    const summaryTotal = document.querySelector('.summary-total span:last-child');
+    if (summaryTotal) {
+      summaryTotal.innerText = "₹" + data.grandTotal;
+    }
+    
+    // Update or add coupon discount row in main summary
+    let couponRow = document.querySelector('.coupon-discount-row');
+    if (!couponRow) {
+      // Create new coupon discount row
+      const shippingRow = document.querySelector('.summary-row:last-of-type');
+      couponRow = document.createElement('div');
+      couponRow.className = 'summary-row coupon-discount-row';
+      couponRow.style.color = '#16a34a';
+      couponRow.innerHTML = `
+        <span>Coupon Discount</span>
+        <span>- ₹${data.discount}</span>
+      `;
+      shippingRow.parentNode.insertBefore(couponRow, shippingRow.nextSibling);
+    } else {
+      // Update existing coupon discount row
+      couponRow.querySelector('span:last-child').innerText = `- ₹${data.discount}`;
+    }
+    
     document.getElementById("couponInput").value = code;
     
     // Update COD availability after coupon is applied
@@ -1038,6 +1101,12 @@ async function applyCoupon() {
   } else {
     // Hide coupon discount section on error
     document.getElementById("couponDiscountSection").style.display = "none";
+    
+    // Remove coupon discount row from main summary
+    const couponRow = document.querySelector('.coupon-discount-row');
+    if (couponRow) {
+      couponRow.remove();
+    }
   }
 }
 
@@ -1058,6 +1127,13 @@ async function removeCoupon() {
     // Hide coupon discount section
     document.getElementById("couponDiscountSection").style.display = "none";
     document.getElementById("couponInput").value = "";
+    
+    // Remove coupon discount row from main summary
+    const couponRow = document.querySelector('.coupon-discount-row');
+    if (couponRow) {
+      couponRow.remove();
+    }
+    
     // Refresh to update totals
     location.reload();
   }
@@ -1095,6 +1171,27 @@ function updateCODAvailability() {
 // Call on page load
 document.addEventListener('DOMContentLoaded', function() {
   updateCODAvailability();
+  
+  // Initialize coupon display if already applied
+  <% if (typeof appliedCoupon !== 'undefined' && appliedCoupon) { %>
+  document.getElementById("couponDiscountSection").style.display = "block";
+  document.getElementById("appliedCouponCode").innerText = "<%= appliedCoupon.code %>";
+  document.getElementById("discountValue").innerText = "-₹<%= appliedCoupon.discount %>";
+  document.getElementById("couponInput").value = "<%= appliedCoupon.code %>";
+  
+  // Add coupon discount row to main summary if not already there
+  if (!document.querySelector('.coupon-discount-row')) {
+    const shippingRow = document.querySelector('.summary-row:last-of-type');
+    const couponRow = document.createElement('div');
+    couponRow.className = 'summary-row coupon-discount-row';
+    couponRow.style.color = '#16a34a';
+    couponRow.innerHTML = `
+      <span>Coupon Discount</span>
+      <span>- ₹<%= appliedCoupon.discount %></span>
+    `;
+    shippingRow.parentNode.insertBefore(couponRow, shippingRow.nextSibling);
+  }
+  <% } %>
 });
 
 </script>

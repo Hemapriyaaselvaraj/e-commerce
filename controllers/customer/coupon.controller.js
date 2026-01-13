@@ -82,8 +82,6 @@ const applyCoupon = async (req, res) => {
     const shipping = cartTotal > 1000 ? 0 : 50;
     const grandTotal = Math.round(cartTotal + shipping - discount);
 
-
-  
     req.session.appliedCoupon = {
       couponId: coupon._id,
       code: coupon.code,

@@ -3,6 +3,7 @@ const ProductVariation = require('../../models/productVariationModel');
 const User = require('../../models/userModel');
 const Offer = require('../../models/offerModel');
 const { calculateBestOffer } = require('../../utils/offerCalculator');
+const { calculateCartTotals } = require('../../utils/cartCalculator');
 
 const getCartPage = async (req, res) => {
   try {
@@ -13,10 +14,10 @@ const getCartPage = async (req, res) => {
     const cartItems = await Cart.find({ user_id: userId })
       .populate({
         path: "product_variation_id",
-        populate: { path: "product_id" }  
+        populate: { path: "product_id" }
       });
 
-    
+
     const now = new Date();
     const activeOffers = await Offer.find({
       isActive: true,
@@ -28,8 +29,8 @@ const getCartPage = async (req, res) => {
 
     const items = cartItems.map(cart => {
 
-      const variation = cart.product_variation_id;   
-      const product = variation?.product_id;         
+      const variation = cart.product_variation_id;
+      const product = variation?.product_id;
 
       const originalPrice = product?.price || 0;
 
@@ -46,7 +47,7 @@ const getCartPage = async (req, res) => {
         quantity: cart.quantity,
         priceBefore: Math.round(originalPrice),
         priceAfter: Math.round(finalPrice),
-        discount: maxOfferDiscount, 
+        discount: maxOfferDiscount,
         total: Math.round(finalPrice * cart.quantity),
         stock: variation.stock_quantity,
         isActive: product?.is_active
@@ -64,13 +65,13 @@ const getCartPage = async (req, res) => {
       subtotal,
       shipping,
       total,
-      
+
     });
 
   } catch (error) {
     console.error("Cart page error:", error);
-    res.status(500).render('user/500', { 
-      message: 'Unable to load your cart at the moment. Please refresh the page or try again later.' 
+    res.status(500).render('user/500', {
+      message: 'Unable to load your cart at the moment. Please refresh the page or try again later.'
     });
   }
 };
@@ -80,24 +81,24 @@ const updateCartQuantity = async (req, res) => {
     const { cartItemId, action } = req.body;
 
     const userId = req.session.userId;
-    if (!userId) 
+    if (!userId)
         return res.status(401).json({ success: false, message: 'Not logged in' });
-    
+
     const cartItem = await Cart.findOne({ _id: cartItemId, user_id: userId });
-    if (!cartItem) 
+    if (!cartItem)
         return res.status(404).json({ success: false, message: 'Cart item not found' });
-    
-    const variation = await ProductVariation.findById(cartItem.product_variation_id).populate('product_id');
-    if (!variation) 
+
+    const variation = await ProductVariation.findById(cartItem.product_variation_id).populate('product_id');      
+    if (!variation)
         return res.status(404).json({ success: false, message: 'Variation not found' });
-    
+
     const product = variation.product_id;
-    if (!product) 
+    if (!product)
         return res.status(404).json({ success: false, message: 'Product not found' });
     if (product.is_active === false) {
       return res.status(403).json({ success: false, message: 'Product is blocked or unlisted.' });
     }
-   
+
     if (action === 'increment') {
       if (cartItem.quantity + 1 > variation.stock_quantity) {
         return res.status(400).json({ success: false, message: 'Quantity exceeds available stock' });
@@ -111,16 +112,16 @@ const updateCartQuantity = async (req, res) => {
     } else {
       return res.status(400).json({ success: false, message: 'Invalid action' });
     }
-    
+
     cartItem.updated_at = Date.now();
-    
+
     await cartItem.save();
     res.json({ success: true, quantity: cartItem.quantity });
   } catch (error) {
     console.error('Update cart quantity error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Unable to update cart quantity. Please refresh the page and try again.' 
+    res.status(500).json({
+      success: false,
+      message: 'Unable to update cart quantity. Please refresh the page and try again.'
     });
   }
 };
@@ -131,37 +132,37 @@ const removeFromCart = async (req, res) => {
     const userId = req.session.userId;
 
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Please log in to manage your cart.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Please log in to manage your cart.'
       });
     }
-    
+
     if (!cartItemId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Item selection is required to remove from cart.' 
+      return res.status(400).json({
+        success: false,
+        message: 'Item selection is required to remove from cart.'
       });
     }
-    
+
     const cartItem = await Cart.findOne({ _id: cartItemId, user_id: userId });
     if (!cartItem) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Item not found in your cart.' 
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found in your cart.'
       });
     }
-    
+
     await Cart.deleteOne({ _id: cartItemId, user_id: userId });
-    res.json({ 
+    res.json({
       success: true,
-      message: 'Item removed from cart successfully.' 
+      message: 'Item removed from cart successfully.'
     });
   } catch (error) {
     console.error('Remove from cart error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Unable to remove item from cart. Please refresh the page and try again.' 
+    res.status(500).json({
+      success: false,
+      message: 'Unable to remove item from cart. Please refresh the page and try again.'
     });
   }
 };
@@ -169,20 +170,20 @@ const removeFromCart = async (req, res) => {
 const addToCart = async (req, res) => {
   try {
     const { product_variation_id, quantity } = req.body;
-    
+
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, message: 'Not logged in' });
-   
+
     if (!product_variation_id || !quantity || quantity < 1) {
       return res.status(400).json({ success: false, message: 'Invalid request' });
     }
-    
+
     const variation = await ProductVariation.findById(product_variation_id).populate('product_id');
     if (!variation) return res.status(404).json({ success: false, message: 'Variation not found' });
-    
+
     const product = variation.product_id;
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-    
+
     if (product.is_active === false) {
       return res.status(403).json({ success: false, message: 'Product is not available' });
     }
@@ -217,8 +218,6 @@ const addToCart = async (req, res) => {
   }
 };
 
-
-
 const getCartCount = async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -226,11 +225,42 @@ const getCartCount = async (req, res) => {
 
     const cartItems = await Cart.find({ user_id: userId });
     const count = cartItems.reduce((total, item) => total + item.quantity, 0);
-    
+
     res.json({ success: true, count });
   } catch (err) {
     console.error('Get cart count error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const getCartTotal = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    
+    if (!userId) {
+      return res.json({ success: false, message: "User not authenticated" });
+    }
+
+    const result = await calculateCartTotals(userId, req.session);
+    
+    if (!result.success) {
+      return res.json(result);
+    }
+
+    return res.json({
+      success: true,
+      subtotal: result.subtotal,
+      shipping: result.shipping,
+      couponDiscount: result.couponDiscount,
+      appliedCouponCode: result.appliedCouponCode,
+      total: result.total
+    });
+
+  } catch (error) {
+    return res.json({ 
+      success: false, 
+      message: "Unable to calculate cart total at the moment." 
+    });
   }
 };
 
@@ -239,5 +269,6 @@ module.exports = {
     updateCartQuantity,
     removeFromCart,
     addToCart,
-    getCartCount
-}
+    getCartCount,
+    getCartTotal
+};

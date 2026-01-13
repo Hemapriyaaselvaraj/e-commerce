@@ -293,6 +293,13 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
+    // Update payment status if order is delivered and payment method is online
+    if (status === 'DELIVERED' && ['RAZORPAY', 'WALLET', 'UPI', 'ONLINE'].includes(order.payment_method)) {
+      order.payment_status = 'COMPLETED';
+      order.delivered_at = new Date();
+      await order.save();
+    }
+
     if (req.headers['content-type'] === 'application/json') {
       res.json({ 
         success: true, 
@@ -378,6 +385,15 @@ const updateProductStatus = async (req, res) => {
 
     if (status === 'DELIVERED') {
       product.delivered_at = new Date();
+      
+      // Update payment status for delivered products based on payment method
+      if (order.payment_method === 'COD') {
+        // COD orders: Keep payment as PENDING until payment is collected
+        // You might want to add a separate field to track if COD payment was collected
+      } else if (['RAZORPAY', 'WALLET', 'UPI', 'ONLINE'].includes(order.payment_method)) {
+        // Online payments: Should already be COMPLETED, but ensure it's set
+        order.payment_status = 'COMPLETED';
+      }
     }
 
     // Update overall order status based on product statuses
@@ -390,6 +406,12 @@ const updateProductStatus = async (req, res) => {
     else if (productStatuses.every(s => s === 'DELIVERED')) {
       order.status = 'DELIVERED';
       order.delivered_at = new Date();
+      
+      // Update payment status when entire order is delivered
+      if (['RAZORPAY', 'WALLET', 'UPI', 'ONLINE'].includes(order.payment_method)) {
+        order.payment_status = 'COMPLETED';
+      }
+      // COD orders keep payment_status as PENDING until payment is collected
     }
     else if (productStatuses.every(s => s === 'CANCELLED')) {
       order.status = 'CANCELLED';

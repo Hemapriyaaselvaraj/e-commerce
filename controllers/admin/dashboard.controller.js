@@ -23,14 +23,23 @@ const getDashboard = async (req, res) => {
 
 const getDashboardDetails = async (req, res) => {
   try {
-    const { timeFilter = 'monthly' } = req.query;
+    const { timeFilter = 'monthly', viewType = 'orders' } = req.query;
     
-    // Validate timeFilter parameter
+    // Validate parameters
     const validFilters = ['daily', 'weekly', 'monthly', 'yearly'];
+    const validViewTypes = ['orders', 'deliveries'];
+    
     if (!validFilters.includes(timeFilter)) {
       return res.status(400).json({ 
         error: 'Invalid time filter selection',
         message: 'Please select a valid time period: daily, weekly, monthly, or yearly.'
+      });
+    }
+    
+    if (!validViewTypes.includes(viewType)) {
+      return res.status(400).json({ 
+        error: 'Invalid view type selection',
+        message: 'Please select a valid view type: orders or deliveries.'
       });
     }
     
@@ -40,35 +49,35 @@ const getDashboardDetails = async (req, res) => {
     
     switch (timeFilter) {
       case 'daily':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13); // Last 14 days including today
         endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-        groupBy = { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } };
+        groupBy = { $dateToString: { format: "%Y-%m-%d", date: viewType === 'orders' ? "$createdAt" : "$updatedAt" } };
         dateFormat = 'daily';
         break;
         
       case 'weekly':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 84); // 12 weeks
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 55); // 8 weeks
         endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
         groupBy = { 
           $dateToString: { 
             format: "Week %U, %Y", 
-            date: "$createdAt" 
+            date: viewType === 'orders' ? "$createdAt" : "$updatedAt"
           } 
         };
         dateFormat = 'weekly';
         break;
         
       case 'yearly':
-        startDate = new Date(now.getFullYear() - 5, 0, 1);
+        startDate = new Date(now.getFullYear() - 4, 0, 1); // Last 5 years
         endDate = new Date(now.getFullYear() + 1, 0, 1);
-        groupBy = { $dateToString: { format: "%Y", date: "$createdAt" } };
+        groupBy = { $dateToString: { format: "%Y", date: viewType === 'orders' ? "$createdAt" : "$updatedAt" } };
         dateFormat = 'yearly';
         break;
         
       default: // monthly
-        startDate = new Date(now.getFullYear(), 0, 1); // Start from January of current year
-        endDate = new Date(now.getFullYear() + 1, 0, 1); // End at January of next year
-        groupBy = { $dateToString: { format: "%Y-%m", date: "$createdAt" } };
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1); // 12 months ago
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1); // End of current month
+        groupBy = { $dateToString: { format: "%Y-%m", date: viewType === 'orders' ? "$createdAt" : "$updatedAt" } };
         dateFormat = 'monthly';
     }
 
@@ -79,7 +88,13 @@ const getDashboardDetails = async (req, res) => {
           $match: {
             status: { $nin: ['CANCELLED'] },
             payment_status: 'COMPLETED', // Only count completed payments as revenue
-            createdAt: { $gte: startDate, $lt: endDate }
+            ...(viewType === 'orders' 
+              ? { createdAt: { $gte: startDate, $lt: endDate } }
+              : { 
+                  updatedAt: { $gte: startDate, $lt: endDate },
+                  status: 'DELIVERED' // Only count delivered orders for delivery view
+                }
+            )
           }
         },
         {
@@ -91,20 +106,36 @@ const getDashboardDetails = async (req, res) => {
       ]),
       userModel.countDocuments({ role: 'user' }),
       Order.countDocuments({
-        createdAt: { $gte: startDate, $lt: endDate }
+        ...(viewType === 'orders' 
+          ? { createdAt: { $gte: startDate, $lt: endDate } }
+          : { 
+              updatedAt: { $gte: startDate, $lt: endDate },
+              status: 'DELIVERED'
+            }
+        )
       })
     ]);
 
     const totalSales = totalSalesResult[0]?.total || 0;
 
-    // Get time series data for chart (only completed payments - actual revenue)
+    // Get time series data for chart
+    let timeSeriesMatchConditions = {
+      status: { $nin: ['CANCELLED'] },
+      payment_status: 'COMPLETED'
+    };
+
+    if (viewType === 'orders') {
+      // Orders view: track by creation date
+      timeSeriesMatchConditions.createdAt = { $gte: startDate, $lt: endDate };
+    } else {
+      // Deliveries view: track by delivery date (updatedAt when status became DELIVERED)
+      timeSeriesMatchConditions.updatedAt = { $gte: startDate, $lt: endDate };
+      timeSeriesMatchConditions.status = 'DELIVERED';
+    }
+
     const timeSeriesData = await Order.aggregate([
       {
-        $match: {
-          status: { $nin: ['CANCELLED'] },
-          payment_status: 'COMPLETED', // Only include orders with completed payments
-          createdAt: { $gte: startDate, $lt: endDate }
-        }
+        $match: timeSeriesMatchConditions
       },
       {
         $group: {
@@ -122,9 +153,14 @@ const getDashboardDetails = async (req, res) => {
     let timeSeriesLabels = [];
     let timeSeriesValues = [];
     
+    console.log(`Dashboard Debug - ${timeFilter} ${viewType}:`, {
+      dateRange: `${startDate.toISOString()} to ${endDate.toISOString()}`,
+      rawDataPoints: timeSeriesData.length,
+      rawData: timeSeriesData
+    });
+    
     if (dateFormat === 'monthly') {
-      // Generate all 12 months for the current year
-      const currentYear = now.getFullYear();
+      // Generate last 12 months from current month
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       
       // Create a map of existing data for quick lookup
@@ -133,12 +169,31 @@ const getDashboardDetails = async (req, res) => {
         dataMap[item._id] = item.sales;
       });
       
-      // Generate all 12 months
-      for (let month = 0; month < 12; month++) {
-        const monthKey = `${currentYear}-${String(month + 1).padStart(2, '0')}`;
-        timeSeriesLabels.push(`${monthNames[month]} ${currentYear}`);
-        timeSeriesValues.push(dataMap[monthKey] || 0);
+      console.log('Available months in data:', Object.keys(dataMap));
+      
+      // Generate last 12 months
+      for (let i = 11; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = monthDate.getFullYear();
+        const month = monthDate.getMonth();
+        
+        const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+        const label = `${monthNames[month]} ${year}`;
+        const value = dataMap[monthKey] || 0;
+        
+        timeSeriesLabels.push(label);
+        timeSeriesValues.push(value);
+        
+        if (value > 0) {
+          console.log(`Month with data: ${label} (${monthKey}) = Rs${value}`);
+        }
       }
+      
+      console.log('Generated monthly chart:', { 
+        labels: timeSeriesLabels, 
+        values: timeSeriesValues,
+        nonZeroCount: timeSeriesValues.filter(v => v > 0).length 
+      });
     } else if (dateFormat === 'daily') {
       // Generate all days in the range
       const dayMap = {};
@@ -146,12 +201,83 @@ const getDashboardDetails = async (req, res) => {
         dayMap[item._id] = item.sales;
       });
       
-      const currentDate = new Date(startDate);
-      while (currentDate < endDate) {
-        const dateKey = currentDate.toISOString().split('T')[0];
-        timeSeriesLabels.push(currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-        timeSeriesValues.push(dayMap[dateKey] || 0);
-        currentDate.setDate(currentDate.getDate() + 1);
+      console.log('Available days in data:', Object.keys(dayMap));
+      console.log('Date range for chart:', startDate.toISOString(), 'to', endDate.toISOString());
+      
+      // Instead of generating all days, use actual days with data plus recent days
+      const allDayKeys = Object.keys(dayMap).sort();
+      
+      if (allDayKeys.length > 0) {
+        // Get all dates from data
+        const dayData = [];
+        
+        // Add all days from data
+        allDayKeys.forEach(dayKey => {
+          const date = new Date(dayKey);
+          dayData.push({
+            key: dayKey,
+            date: date,
+            value: dayMap[dayKey],
+            label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          });
+        });
+        
+        // Sort by date
+        dayData.sort((a, b) => a.date - b.date);
+        
+        // Also add recent days (last 7 days) even if they have no data for context
+        const recentDays = [];
+        const today = new Date();
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i);
+          const dateKey = date.toISOString().split('T')[0];
+          
+          // Only add if not already in dayData
+          if (!dayMap[dateKey]) {
+            recentDays.push({
+              key: dateKey,
+              date: date,
+              value: 0,
+              label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            });
+          }
+        }
+        
+        // Combine data days and recent days, remove duplicates, sort
+        const allDays = [...dayData, ...recentDays];
+        const uniqueDays = allDays.filter((day, index, self) => 
+          index === self.findIndex(d => d.key === day.key)
+        );
+        uniqueDays.sort((a, b) => a.date - b.date);
+        
+        // Take the most recent 14 days
+        const recentDaysData = uniqueDays.slice(-14);
+        
+        recentDaysData.forEach(day => {
+          timeSeriesLabels.push(day.label);
+          timeSeriesValues.push(day.value);
+          
+          if (day.value > 0) {
+            console.log(`Day with data: ${day.label} (${day.key}) = Rs${day.value}`);
+          }
+        });
+        
+        console.log('Generated daily chart:', { 
+          labels: timeSeriesLabels, 
+          values: timeSeriesValues,
+          nonZeroCount: timeSeriesValues.filter(v => v > 0).length 
+        });
+      } else {
+        // Fallback: generate last 14 days if no data
+        const currentDate = new Date(startDate);
+        while (currentDate < endDate) {
+          const label = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          timeSeriesLabels.push(label);
+          timeSeriesValues.push(0);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        console.log('No daily data found, generated empty chart');
       }
     } else if (dateFormat === 'yearly') {
       // Generate all years in the range
@@ -168,25 +294,64 @@ const getDashboardDetails = async (req, res) => {
         timeSeriesValues.push(yearMap[year.toString()] || 0);
       }
     } else {
-      // For weekly, generate last 12 weeks
+      // For weekly, show only last 8 weeks to make data more visible
       if (dateFormat === 'weekly') {
         const weekMap = {};
         timeSeriesData.forEach(item => {
           weekMap[item._id] = item.sales;
         });
         
-        // Generate last 12 weeks
-        const currentDate = new Date();
-        for (let i = 11; i >= 0; i--) {
-          const weekStart = new Date(currentDate);
-          weekStart.setDate(currentDate.getDate() - (i * 7));
+        console.log('Available weeks in data:', Object.keys(weekMap));
+        
+        // Instead of generating weeks, use the actual weeks from data and fill gaps
+        const allWeekKeys = Object.keys(weekMap).sort();
+        
+        // If we have data, show all weeks with data plus some recent weeks
+        if (allWeekKeys.length > 0) {
+          // Get all unique weeks from the data
+          const weekData = [];
           
-          const weekNumber = getWeekNumber(weekStart);
-          const year = weekStart.getFullYear();
-          const weekKey = `Week ${weekNumber}, ${year}`;
+          // Add all weeks from data
+          allWeekKeys.forEach(weekKey => {
+            const weekMatch = weekKey.match(/Week (\d+), (\d+)/);
+            if (weekMatch) {
+              const weekNum = parseInt(weekMatch[1]);
+              const year = parseInt(weekMatch[2]);
+              weekData.push({
+                key: weekKey,
+                weekNum: weekNum,
+                year: year,
+                value: weekMap[weekKey]
+              });
+            }
+          });
           
-          timeSeriesLabels.push(`Week ${weekNumber}`);
-          timeSeriesValues.push(weekMap[weekKey] || 0);
+          // Sort by year and week
+          weekData.sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.weekNum - b.weekNum;
+          });
+          
+          // Take the most recent weeks (limit to 8)
+          const recentWeeks = weekData.slice(-8);
+          
+          recentWeeks.forEach(week => {
+            timeSeriesLabels.push(`Week ${week.weekNum}`);
+            timeSeriesValues.push(week.value);
+          });
+          
+          console.log('Generated weekly chart:', { labels: timeSeriesLabels, values: timeSeriesValues });
+        } else {
+          // Fallback: generate last 8 weeks if no data
+          const currentDate = new Date();
+          for (let i = 7; i >= 0; i--) {
+            const weekStart = new Date(currentDate);
+            weekStart.setDate(currentDate.getDate() - (i * 7));
+            
+            const weekNumber = getWeekNumber(weekStart);
+            timeSeriesLabels.push(`Week ${weekNumber}`);
+            timeSeriesValues.push(0);
+          }
         }
       } else {
         // Fallback for other formats
@@ -194,6 +359,13 @@ const getDashboardDetails = async (req, res) => {
         timeSeriesValues = timeSeriesData.map(item => item.sales);
       }
     }
+    
+    console.log(`Chart Data Generated:`, {
+      labels: timeSeriesLabels,
+      values: timeSeriesValues,
+      nonZeroCount: timeSeriesValues.filter(v => v > 0).length,
+      maxValue: Math.max(...timeSeriesValues, 0)
+    });
     
     // Helper function to get week number
     function getWeekNumber(date) {
@@ -258,7 +430,13 @@ const getDashboardDetails = async (req, res) => {
         $match: {
           status: { $nin: ['CANCELLED'] },
           payment_status: 'COMPLETED',
-          createdAt: { $gte: startDate, $lt: endDate }
+          ...(viewType === 'orders' 
+            ? { createdAt: { $gte: startDate, $lt: endDate } }
+            : { 
+                updatedAt: { $gte: startDate, $lt: endDate },
+                status: 'DELIVERED'
+              }
+          )
         }
       },
       { $unwind: "$products" },
@@ -290,7 +468,13 @@ const getDashboardDetails = async (req, res) => {
         $match: {
           status: { $nin: ['CANCELLED'] },
           payment_status: 'COMPLETED',
-          createdAt: { $gte: startDate, $lt: endDate }
+          ...(viewType === 'orders' 
+            ? { createdAt: { $gte: startDate, $lt: endDate } }
+            : { 
+                updatedAt: { $gte: startDate, $lt: endDate },
+                status: 'DELIVERED'
+              }
+          )
         }
       },
       { $unwind: "$products" },
@@ -341,7 +525,13 @@ const getDashboardDetails = async (req, res) => {
         $match: {
           status: { $nin: ['CANCELLED'] },
           payment_status: 'COMPLETED',
-          createdAt: { $gte: startDate, $lt: endDate }
+          ...(viewType === 'orders' 
+            ? { createdAt: { $gte: startDate, $lt: endDate } }
+            : { 
+                updatedAt: { $gte: startDate, $lt: endDate },
+                status: 'DELIVERED'
+              }
+          )
         }
       },
       { $unwind: "$products" },
@@ -400,6 +590,8 @@ const getDashboardDetails = async (req, res) => {
         topBrands: topBrands || []
       },
       timeFilter,
+      viewType,
+      chartTitle: viewType === 'orders' ? 'Revenue by Order Date' : 'Revenue by Delivery Date',
       generatedAt: new Date().toISOString()
     });
 

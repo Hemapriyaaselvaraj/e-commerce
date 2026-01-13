@@ -68,7 +68,14 @@ const checkout = async (req, res) => {
   );
 
   const shipping = subtotal > 1000 ? 0 : 50;
-  const total = subtotal + shipping;
+  let total = subtotal + shipping;
+  
+  // Apply any session coupon discount for display consistency
+  let couponDiscount = 0;
+  if (req.session.appliedCoupon) {
+    couponDiscount = req.session.appliedCoupon.discount || 0;
+    total = total - couponDiscount;
+  }
 
   const razorpayKeyId = process.env.RAZORPAY_KEY_ID; 
 
@@ -82,7 +89,9 @@ const checkout = async (req, res) => {
     offerDiscount: Math.round(offerDiscount),
     subtotal: Math.round(subtotal),
     shipping,
-    total,
+    couponDiscount: Math.round(couponDiscount),
+    appliedCoupon: req.session.appliedCoupon || null,
+    total: Math.round(total),
     razorpayKeyId
   });
 };
