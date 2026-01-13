@@ -29,7 +29,7 @@ const productList = async (req, res) => {
   const selectedPrice = [].concat(price || []);
   const searchText = search?.trim() || "";
   const currentPage = parseInt(page) || 1;
-  const pageSize = 20;
+  const pageSize = 10;
 
   //Build base Mongoose filter object
   const filter = { is_active: true };
@@ -213,10 +213,17 @@ const productList = async (req, res) => {
 const productDetail = async (req, res) => {
   try {
     const productId = req.params.id;
+    
+    // Validate if productId is a valid MongoDB ObjectId
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(404).render('user/404');
+    }
+    
     const product = await Product.findById(productId).lean();
 
     if (!product) {
-      return res.status(404).send("Product not found");
+      return res.status(404).render('user/404');
     }
 
     const now = new Date();
@@ -313,6 +320,13 @@ const productDetail = async (req, res) => {
 
   } catch (err) {
     console.error("Product detail error:", err);
+    
+    // If it's a MongoDB CastError (invalid ObjectId), show 404
+    if (err.name === 'CastError' && err.kind === 'ObjectId') {
+      return res.status(404).render('user/404');
+    }
+    
+    // For other errors, show 500 error
     return res.status(500).send("Error loading product detail");
   }
 };

@@ -25,6 +25,9 @@ const addressSchema = new Schema({
   locality: {
     type: String
   },
+  street: {
+    type: String
+  },
   city: {
     type: String
   },

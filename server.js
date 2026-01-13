@@ -68,8 +68,6 @@ app.use(attachUserName);
 
 app.use('/user',userRoutes)
 app.use('/admin',adminRoutes)
-
-app.use('/',homeRoutes)
 app.use('/products', productRoutes)
 app.use('/wishlist', wishlistRoutes)
 app.use('/cart', cartRoutes)
@@ -78,6 +76,16 @@ app.use('/addresses', addressRoutes);
 app.use('/profile',profileRoutes)
 app.use('/order', orderRoutes);
 app.use('/wallet', walletRoutes)
+app.use('/',homeRoutes)
+
+app.use("/admin", (req, res) => {
+  res.status(404).render("admin/404");
+});
+
+app.use((req, res) => {
+  res.status(404).render("user/404");
+});
+
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

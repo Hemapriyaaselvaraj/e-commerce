@@ -8,7 +8,7 @@ router.get('/available-coupons', checkoutController.getAvailableCoupons); // No 
 router.use(isCustomerAccessible);
 
 router.get('/', checkoutController.checkout);
-// router.post('/address/add' , checkoutController.addAddress )
-// router.post('/address/edit', checkoutController.editAddress)
+router.post('/address/add', checkoutController.addAddress);
+router.post('/address/edit', checkoutController.editAddress);
 
 module.exports = router;

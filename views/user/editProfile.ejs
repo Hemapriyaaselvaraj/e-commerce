@@ -266,6 +266,82 @@
       emailOtpError.textContent = '';
     });
 
+    // Handle profile form submission
+    document.getElementById('editProfileForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      
+      // Validate required fields
+      const firstName = formData.get('firstName').trim();
+      const lastName = formData.get('lastName').trim();
+      const phoneNumber = formData.get('phoneNumber').trim();
+      
+      if (!firstName || !lastName || !phoneNumber) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Please fill in all required fields.'
+        });
+        return;
+      }
+      
+      // Validate phone number (basic validation)
+      const phoneRegex = /^[0-9]{10}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Invalid Phone Number',
+          text: 'Please enter a valid 10-digit phone number.'
+        });
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Updating...';
+      
+      fetch('/profile/edit', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          firstName: firstName,
+          lastName: lastName,
+          phoneNumber: phoneNumber
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: 'Profile updated successfully!',
+            showConfirmButton: false,
+            timer: 2000
+          }).then(() => {
+            window.location.href = '/profile';
+          });
+        } else {
+          throw new Error(data.message || 'Update failed');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Update Failed',
+          text: 'Failed to update profile. Please try again.'
+        });
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      });
+    });
     
     document.querySelector('form[method="POST"]').addEventListener('submit', function() {
       emailInput.setAttribute('name', 'email');

@@ -102,16 +102,46 @@ const getEditProfile = async(req,res) => {
 const postEditProfile = async (req, res) => {
   try {
     if (!req.session || !req.session.userId) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
       return res.redirect('/login');
     }
+    
     const { firstName, lastName, phoneNumber } = req.body;
+    
+    // Validate required fields
+    if (!firstName || !lastName || !phoneNumber) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(400).json({ success: false, message: 'All fields are required' });
+      }
+      return res.status(400).send('All fields are required');
+    }
+    
+    // Validate phone number
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phoneNumber.trim())) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit phone number' });
+      }
+      return res.status(400).send('Please enter a valid 10-digit phone number');
+    }
+    
     await userModel.findByIdAndUpdate(req.session.userId, {
-      firstName,
-      lastName,
-      phoneNumber
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      phoneNumber: phoneNumber.trim()
     });
+    
+    if (req.headers['content-type'] === 'application/json') {
+      return res.json({ success: true, message: 'Profile updated successfully' });
+    }
     res.redirect('/profile');
   } catch (err) {
+    console.error('Error updating profile:', err);
+    if (req.headers['content-type'] === 'application/json') {
+      return res.status(500).json({ success: false, message: 'Error updating profile' });
+    }
     res.status(500).send('Error updating profile');
   }
 };

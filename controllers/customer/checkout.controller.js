@@ -87,70 +87,200 @@ const checkout = async (req, res) => {
   });
 };
 
-// const addAddress = async (req, res) => {
-//   try {
-//     const userId = req.session.userId;
-//     if (!userId) {
-//       return res.status(401).json({ success: false, message: "Please sign in to save an address." });
-//     }
+const addAddress = async (req, res) => {
+  try {
+    console.log('🔍 Add address request received:', req.body);
+    console.log('🔍 Session data:', {
+      user: req.session.user,
+      userId: req.session.userId,
+      role: req.session.role
+    });
+    
+    const userId = req.session.userId;
+    console.log('🔍 User ID from session:', userId);
+    
+    if (!userId) {
+      console.log('❌ No user ID in session');
+      return res.status(401).json({ success: false, message: "Please sign in to save an address." });
+    }
 
-//     // Data coming from AJAX body
-//     const {
-//       name,
-//       label,
-//       type,
-//       house_number,
-//       locality,
-//       street,
-//       city,
-//       state,
-//       pincode,
-//       phone_number
-//     } = req.body;
+    // Data coming from AJAX body
+    const {
+      name,
+      label,
+      type,
+      house_number,
+      locality,
+      street,
+      city,
+      state,
+      pincode,
+      phone_number
+    } = req.body;
 
-//     // Validate required fields
-//     if (!name || !phone_number || !city || !state || !pincode) {
-//       return res.status(400).json({ 
-//         success: false, 
-//         message: "Name, phone, city, state and pincode are required." 
-//       });
-//     }
+    console.log('🔍 Extracted data:', { name, phone_number, city, state, pincode });
 
-//     // Normalize type field
-//     const normalizeType = (value = '') => {
-//       const normalized = value.toString().trim().toUpperCase();
-//       const allowed = ['HOME', 'WORK', 'OTHER'];
-//       if (allowed.includes(normalized)) return normalized;
-//       return normalized ? 'OTHER' : 'HOME';
-//     };
+    // Validate required fields
+    if (!name || !phone_number || !city || !state || !pincode) {
+      console.log('❌ Validation failed - missing required fields');
+      return res.status(400).json({ 
+        success: false, 
+        message: "Name, phone, city, state and pincode are required." 
+      });
+    }
 
-//     // Check if this is the first address (should be default)
-//     const addressCount = await Address.countDocuments({ user_id: userId });
-//     const isDefault = addressCount === 0;
+    // Validate phone number
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone_number.trim())) {
+      console.log('❌ Phone validation failed:', phone_number);
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please enter a valid 10-digit phone number." 
+      });
+    }
 
-//     // Create and save the new address
-//     await Address.create({
-//       user_id: userId,
-//       name: name.trim(),
-//       label: label?.trim(),
-//       type: normalizeType(type || label),
-//       house_number: house_number?.trim(),
-//       locality: locality?.trim(),
-//       street: street?.trim(),
-//       city: city.trim(),
-//       state: state.trim(),
-//       pincode: Number(pincode),
-//       phone_number: phone_number.trim(),
-//       isDefault: isDefault
-//     });
+    // Validate pincode
+    const pincodeRegex = /^[0-9]{6}$/;
+    if (!pincodeRegex.test(pincode.toString().trim())) {
+      console.log('❌ Pincode validation failed:', pincode);
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please enter a valid 6-digit pincode." 
+      });
+    }
 
-//     return res.json({ success: true });
+    // Normalize type field
+    const normalizeType = (value = '') => {
+      const normalized = value.toString().trim().toUpperCase();
+      const allowed = ['HOME', 'WORK', 'OTHER'];
+      if (allowed.includes(normalized)) return normalized;
+      return normalized ? 'OTHER' : 'HOME';
+    };
 
-//   } catch (error) {
-//     console.error("Add address error:", error);
-//     return res.status(500).json({ success: false, message: "Error saving address" });
-//   }
-// };
+    // Check if this is the first address (should be default)
+    const addressCount = await Address.countDocuments({ user_id: userId });
+    const isDefault = addressCount === 0;
+    
+    console.log('🔍 Address count for user:', addressCount, 'Will be default:', isDefault);
+
+    const addressData = {
+      user_id: userId,
+      name: name.trim(),
+      label: label?.trim(),
+      type: normalizeType(type || label),
+      house_number: house_number?.trim(),
+      locality: locality?.trim(),
+      street: street?.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      pincode: Number(pincode),
+      phone_number: phone_number.trim(),
+      isDefault: isDefault
+    };
+    
+    console.log('🔍 Creating address with data:', addressData);
+
+    // Create and save the new address
+    const newAddress = await Address.create(addressData);
+    
+    console.log('✅ Address created successfully:', newAddress._id);
+
+    return res.json({ success: true, message: "Address saved successfully!" });
+
+  } catch (error) {
+    console.error("❌ Add address error:", error);
+    return res.status(500).json({ success: false, message: "Error saving address: " + error.message });
+  }
+};
+
+const editAddress = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Please sign in to edit address." });
+    }
+
+    const {
+      addressId,
+      name,
+      label,
+      type,
+      house_number,
+      locality,
+      street,
+      city,
+      state,
+      pincode,
+      phone_number
+    } = req.body;
+
+    if (!addressId) {
+      return res.status(400).json({ success: false, message: "Address ID is required." });
+    }
+
+    // Validate required fields
+    if (!name || !phone_number || !city || !state || !pincode) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Name, phone, city, state and pincode are required." 
+      });
+    }
+
+    // Validate phone number
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone_number.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please enter a valid 10-digit phone number." 
+      });
+    }
+
+    // Validate pincode
+    const pincodeRegex = /^[0-9]{6}$/;
+    if (!pincodeRegex.test(pincode.toString().trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please enter a valid 6-digit pincode." 
+      });
+    }
+
+    // Normalize type field
+    const normalizeType = (value = '') => {
+      const normalized = value.toString().trim().toUpperCase();
+      const allowed = ['HOME', 'WORK', 'OTHER'];
+      if (allowed.includes(normalized)) return normalized;
+      return normalized ? 'OTHER' : 'HOME';
+    };
+
+    // Update the address
+    const updatedAddress = await Address.findOneAndUpdate(
+      { _id: addressId, user_id: userId },
+      {
+        name: name.trim(),
+        label: label?.trim(),
+        type: normalizeType(type || label),
+        house_number: house_number?.trim(),
+        locality: locality?.trim(),
+        street: street?.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        pincode: Number(pincode),
+        phone_number: phone_number.trim()
+      },
+      { new: true }
+    );
+
+    if (!updatedAddress) {
+      return res.status(404).json({ success: false, message: "Address not found." });
+    }
+
+    return res.json({ success: true, message: "Address updated successfully!" });
+
+  } catch (error) {
+    console.error("Edit address error:", error);
+    return res.status(500).json({ success: false, message: "Error updating address" });
+  }
+};
 
 
 const getAvailableCoupons = async (req, res) => {
@@ -190,6 +320,7 @@ const getAvailableCoupons = async (req, res) => {
 
 module.exports = {
   checkout,
-  getAvailableCoupons
-//   addAddress
+  getAvailableCoupons,
+  addAddress,
+  editAddress
 };

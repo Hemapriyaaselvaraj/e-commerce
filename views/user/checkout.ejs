@@ -730,37 +730,120 @@
 
       
       document.getElementById("saveAddressBtn").onclick = async () => {
-        const form = document.getElementById("addressForm");
+        console.log('🔍 Save address button clicked');
+        
+        // Get form data
         const data = {
           addressId: document.getElementById("addressId").value,
-          name: document.getElementById("addressName").value,
-          label: document.getElementById("addressLabel").value,
-          type: document.getElementById("addressLabel").value,
-          house_number: document.getElementById("addressHouseNumber").value,
-          locality: document.getElementById("addressLocality").value,
-          street: document.getElementById("addressStreet").value,
-          city: document.getElementById("addressCity").value,
-          state: document.getElementById("addressState").value,
-          pincode: document.getElementById("addressPincode").value,
-          phone_number: document.getElementById("addressPhone").value,
+          name: document.getElementById("addressName").value.trim(),
+          label: document.getElementById("addressLabel").value.trim(),
+          type: document.getElementById("addressLabel").value.trim(),
+          house_number: document.getElementById("addressHouseNumber").value.trim(),
+          locality: document.getElementById("addressLocality").value.trim(),
+          street: document.getElementById("addressStreet").value.trim(),
+          city: document.getElementById("addressCity").value.trim(),
+          state: document.getElementById("addressState").value.trim(),
+          pincode: document.getElementById("addressPincode").value.trim(),
+          phone_number: document.getElementById("addressPhone").value.trim(),
         };
-       const url = data.addressId && data.addressId !== ""
-  ? "/checkout/address/edit"
-  : "/checkout/address/add";
-
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        const result = await res.json();
-        if (result.success) location.reload();
-        else {
+        
+        console.log('🔍 Form data:', data);
+        
+        // Client-side validation
+        if (!data.name || !data.phone_number || !data.city || !data.state || !data.pincode) {
+          console.log('❌ Validation failed');
           Swal.fire({
             icon: 'error',
-            title: 'Failed',
-            text: result.message || "Failed to save address"
+            title: 'Validation Error',
+            text: 'Name, phone, city, state and pincode are required fields.'
           });
+          return;
+        }
+        
+        // Validate phone number (10 digits)
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(data.phone_number)) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid Phone Number',
+            text: 'Please enter a valid 10-digit phone number.'
+          });
+          return;
+        }
+        
+        // Validate pincode (6 digits)
+        const pincodeRegex = /^[0-9]{6}$/;
+        if (!pincodeRegex.test(data.pincode)) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid Pincode',
+            text: 'Please enter a valid 6-digit pincode.'
+          });
+          return;
+        }
+        
+        const url = data.addressId && data.addressId !== ""
+          ? "/checkout/address/edit"
+          : "/checkout/address/add";
+          
+        console.log('🔍 Request URL:', url);
+
+        try {
+          const saveBtn = document.getElementById("saveAddressBtn");
+          const originalText = saveBtn.textContent;
+          saveBtn.disabled = true;
+          saveBtn.textContent = "Saving...";
+          
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify(data),
+          });
+          
+          console.log('🔍 Response status:', res.status);
+          
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          
+          const result = await res.json();
+          console.log('🔍 Response:', result);
+          
+          if (result.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: result.message || 'Address saved successfully!',
+              showConfirmButton: false,
+              timer: 2000
+            }).then(() => {
+              location.reload();
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Failed',
+              text: result.message || "Failed to save address"
+            });
+          }
+          
+          saveBtn.disabled = false;
+          saveBtn.textContent = originalText;
+        } catch (error) {
+          console.error('❌ Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: `Failed to save address: ${error.message}`
+          });
+          
+          const saveBtn = document.getElementById("saveAddressBtn");
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
         }
       };
 
