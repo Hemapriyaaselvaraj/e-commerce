@@ -327,7 +327,9 @@ const productDetail = async (req, res) => {
     }
     
     // For other errors, show 500 error
-    return res.status(500).send("Error loading product detail");
+    return res.status(500).render('user/500', { 
+      message: 'We\'re having trouble loading this product. Please try refreshing the page or browse other products.' 
+    });
   }
 };
 

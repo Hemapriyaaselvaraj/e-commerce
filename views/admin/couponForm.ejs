@@ -482,6 +482,41 @@
         });
         return;
       }
+
+      // Check if start date is in the past (for new coupons)
+      const isEdit = '<%= coupon ? true : false %>';
+      if (!isEdit && new Date(validFrom) < new Date().setHours(0,0,0,0)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Valid from date cannot be in the past',
+          confirmButtonColor: '#343a40'
+        });
+        return;
+      }
+
+      // Check minimum validity period (at least 1 day)
+      const daysDifference = (new Date(validTo) - new Date(validFrom)) / (1000 * 60 * 60 * 24);
+      if (daysDifference < 1) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Coupon must be valid for at least 1 day',
+          confirmButtonColor: '#343a40'
+        });
+        return;
+      }
+
+      // Check maximum validity period (not more than 1 year)
+      if (daysDifference > 365) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Coupon validity period cannot exceed 1 year (365 days)',
+          confirmButtonColor: '#343a40'
+        });
+        return;
+      }
       
       // Show loading state
       submitButton.disabled = true;
@@ -585,14 +620,50 @@
     function validateDates() {
       const validFrom = document.getElementById('validFrom');
       const validTo = document.getElementById('validTo');
+      const isEdit = '<%= coupon ? true : false %>';
       
       if (validFrom.value && validTo.value) {
-        if (new Date(validTo.value) <= new Date(validFrom.value)) {
+        const fromDate = new Date(validFrom.value);
+        const toDate = new Date(validTo.value);
+        const today = new Date().setHours(0,0,0,0);
+        const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
+        
+        // Check if end date is after start date
+        if (toDate <= fromDate) {
           validTo.style.borderColor = '#dc3545';
           validTo.title = 'End date must be after start date';
+          return;
+        }
+        
+        // Check minimum validity period
+        if (daysDifference < 1) {
+          validTo.style.borderColor = '#dc3545';
+          validTo.title = 'Coupon must be valid for at least 1 day';
+          return;
+        }
+        
+        // Check maximum validity period
+        if (daysDifference > 365) {
+          validTo.style.borderColor = '#dc3545';
+          validTo.title = 'Validity period cannot exceed 1 year (365 days)';
+          return;
+        }
+        
+        validTo.style.borderColor = '#28a745';
+        validTo.title = `Valid period: ${Math.ceil(daysDifference)} days`;
+      }
+
+      // Check if start date is in the past (only for new coupons)
+      if (!isEdit && validFrom.value) {
+        const fromDate = new Date(validFrom.value);
+        const today = new Date().setHours(0,0,0,0);
+        
+        if (fromDate < today) {
+          validFrom.style.borderColor = '#dc3545';
+          validFrom.title = 'Start date cannot be in the past';
         } else {
-          validTo.style.borderColor = '#28a745';
-          validTo.title = '';
+          validFrom.style.borderColor = '#28a745';
+          validFrom.title = 'Valid start date';
         }
       }
     }

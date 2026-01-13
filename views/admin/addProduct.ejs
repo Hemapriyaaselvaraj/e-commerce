@@ -251,7 +251,16 @@
             const sizeSel = box.querySelector('select[name^="variations"][name$="[size]"]');
             const colorSel = box.querySelector('select[name^="variations"][name$="[color]"]');
             if (sizeSel && colorSel && sizeSel.value === data.size && colorSel.value === data.color) {
-              alert('This size and color combination already exists.');
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Duplicate Combination',
+                  text: 'This size and color combination already exists.',
+                  confirmButtonColor: '#ffc107'
+                });
+              } else {
+                alert('This size and color combination already exists.');
+              }
               return;
             }
           }
@@ -326,7 +335,16 @@
             const sizeSel = box.querySelector('select[name^="variations"][name$="[size]"]');
             const colorSel = box.querySelector('select[name^="variations"][name$="[color]"]');
             if (sizeSel && colorSel && sizeSel.value === selectedSize && colorSel.value === selectedColor) {
-              alert('This size and color combination already exists.');
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Duplicate Combination',
+                  text: 'This size and color combination already exists.',
+                  confirmButtonColor: '#ffc107'
+                });
+              } else {
+                alert('This size and color combination already exists.');
+              }
               
               if (event.target === sizeSelect) sizeSelect.value = '';
               if (event.target === colorSelect) colorSelect.value = '';

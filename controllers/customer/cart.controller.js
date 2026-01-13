@@ -67,9 +67,11 @@ const getCartPage = async (req, res) => {
       
     });
 
-  } catch (err) {
-    console.error("Cart page error:", err);
-    res.status(500).send("Error loading cart");
+  } catch (error) {
+    console.error("Cart page error:", error);
+    res.status(500).render('user/500', { 
+      message: 'Unable to load your cart at the moment. Please refresh the page or try again later.' 
+    });
   }
 };
 
@@ -114,9 +116,12 @@ const updateCartQuantity = async (req, res) => {
     
     await cartItem.save();
     res.json({ success: true, quantity: cartItem.quantity });
-  } catch (err) {
-    console.error('Update cart quantity error:', err);
-    res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  } catch (error) {
+    console.error('Update cart quantity error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to update cart quantity. Please refresh the page and try again.' 
+    });
   }
 };
 
@@ -125,18 +130,39 @@ const removeFromCart = async (req, res) => {
     const { cartItemId } = req.body;
     const userId = req.session.userId;
 
-    if (!userId) 
-        return res.status(401).json({ success: false, message: 'Not logged in' });
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Please log in to manage your cart.' 
+      });
+    }
+    
+    if (!cartItemId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Item selection is required to remove from cart.' 
+      });
+    }
     
     const cartItem = await Cart.findOne({ _id: cartItemId, user_id: userId });
-    if (!cartItem) 
-        return res.status(404).json({ success: false, message: 'Cart item not found' });
+    if (!cartItem) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Item not found in your cart.' 
+      });
+    }
     
     await Cart.deleteOne({ _id: cartItemId, user_id: userId });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Remove from cart error:', err);
-    res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+    res.json({ 
+      success: true,
+      message: 'Item removed from cart successfully.' 
+    });
+  } catch (error) {
+    console.error('Remove from cart error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to remove item from cart. Please refresh the page and try again.' 
+    });
   }
 };
 

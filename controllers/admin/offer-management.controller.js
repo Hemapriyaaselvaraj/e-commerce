@@ -30,15 +30,21 @@ const getAddOffer = async (req, res) => {
     const user = await User.findById(req.session.userId);
     const name = user ? user.firstName : 'Admin';
 
-    const flashError = req.flash("error");
-    const error = flashError.length > 0 ? flashError[0] : null;
+    // Get session messages
+    const error = req.session.error || null;
+    const success = req.session.success || null;
+    
+    // Clear session messages
+    delete req.session.error;
+    delete req.session.success;
 
     res.render("admin/offerForm", {
       name,
       products,
       categories,
       offer: null,
-      error
+      error,
+      success
     });
 
   } catch (error) {
@@ -58,9 +64,65 @@ const postAddOffer = async (req, res) => {
       validTo
     } = req.body;
 
-     const existing = await Offer.findOne({ offerName });
+    // Validate required fields
+    if (!offerName || !offerName.trim()) {
+      req.session.error = "Please enter a valid offer name. The name cannot be empty or contain only spaces.";
+      return res.redirect("/admin/add-offer");
+    }
+
+    if (!discountPercentage || parseFloat(discountPercentage) <= 0 || parseFloat(discountPercentage) > 90) {
+      req.session.error = "Please enter a discount percentage between 1% and 90%.";
+      return res.redirect("/admin/add-offer");
+    }
+
+    if (!validFrom || !validTo) {
+      req.session.error = "Please select both start and end dates for the offer validity period.";
+      return res.redirect("/admin/add-offer");
+    }
+
+    // Date validation
+    const fromDate = new Date(validFrom);
+    const toDate = new Date(validTo);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Check if dates are valid
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      req.session.error = "Please enter valid dates in the correct format.";
+      return res.redirect("/admin/add-offer");
+    }
+
+    // Check if end date is after start date
+    if (toDate <= fromDate) {
+      req.session.error = "The end date must be after the start date. Please check your date selection.";
+      return res.redirect("/admin/add-offer");
+    }
+
+    // Check if start date is not in the past
+    if (fromDate < today) {
+      req.session.error = "The start date cannot be in the past. Please select today's date or a future date.";
+      return res.redirect("/admin/add-offer");
+    }
+
+    // Check minimum validity period (at least 1 day)
+    const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
+    if (daysDifference < 1) {
+      req.session.error = "The offer must be valid for at least 1 day. Please extend the validity period.";
+      return res.redirect("/admin/add-offer");
+    }
+
+    // Check maximum validity period (not more than 1 year)
+    if (daysDifference > 365) {
+      req.session.error = "The offer validity period cannot exceed 1 year (365 days). Please reduce the validity period.";
+      return res.redirect("/admin/add-offer");
+    }
+
+    // Check for duplicate offer name
+    const existing = await Offer.findOne({ 
+      offerName: { $regex: new RegExp(`^${offerName.trim()}$`, 'i') }
+    });
     if (existing) {
-      req.session.error = `Offer name "${offerName}" already exists.`;
+      req.session.error = `An offer with the name "${offerName.trim()}" already exists. Please choose a different name.`;
       return res.redirect("/admin/add-offer");
     }
 
@@ -73,19 +135,21 @@ const postAddOffer = async (req, res) => {
       : [];
 
     await Offer.create({
-      offerName,
-      discountPercentage,
+      offerName: offerName.trim(),
+      discountPercentage: parseFloat(discountPercentage),
       product: productArray,
       category: categoryArray,
-      validFrom: new Date(validFrom),
-      validTo: new Date(validTo)
+      validFrom: fromDate,
+      validTo: toDate
     });
 
+    req.session.success = "Offer created successfully! It's now available for customers.";
     res.redirect("/admin/offers");
 
   } catch (error) {
     console.error("Error creating offer:", error);
-
+    req.session.error = "We couldn't create the offer due to a technical issue. Please try again or contact support if the problem continues.";
+    res.redirect("/admin/add-offer");
   }
 };
 
@@ -103,12 +167,19 @@ const getEditOffer = async (req, res) => {
     const user = await User.findById(req.session.userId);
     const name = user ? user.firstName : 'Admin';
 
+    // Get only error messages for edit form (not success messages)
+    const error = req.session.error || null;
+    
+    // Clear only error messages (keep success messages for offers list)
+    delete req.session.error;
+
     res.render("admin/offerForm", {
       name,
       products,
       categories,
       offer,
-      error: null
+      error,
+      success: null // Never show success messages on edit form load
     });
 
   } catch (error) {
@@ -120,6 +191,8 @@ const getEditOffer = async (req, res) => {
 const postEditOffer = async (req, res) => {
   try {
     const offerId = req.params.id;
+    console.log('Edit offer request for ID:', offerId);
+    console.log('Request body:', req.body);
 
     let {
       offerName,
@@ -130,23 +203,100 @@ const postEditOffer = async (req, res) => {
       validTo
     } = req.body;
 
+    // Validate required fields
+    if (!offerName || !offerName.trim()) {
+      console.log('Validation failed: Offer name is required');
+      req.session.error = "Offer name is required and cannot be empty";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    if (!discountPercentage || parseFloat(discountPercentage) <= 0 || parseFloat(discountPercentage) > 90) {
+      console.log('Validation failed: Invalid discount percentage');
+      req.session.error = "Discount percentage must be between 1 and 90";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    if (!validFrom || !validTo) {
+      console.log('Validation failed: Dates are required');
+      req.session.error = "Valid from and valid to dates are required";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    // Date validation
+    const fromDate = new Date(validFrom);
+    const toDate = new Date(validTo);
+
+    // Check if dates are valid
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      console.log('Validation failed: Invalid date format');
+      req.session.error = "Invalid date format provided";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    // Check if end date is after start date
+    if (toDate <= fromDate) {
+      console.log('Validation failed: End date must be after start date');
+      req.session.error = "Valid to date must be after valid from date";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    // Check minimum validity period (at least 1 day)
+    const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
+    if (daysDifference < 1) {
+      console.log('Validation failed: Minimum validity period');
+      req.session.error = "Offer must be valid for at least 1 day";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    // Check maximum validity period (not more than 1 year)
+    if (daysDifference > 365) {
+      console.log('Validation failed: Maximum validity period');
+      req.session.error = "Offer validity period cannot exceed 1 year (365 days)";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    // Check for duplicate offer name (excluding current offer)
+    const existing = await Offer.findOne({ 
+      offerName: { $regex: new RegExp(`^${offerName.trim()}$`, 'i') },
+      _id: { $ne: offerId }
+    });
+    if (existing) {
+      console.log('Validation failed: Duplicate offer name');
+      req.session.error = `Offer name "${offerName.trim()}" already exists`;
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
     product = product ? (Array.isArray(product) ? product : [product]) : [];
     category = category ? (Array.isArray(category) ? category : [category]) : [];
 
-    await Offer.findByIdAndUpdate(offerId, {
-      offerName,
-      discountPercentage,
+    console.log('Updating offer with data:', {
+      offerName: offerName.trim(),
+      discountPercentage: parseFloat(discountPercentage),
       product,
       category,
-      validFrom: new Date(validFrom),
-      validTo: new Date(validTo)
+      validFrom: fromDate,
+      validTo: toDate
     });
 
+    const updatedOffer = await Offer.findByIdAndUpdate(offerId, {
+      offerName: offerName.trim(),
+      discountPercentage: parseFloat(discountPercentage),
+      product,
+      category,
+      validFrom: fromDate,
+      validTo: toDate
+    }, { new: true });
+
+    console.log('Offer updated successfully:', updatedOffer);
+
+    req.session.success = "Offer updated successfully";
+    console.log('Redirecting to /admin/offers');
     res.redirect("/admin/offers");
 
   } catch (error) {
     console.error("Edit offer error:", error);
-    res.status(500).send("Server Error");
+    req.session.error = "Error updating offer. Please try again.";
+    res.redirect(`/admin/edit-offer/${req.params.id}`);
   }
 };
 

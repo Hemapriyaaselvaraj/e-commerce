@@ -470,12 +470,30 @@
     if (!cropper) return;
     const canvas = cropper.getCroppedCanvas({ width: 400, height: 400, imageSmoothingQuality: 'high' });
     if (!canvas) {
-      alert('Could not crop image.');
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Could not crop image.',
+          confirmButtonColor: '#d33'
+        });
+      } else {
+        alert('Could not crop image.');
+      }
       return;
     }
     canvas.toBlob(async (blob) => {
       if (!blob) {
-        alert('Failed to create image blob.');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to create image blob.',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Failed to create image blob.');
+        }
         return;
       }
 
@@ -499,11 +517,29 @@
           setTimeout(() => { window.location.reload(); }, 500);
         } else {
           const text = await response.text();
-          alert('Failed to upload image. ' + text);
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Upload Failed',
+              text: 'Failed to upload image. ' + text,
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert('Failed to upload image. ' + text);
+          }
         }
       } catch (error) {
         console.error('Upload error:', error);
-        alert('Failed to upload image. Please try again.');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Upload Error',
+            text: 'Failed to upload image. Please try again.',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Failed to upload image. Please try again.');
+        }
       }
     }, 'image/jpeg', 0.9);
   });

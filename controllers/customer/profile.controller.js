@@ -20,7 +20,10 @@ const getProfile = async (req, res) => {
       defaultAddress
     });
   } catch (err) {
-    res.status(500).send('Error loading profile');
+    console.error('Error loading profile:', err);
+    res.status(500).render('user/500', { 
+      message: 'We\'re having trouble loading your profile right now. Please try refreshing the page or contact support if the problem continues.' 
+    });
   }
 };
 
@@ -37,7 +40,9 @@ const updateProfile = async (req, res) => {
     });
     res.redirect('/profile');
   } catch (err) {
-    res.status(500).send('Error updating profile');
+    console.error('Error updating profile:', err);
+    req.flash('error', 'We couldn\'t save your profile changes. Please try again or contact support if the problem continues.');
+    res.redirect('/profile/edit');
   }
 };
 
@@ -46,24 +51,34 @@ const updateProfileImage = async (req, res) => {
     const userId = req.session?.userId;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Please sign in to update your profile picture.' 
+      });
     }
 
     const imageUrl = req.file?.path || req.file?.secure_url || req.file?.url || req.file?.location || null;
 
     if (!imageUrl) {
-      return res.status(400).json({ success: false, message: 'No image received' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please select an image file to upload.' 
+      });
     }
 
     await userModel.findByIdAndUpdate(userId, { profileImage: imageUrl });
 
-    return res.json({ success: true, message: 'Profile image updated', imageUrl });
+    return res.json({ 
+      success: true, 
+      message: 'Your profile picture has been updated successfully!', 
+      imageUrl 
+    });
 
   } catch (error) {
     console.error("Error updating profile image:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error"
+      message: "We're having trouble updating your profile picture. Please try again or contact support if the problem continues."
     });
   }
 };
@@ -95,7 +110,9 @@ const getEditProfile = async(req,res) => {
     });
   } catch (err) {
     console.error('Error loading edit profile:', err);
-    res.status(500).send('Error loading edit profile');
+    res.status(500).render('user/500', { 
+      message: 'We\'re having trouble loading the edit profile page. Please try refreshing or contact support if the problem continues.' 
+    });
   }
 }
 
@@ -137,12 +154,17 @@ const postEditProfile = async (req, res) => {
       return res.json({ success: true, message: 'Profile updated successfully' });
     }
     res.redirect('/profile');
-  } catch (err) {
-    console.error('Error updating profile:', err);
+  } catch (error) {
+    console.error('Error updating profile:', error);
     if (req.headers['content-type'] === 'application/json') {
-      return res.status(500).json({ success: false, message: 'Error updating profile' });
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Unable to update your profile at the moment. Please check your information and try again.' 
+      });
     }
-    res.status(500).send('Error updating profile');
+    res.status(500).render('user/500', { 
+      message: 'Unable to update your profile at the moment. Please try again later.' 
+    });
   }
 };
 
@@ -173,9 +195,11 @@ const getReferAndEarn = async (req, res) => {
       appliedReferralCode     
     });
 
-  } catch (err) {
-    console.error("Refer & Earn page error:", err);
-    res.status(500).send("Server error");
+  } catch (error) {
+    console.error("Refer & Earn page error:", error);
+    res.status(500).render('user/500', { 
+      message: 'Unable to load the refer & earn page at the moment. Please try again later.' 
+    });
   }
 };
 

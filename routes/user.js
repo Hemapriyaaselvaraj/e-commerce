@@ -19,18 +19,18 @@ router.get('/auth/google', passport.authenticate('google', { scope: ['openid','p
 router.get('/auth/google/callback', (req, res, next) => {
   passport.authenticate('google', function(err, user, info) {
     if (err) {
-      req.session.loginError = err.message || 'Authentication error occurred';
+      req.session.loginError = err.message || 'We\'re having trouble with Google sign-in right now. Please try again or use email login.';
       return res.redirect('/user/login');
     }
     
     if (!user) {
-      req.session.loginError = info.message || 'Authentication failed';
+      req.session.loginError = info.message || 'Google sign-in was cancelled or failed. Please try again.';
       return res.redirect('/user/login');
     }
 
     req.logIn(user, function(err) {
       if (err) {
-        req.session.loginError = 'Error during login';
+        req.session.loginError = 'We couldn\'t complete your sign-in. Please try again.';
         return res.redirect('/user/login');
       }
       

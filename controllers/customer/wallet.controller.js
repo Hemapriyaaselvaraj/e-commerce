@@ -39,7 +39,9 @@ res.render("user/wallet", {
 
   } catch (error) {
     console.error(error);
-    res.status(500).send("Error loading wallet");
+    res.status(500).render('user/500', { 
+      message: 'We\'re having trouble loading your wallet. Please try refreshing the page or contact support if the problem continues.' 
+    });
   }
 
 }
@@ -64,7 +66,10 @@ const createOrder = async (req, res) => {
     return res.json({ success: true, order });
   } catch (err) {
     console.error('createOrder error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to create order' });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'We couldn\'t process your wallet payment right now. Please try again or use a different payment method.' 
+    });
   }
 };
 
@@ -119,8 +124,11 @@ const verifyPayment = async (req, res) => {
     return res.json({ success: true });
   } catch (err) {
     console.error('verifyPayment error:', err);
-    req.flash('error', 'Payment ver.ification failed');
-    return res.status(500).json({ success: false, message: 'Verification failed' });
+    req.flash('error', 'We couldn\'t verify your payment. Please contact support with your transaction details.');
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Payment verification failed. Please contact support.' 
+    });
   }
 };
 

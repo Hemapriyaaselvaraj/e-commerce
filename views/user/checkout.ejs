@@ -344,44 +344,122 @@
       color: #000;
     }
 
-    /* Modal overrides */
-    #addressModal input,
-    #addressModal select {
-      pointer-events: auto !important;
-      background: #fff !important;
-      color: #212529 !important;
-      opacity: 1 !important;
-      border: 1px solid #ced4da !important;
-      box-shadow: none !important;
-    }
-    #addressModal input[readonly],
-    #addressModal input[disabled],
-    #addressModal select[disabled] {
-      pointer-events: auto !important;
-      background: #fff !important;
-      color: #212529 !important;
-      opacity: 1 !important;
+    /* Coupon Modal Styles */
+    .coupon-modal .swal2-popup {
+      border-radius: 16px !important;
+      padding: 24px !important;
     }
 
-    #addressModal {
-      display: none;
-      position: fixed;
-      z-index: 2000;
-      left: 0;
-      top: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.25);
-      align-items: center;
-      justify-content: center;
+    .coupon-modal .swal2-title {
+      font-size: 1.5rem !important;
+      font-weight: 700 !important;
+      color: #0f172a !important;
+      margin-bottom: 20px !important;
+      text-align: left !important;
     }
 
-    #addressModal .modal-dialog {
-      max-width: 420px;
-      width: 95vw;
-      margin: auto;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    .coupon-modal .swal2-html-container {
+      margin: 0 !important;
+      padding: 0 !important;
+      text-align: left !important;
+    }
+
+    .coupon-item {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: white;
       position: relative;
+      text-align: left;
+    }
+
+    .coupon-item:hover:not(.disabled) {
+      background-color: #f8f9fa !important;
+      border-color: #0f172a !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .coupon-item.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .coupon-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      text-align: left;
+    }
+
+    .coupon-left-content {
+      text-align: left;
+      flex: 1;
+    }
+
+    .coupon-code {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #0f172a;
+      letter-spacing: 1px;
+      text-align: left;
+    }
+
+    .coupon-description {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin-top: 4px;
+      line-height: 1.4;
+      text-align: left;
+    }
+
+    .coupon-badge {
+      background: #0f172a;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .coupon-badge.disabled {
+      background: #9ca3af;
+    }
+
+    .coupon-min-purchase {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid #f3f4f6;
+      text-align: left;
+    }
+
+    .coupon-used-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #dc3545;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .coupon-usage-info {
+      font-size: 0.8rem;
+      color: #dc3545;
+      margin-top: 6px;
+      font-weight: 500;
+      text-align: left;
     }
 
     /* Footer */
@@ -490,10 +568,6 @@
         font-size: 0.95rem;
         padding: 12px;
       }
-
-      #addressModal .modal-dialog {
-        padding: 10px;
-      }
     }
   </style>
 </head>
@@ -529,7 +603,10 @@
             <div class="meta">No saved addresses. Please add one.</div>
           <% } %>
         </div>
-        <button id="openAddAddressModal" class="add-address">+ Add New Address</button>
+        <a href="/addresses" class="add-address" style="text-decoration: none; display: inline-block; text-align: center;">+ Add New Address</a>
+        <p style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; text-align: center;">
+          <i class="fas fa-info-circle"></i> Manage your addresses in your profile
+        </p>
       </section>
       <section class="payment-method-section card-panel">
         <div class="section-header">
@@ -657,55 +734,6 @@
       </section>
     </aside>
   
-    
-    <div id="addressModal" class="modal">
-      <div class="modal-dialog bg-white rounded p-4">
-        <h4 id="addressModalTitle">Add Address</h4>
-        <form id="addressForm">
-          <input type="hidden" id="addressId" value="" />
-          <div class="mb-2">
-            <label>Name</label>
-            <input type="text" id="addressName" class="form-control" />
-          </div>
-          <div class="mb-2">
-            <label>Label (Home/Work)</label>
-            <input type="text" id="addressLabel" class="form-control" />
-          </div>
-          <div class="mb-2">
-            <label>House / Flat No.</label>
-            <input type="text" id="addressHouseNumber" class="form-control" />
-          </div>
-          <div class="mb-2">
-            <label>Locality</label>
-            <input type="text" id="addressLocality" class="form-control" />
-          </div>
-          <div class="mb-2">
-            <label>Street</label>
-            <input type="text" id="addressStreet" class="form-control" />
-          </div>
-          <div class="mb-2">
-            <label>City</label>
-            <input type="text" id="addressCity" class="form-control" />
-          </div>
-          <div class="mb-2">
-            <label>State</label>
-            <input type="text" id="addressState" class="form-control" />
-          </div>
-          <div class="mb-2">
-            <label>Pincode</label>
-            <input type="text" id="addressPincode" class="form-control" />
-          </div>
-          <div class="mb-2">
-            <label>Phone</label>
-            <input type="text" id="addressPhone" class="form-control" />
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button type="button" id="saveAddressBtn" class="btn btn-primary">Save</button>
-            <button type="button" id="closeAddressModal" class="btn btn-secondary">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
   </main>
   <%- include('../partials/footer') %>
   
@@ -714,139 +742,6 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const addressModal = document.getElementById("addressModal");
-      document.getElementById("openAddAddressModal").onclick = () => {
-        document.getElementById("addressModalTitle").textContent =
-          "Add Address";
-        document.getElementById("addressForm").reset();
-        document.getElementById("addressId").value = "";
-        addressModal.style.display = "flex";
-      };
-      document.getElementById("closeAddressModal").onclick = () =>
-        (addressModal.style.display = "none");
-      window.onclick = (e) => {
-        if (e.target === addressModal) addressModal.style.display = "none";
-      };
-
-      
-      document.getElementById("saveAddressBtn").onclick = async () => {
-        console.log('🔍 Save address button clicked');
-        
-        // Get form data
-        const data = {
-          addressId: document.getElementById("addressId").value,
-          name: document.getElementById("addressName").value.trim(),
-          label: document.getElementById("addressLabel").value.trim(),
-          type: document.getElementById("addressLabel").value.trim(),
-          house_number: document.getElementById("addressHouseNumber").value.trim(),
-          locality: document.getElementById("addressLocality").value.trim(),
-          street: document.getElementById("addressStreet").value.trim(),
-          city: document.getElementById("addressCity").value.trim(),
-          state: document.getElementById("addressState").value.trim(),
-          pincode: document.getElementById("addressPincode").value.trim(),
-          phone_number: document.getElementById("addressPhone").value.trim(),
-        };
-        
-        console.log('🔍 Form data:', data);
-        
-        // Client-side validation
-        if (!data.name || !data.phone_number || !data.city || !data.state || !data.pincode) {
-          console.log('❌ Validation failed');
-          Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            text: 'Name, phone, city, state and pincode are required fields.'
-          });
-          return;
-        }
-        
-        // Validate phone number (10 digits)
-        const phoneRegex = /^[0-9]{10}$/;
-        if (!phoneRegex.test(data.phone_number)) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Invalid Phone Number',
-            text: 'Please enter a valid 10-digit phone number.'
-          });
-          return;
-        }
-        
-        // Validate pincode (6 digits)
-        const pincodeRegex = /^[0-9]{6}$/;
-        if (!pincodeRegex.test(data.pincode)) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Invalid Pincode',
-            text: 'Please enter a valid 6-digit pincode.'
-          });
-          return;
-        }
-        
-        const url = data.addressId && data.addressId !== ""
-          ? "/checkout/address/edit"
-          : "/checkout/address/add";
-          
-        console.log('🔍 Request URL:', url);
-
-        try {
-          const saveBtn = document.getElementById("saveAddressBtn");
-          const originalText = saveBtn.textContent;
-          saveBtn.disabled = true;
-          saveBtn.textContent = "Saving...";
-          
-          const res = await fetch(url, {
-            method: "POST",
-            headers: { 
-              "Content-Type": "application/json",
-              "Accept": "application/json"
-            },
-            credentials: "same-origin",
-            body: JSON.stringify(data),
-          });
-          
-          console.log('🔍 Response status:', res.status);
-          
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          }
-          
-          const result = await res.json();
-          console.log('🔍 Response:', result);
-          
-          if (result.success) {
-            Swal.fire({
-              icon: 'success',
-              title: 'Success!',
-              text: result.message || 'Address saved successfully!',
-              showConfirmButton: false,
-              timer: 2000
-            }).then(() => {
-              location.reload();
-            });
-          } else {
-            Swal.fire({
-              icon: 'error',
-              title: 'Failed',
-              text: result.message || "Failed to save address"
-            });
-          }
-          
-          saveBtn.disabled = false;
-          saveBtn.textContent = originalText;
-        } catch (error) {
-          console.error('❌ Error:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Network Error',
-            text: `Failed to save address: ${error.message}`
-          });
-          
-          const saveBtn = document.getElementById("saveAddressBtn");
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Save";
-        }
-      };
-
       // Place Order Button
       const placeOrderButton = document.getElementById("placeOrder");
       
@@ -1046,34 +941,30 @@ async function showAvailableCoupons() {
     const data = await res.json();
     
     if (data.success && data.coupons.length > 0) {
-      let couponsHTML = '<div style="max-height: 400px; overflow-y: auto;">';
+      let couponsHTML = '<div style="max-height: 400px; overflow-y: auto; padding-right: 8px;">';
       data.coupons.forEach(coupon => {
         const discountText = coupon.discountType === 'PERCENTAGE' 
           ? `${coupon.discountValue}% OFF` 
           : `₹${coupon.discountValue} OFF`;
         
         const isDisabled = coupon.isUsed;
-        const opacity = isDisabled ? '0.5' : '1';
-        const cursor = isDisabled ? 'not-allowed' : 'pointer';
         const clickHandler = isDisabled ? '' : `onclick="applyCouponCode('${coupon.code}')"`;
-        const hoverHandlers = isDisabled ? '' : `onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.borderColor='#0f172a';" onmouseout="this.style.backgroundColor='white'; this.style.borderColor='#e5e7eb';"`;
+        const disabledClass = isDisabled ? ' disabled' : '';
         
         couponsHTML += `
-          <div style="border: 1px solid ${isDisabled ? '#e5e7eb' : '#e5e7eb'}; border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: ${cursor}; transition: all 0.3s; opacity: ${opacity}; position: relative;" 
-               ${clickHandler}
-               ${hoverHandlers}>
-            ${isDisabled ? '<div style="position: absolute; top: 8px; right: 8px; background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">USED</div>' : ''}
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-family: 'Courier New', monospace; font-weight: 700; font-size: 1.1rem; color: ${isDisabled ? '#9ca3af' : '#0f172a'};">${coupon.code}</div>
-                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 4px;">${coupon.description || 'Special discount'}</div>
-                ${isDisabled ? `<div style="font-size: 0.8rem; color: #dc3545; margin-top: 4px;">You've used this coupon ${coupon.timesUsed}/${coupon.usageLimit} times</div>` : ''}
+          <div class="coupon-item${disabledClass}" ${clickHandler}>
+            ${isDisabled ? '<div class="coupon-used-badge">USED</div>' : ''}
+            <div class="coupon-header">
+              <div class="coupon-left-content">
+                <div class="coupon-code">${coupon.code}</div>
+                <div class="coupon-description">${coupon.description || 'Special discount'}</div>
+                ${isDisabled ? `<div class="coupon-usage-info">You've used this coupon ${coupon.timesUsed}/${coupon.usageLimit} times</div>` : ''}
               </div>
-              <div style="background: ${isDisabled ? '#9ca3af' : '#0f172a'}; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.9rem;">
+              <div class="coupon-badge${isDisabled ? ' disabled' : ''}">
                 ${discountText}
               </div>
             </div>
-            ${coupon.minimumPurchase > 0 ? `<div style="font-size: 0.85rem; color: #6b7280; margin-top: 8px;">Min purchase: ₹${coupon.minimumPurchase}</div>` : ''}
+            ${coupon.minimumPurchase > 0 ? `<div class="coupon-min-purchase">Min purchase: ₹${coupon.minimumPurchase}</div>` : ''}
           </div>
         `;
       });
@@ -1082,7 +973,7 @@ async function showAvailableCoupons() {
       Swal.fire({
         title: 'Available Coupons',
         html: couponsHTML,
-        width: '600px',
+        width: '650px',
         showCloseButton: true,
         showConfirmButton: false,
         customClass: {

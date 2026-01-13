@@ -78,10 +78,6 @@ app.use('/order', orderRoutes);
 app.use('/wallet', walletRoutes)
 app.use('/',homeRoutes)
 
-app.use("/admin", (req, res) => {
-  res.status(404).render("admin/404");
-});
-
 app.use((req, res) => {
   res.status(404).render("user/404");
 });

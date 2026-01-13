@@ -859,7 +859,16 @@
 
         const data = await res.json();
         if (!data || !data.success) {
-          alert(data.message || 'Could not update wishlist');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: data.message || 'Could not update wishlist',
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert(data.message || 'Could not update wishlist');
+          }
           return;
         }
 
@@ -878,7 +887,16 @@
         }
       } catch (err) {
         console.error('Wishlist toggle failed', err);
-        alert('Network error. Please try again.');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: 'Network error. Please try again.',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Network error. Please try again.');
+        }
       }
     }
   </script>

@@ -36,28 +36,28 @@ const getAddCoupon = async (req, res) => {
       if (!code || !code.trim()) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Coupon code is required' 
+          message: 'Please enter a valid coupon code. The code cannot be empty or contain only spaces.' 
         });
       }
 
       if (!discountValue || discountValue <= 0) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Discount value must be greater than 0' 
+          message: 'Please enter a discount value greater than 0.' 
         });
       }
 
       if (discountType === 'PERCENTAGE' && discountValue > 100) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Percentage discount cannot exceed 100%' 
+          message: 'Percentage discount cannot exceed 100%. Please enter a value between 1 and 100.' 
         });
       }
 
       if (code.trim().length < 3) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Coupon code must be at least 3 characters long' 
+          message: 'Coupon code must be at least 3 characters long.' 
         });
       }
 
@@ -68,10 +68,50 @@ const getAddCoupon = async (req, res) => {
         });
       }
 
-      if (new Date(validTo) <= new Date(validFrom)) {
+      // Date validation
+      const fromDate = new Date(validFrom);
+      const toDate = new Date(validTo);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Check if dates are valid
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid date format provided' 
+        });
+      }
+
+      // Check if end date is after start date
+      if (toDate <= fromDate) {
         return res.status(400).json({ 
           success: false, 
           message: 'Valid to date must be after valid from date' 
+        });
+      }
+
+      // Check if start date is not in the past
+      if (fromDate < today) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Valid from date cannot be in the past' 
+        });
+      }
+
+      // Check minimum validity period (at least 1 day)
+      const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
+      if (daysDifference < 1) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon must be valid for at least 1 day' 
+        });
+      }
+
+      // Check maximum validity period (not more than 1 year)
+      if (daysDifference > 365) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon validity period cannot exceed 1 year (365 days)' 
         });
       }
 
@@ -90,12 +130,12 @@ const getAddCoupon = async (req, res) => {
         code: code.trim().toUpperCase(),
         description,
         discountType,
-        discountValue,
-        minimumPurchase,
-        maxDiscount,
-        validFrom,
-        validTo,
-        usageLimitPerUser
+        discountValue: parseFloat(discountValue),
+        minimumPurchase: parseFloat(minimumPurchase) || 0,
+        maxDiscount: parseFloat(maxDiscount) || null,
+        validFrom: fromDate,
+        validTo: toDate,
+        usageLimitPerUser: parseInt(usageLimitPerUser) || 1
       });
 
       res.json({ 
@@ -193,10 +233,40 @@ const postEditCoupon = async (req, res) => {
         });
       }
 
-      if (new Date(validTo) <= new Date(validFrom)) {
+      // Date validation
+      const fromDate = new Date(validFrom);
+      const toDate = new Date(validTo);
+
+      // Check if dates are valid
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid date format provided' 
+        });
+      }
+
+      // Check if end date is after start date
+      if (toDate <= fromDate) {
         return res.status(400).json({ 
           success: false, 
           message: 'Valid to date must be after valid from date' 
+        });
+      }
+
+      // Check minimum validity period (at least 1 day)
+      const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
+      if (daysDifference < 1) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon must be valid for at least 1 day' 
+        });
+      }
+
+      // Check maximum validity period (not more than 1 year)
+      if (daysDifference > 365) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Coupon validity period cannot exceed 1 year (365 days)' 
         });
       }
 

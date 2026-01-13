@@ -223,13 +223,31 @@
               timerSeconds--;
             }
           }, 1000);
-          alert('OTP resent to your email.');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'success',
+              title: 'OTP Sent',
+              text: 'OTP resent to your email.',
+              confirmButtonColor: '#28a745'
+            });
+          } else {
+            alert('OTP resent to your email.');
+          }
         })
         .catch(() => {
           resendOtpLink.textContent = 'Resend OTP';
           resendOtpLink.style.pointerEvents = 'auto';
           resendOtpLink.style.opacity = '1';
-          alert('Failed to resend OTP. Please try again.');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to resend OTP. Please try again.',
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert('Failed to resend OTP. Please try again.');
+          }
         });
       }
     });
@@ -242,7 +260,16 @@
       inputs.forEach(input => { otp += input.value; });
       document.getElementById('otp-full').value = otp;
       if (otp.length !== 6) {
-        alert('Please enter all 6 digits of the OTP');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Incomplete OTP',
+            text: 'Please enter all 6 digits of the OTP',
+            confirmButtonColor: '#ffc107'
+          });
+        } else {
+          alert('Please enter all 6 digits of the OTP');
+        }
         return false;
       }
       return true; 

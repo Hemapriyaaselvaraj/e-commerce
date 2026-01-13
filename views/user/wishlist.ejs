@@ -304,10 +304,30 @@ main {
                 location.reload();
               }
             } else {
-              alert(data.message || 'Could not remove from wishlist.');
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: data.message || 'Could not remove from wishlist.',
+                  confirmButtonColor: '#d33'
+                });
+              } else {
+                alert(data.message || 'Could not remove from wishlist.');
+              }
             }
           })
-          .catch(() => alert('Could not remove from wishlist.'));
+          .catch(() => {
+            if (typeof Swal !== 'undefined') {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Could not remove from wishlist.',
+                confirmButtonColor: '#d33'
+              });
+            } else {
+              alert('Could not remove from wishlist.');
+            }
+          });
         });
       });
       document.querySelectorAll('.add-to-cart-btn').forEach(btn => {

@@ -890,7 +890,16 @@
         try {
           data = await res.json();
         } catch (e) {
-          alert('Could not add to cart. (Invalid response)');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Could not add to cart. (Invalid response)',
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert('Could not add to cart. (Invalid response)');
+          }
           console.error('Add to cart response error:', e);
           return;
         }

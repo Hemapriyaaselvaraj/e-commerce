@@ -33,7 +33,10 @@ const getProductConfiguration = async (req, res) => {
     });
   } catch (error) {
     console.error("Error loading product configuration:", error);
-    res.redirect("/user/login");
+    res.status(500).render('admin/500', { 
+      message: 'We\'re having trouble loading the product configuration page. Please try refreshing or contact technical support if the problem continues.',
+      name: 'Admin'
+    });
   }
 };
 
@@ -41,26 +44,35 @@ const createCategory = async (req, res) => {
   try {
     const { value } = req.body;
 
+    if (!value || !value.trim()) {
+      return res.status(400).json({ 
+        message: "Please enter a category name. The name cannot be empty." 
+      });
+    }
+
     const isCategoryAlreadyAvailable = await productCategoryModel.findOne({
       category: { $regex: `^${value}$`, $options: "i" },
     });
 
     if (isCategoryAlreadyAvailable) {
-      throw new Error("Category already exists");
+      return res.status(400).json({ 
+        message: "A category with this name already exists. Please choose a different name." 
+      });
     }
 
     const newCategory = new productCategoryModel({
-      category: value.toUpperCase(),
+      category: value.trim().toUpperCase(),
     });
     await newCategory.save();
 
     res.status(201).json({
-      message: "Category created",
+      message: "Category created successfully!",
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to create category" });
+    console.error("Error creating category:", error);
+    res.status(500).json({ 
+      message: "We couldn't create the category due to a technical issue. Please try again or contact support if the problem continues." 
+    });
   }
 };
 
@@ -69,34 +81,46 @@ const updateCategory = async (req, res) => {
     const { value } = req.body;
     const { id } = req.params;
 
+    if (!value || !value.trim()) {
+      return res.status(400).json({ 
+        message: "Please enter a category name. The name cannot be empty." 
+      });
+    }
+
     const existingCategory = await productCategoryModel.findById(id);
 
     if (!existingCategory) {
-      throw new Error("Category not found");
+      return res.status(404).json({ 
+        message: "Category not found. It may have been deleted by another admin." 
+      });
     }
 
     const isCategoryAlreadyAvailable = await productCategoryModel.findOne({
       category: { $regex: `^${value}$`, $options: "i" },
+      _id: { $ne: id }
     });
 
     if (isCategoryAlreadyAvailable) {
-      throw new Error("Category already exists");
+      return res.status(400).json({ 
+        message: "A category with this name already exists. Please choose a different name." 
+      });
     }
 
     var myquery = { _id: id };
     var newvalues = {
-      $set: { category: value.toUpperCase() },
+      $set: { category: value.trim().toUpperCase() },
     };
 
     await productCategoryModel.updateOne(myquery, newvalues);
 
     res.status(200).json({
-      message: "Category updated",
+      message: "Category updated successfully!",
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to update category" });
+    console.error("Error updating category:", error);
+    res.status(500).json({ 
+      message: "We couldn't update the category due to a technical issue. Please try again or contact support if the problem continues." 
+    });
   }
 };
 
@@ -104,15 +128,23 @@ const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const category = await productCategoryModel.findById(id);
+    if (!category) {
+      return res.status(404).json({ 
+        message: "Category not found. It may have already been deleted." 
+      });
+    }
+
     await productCategoryModel.findByIdAndDelete(id);
 
     res.status(200).json({
-      message: "Category deleted",
+      message: "Category deleted successfully!",
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to delete category" });
+    console.error("Error deleting category:", error);
+    res.status(500).json({ 
+      message: "We couldn't delete the category due to a technical issue. Please try again or contact support if the problem continues." 
+    });
   }
 };
 
@@ -120,22 +152,33 @@ const createType = async (req, res) => {
   try {
     const { value } = req.body;
 
+    if (!value || !value.trim()) {
+      return res.status(400).json({ 
+        message: "Please enter a product type name. The name cannot be empty." 
+      });
+    }
+
     const isTypeAlreadyAvailable = await productTypeModel.findOne({
       type: { $regex: `^${value}$`, $options: "i" },
     });
 
     if (isTypeAlreadyAvailable) {
-      throw new Error("Type already exists");
+      return res.status(400).json({ 
+        message: "A product type with this name already exists. Please choose a different name." 
+      });
     }
 
-    const newType = new productTypeModel({ type: value.toUpperCase() });
+    const newType = new productTypeModel({ type: value.trim().toUpperCase() });
     await newType.save();
 
     res.status(201).json({
-      message: "Type created",
+      message: "Product type created successfully!",
     });
   } catch (error) {
-    res.status(500).json({ message: error.message || "Failed to create type" });
+    console.error("Error creating type:", error);
+    res.status(500).json({ 
+      message: "We couldn't create the product type due to a technical issue. Please try again or contact support if the problem continues." 
+    });
   }
 };
 

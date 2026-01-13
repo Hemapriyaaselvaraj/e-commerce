@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const isNotLogin = (req, res, next) => {
     if (req.session.user) {
         if (req.session.role === 'admin') {
@@ -34,6 +36,15 @@ const isAdminAccessible = (req, res, next) => {
     return res.redirect('/');
 };
 
+const validateObjectId = (req, res, next) => {
+    const { id } = req.params;
+    
+    if (id && !mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(404).render('admin/404');
+    }
+    
+    next();
+};
 
 
-module.exports = {isNotLogin, isCustomerAccessible, isAdminAccessible}
+module.exports = {isNotLogin, isCustomerAccessible, isAdminAccessible, validateObjectId}

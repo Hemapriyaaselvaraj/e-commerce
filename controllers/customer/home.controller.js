@@ -96,9 +96,11 @@ const home = async (req, res) => {
       featuredProducts
     });
 
-  } catch (err) {
-    console.error("Home route error:", err);
-    res.status(500).send("Something went wrong");
+  } catch (error) {
+    console.error("Home route error:", error);
+    res.status(500).render('user/500', { 
+      message: 'Unable to load the home page at the moment. Please refresh the page or try again later.' 
+    });
   }
 };
 

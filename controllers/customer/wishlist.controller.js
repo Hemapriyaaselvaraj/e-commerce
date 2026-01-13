@@ -7,13 +7,28 @@ const Cart = require('../../models/cartModel');
 const toggleWishlist = async (req, res) => {
   try {
     const userId = req.session && req.session.userId;
-    if (!userId) return res.status(401).json({ success: false, message: 'Login required' });
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Please log in to manage your wishlist.' 
+      });
+    }
 
     const { productId } = req.body;
-    if (!productId) return res.status(400).json({ success: false, message: 'productId required' });
+    if (!productId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Product selection is required to update your wishlist.' 
+      });
+    }
 
     const variation = await ProductVariation.findOne({ product_id: productId }).lean();
-    if (!variation) return res.status(400).json({ success: false, message: 'No variation available for this product' });
+    if (!variation) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'This product is currently unavailable for wishlist.' 
+      });
+    }
 
     const existing = await Wishlist.findOne({
       user_id: userId,
@@ -35,9 +50,12 @@ const toggleWishlist = async (req, res) => {
     });
     await newEntry.save();
     return res.json({ success: true, action: 'added' });
-  } catch (err) {
-    console.error('Wishlist toggle error', err);
-    return res.status(500).json({ success: false, message: 'Server error' });
+  } catch (error) {
+    console.error('Wishlist toggle error', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Unable to update your wishlist at the moment. Please try again later.' 
+    });
   }
 };
 
@@ -48,14 +66,11 @@ const getWishlist = async (req, res) => {
       return res.redirect('/login');
     }
 
-    
     const wishlistEntries = await Wishlist.find({ user_id: req.session.userId })
       .populate('product_id')
       .populate('variation_id');
 
-
     const items = wishlistEntries.map(entry => ({
-
       category: entry.product_id.product_category,
       price: entry.product_id.price,
       image: (entry.variation_id?.images?.length > 0) 
@@ -70,44 +85,73 @@ const getWishlist = async (req, res) => {
     res.render('user/wishlist', {
       items: items,
       itemCount: items.length,
-
     });
 
-  } catch (err) {
-    console.error('Error fetching wishlist:', err);
-    res.status(500).send('error', { message: 'Error loading wishlist' });
+  } catch (error) {
+    console.error('Error fetching wishlist:', error);
+    res.status(500).render('user/500', { 
+      message: 'Unable to load your wishlist at the moment. Please refresh the page or try again later.' 
+    });
   }
 };
 
 const removeFromWishlist = async (req, res) => {
   try {
     if (!req.session || !req.session.userId) {
-      return res.status(401).json({ success: false, message: 'Not logged in' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Please log in to manage your wishlist.' 
+      });
     }
-    const { wishlistId } = req.body;
     
-    await Wishlist.deleteOne({ 
+    const { wishlistId } = req.body;
+    if (!wishlistId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Item selection is required to remove from wishlist.' 
+      });
+    }
+    
+    const result = await Wishlist.deleteOne({ 
       user_id: req.session.userId, 
       _id: wishlistId,
     });
-    res.status(200).json({ success: true, message: 'Removed from wishlist' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Error removing from wishlist' });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Item not found in your wishlist.' 
+      });
+    }
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Item removed from wishlist successfully.' 
+    });
+  } catch (error) {
+    console.error('Remove from wishlist error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to remove item from wishlist. Please try again later.' 
+    });
   }
 };
 
 const addToWishlist = async (req, res) => {
   try {
     if (!req.session || !req.session.userId) {
-      return res.status(401).json({ success: false, message: 'Not logged in' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Please log in to add items to your wishlist.' 
+      });
     }
-    const { productId, variationId, size, color } = req.body;
     
+    const { productId, variationId, size, color } = req.body;
     
     if (!productId || !variationId || !size || !color) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Missing required fields. Size and Color required.' 
+        message: 'Product details including size and color are required to add to wishlist.' 
       });
     }
 
@@ -118,15 +162,17 @@ const addToWishlist = async (req, res) => {
     });
 
     if (exists) {
-      return res.status(200).json({ success: true, message: 'Already in wishlist' });
+      return res.status(200).json({ 
+        success: true, 
+        message: 'This item is already in your wishlist.' 
+      });
     }
 
-    
     const variation = await ProductVariation.findById(variationId);
     if (!variation || variation.product_size !== size || variation.product_color !== color) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid product variation' 
+        message: 'Selected product variation is not available.' 
       });
     }
     
@@ -138,9 +184,16 @@ const addToWishlist = async (req, res) => {
       selected_color: color
     });
     
-    res.status(200).json({ success: true, message: 'Added to wishlist' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Error adding to wishlist' });
+    res.status(200).json({ 
+      success: true, 
+      message: 'Item added to your wishlist successfully.' 
+    });
+  } catch (error) {
+    console.error('Add to wishlist error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to add item to wishlist. Please try again later.' 
+    });
   }
 };
 
@@ -235,9 +288,12 @@ const getWishlistCount = async (req, res) => {
 
     const count = await Wishlist.countDocuments({ user_id: userId });
     res.json({ success: true, count });
-  } catch (err) {
-    console.error('Get wishlist count error:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+  } catch (error) {
+    console.error('Get wishlist count error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to get wishlist count. Please refresh the page.' 
+    });
   }
 };
 

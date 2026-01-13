@@ -599,10 +599,30 @@
                 this.closest(".cart-item").remove();
                 location.reload();
               } else {
-                alert(data.message || "Could not remove item.");
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.message || "Could not remove item.",
+                    confirmButtonColor: '#d33'
+                  });
+                } else {
+                  alert(data.message || "Could not remove item.");
+                }
               }
             })
-            .catch(() => alert("Could not remove item."));
+            .catch(() => {
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: "Could not remove item.",
+                  confirmButtonColor: '#d33'
+                });
+              } else {
+                alert("Could not remove item.");
+              }
+            });
         });
       });
     });

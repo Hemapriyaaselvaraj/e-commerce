@@ -8,7 +8,23 @@ const getAddresses = async (req, res) => {
   const addresses = await Address.find({ user_id: req.session.userId }).lean();
   const user = await userModel.findById(req.session.userId).lean();
   
-  res.render('user/addresses', { addresses, user });
+  // Get cart and wishlist counts for navbar
+  const Cart = require('../../models/cartModel');
+  const Wishlist = require('../../models/wishlistModel');
+  
+  const cart = await Cart.findOne({ user: req.session.userId });
+  const cartCount = cart ? cart.items.length : 0;
+  
+  const wishlist = await Wishlist.findOne({ user: req.session.userId });
+  const wishlistCount = wishlist ? wishlist.products.length : 0;
+  
+  res.render('user/addresses', { 
+    addresses, 
+    user,
+    name: user.firstName,
+    cartCount,
+    wishlistCount
+  });
 };
 
 const postAddAddress = async (req, res) => {

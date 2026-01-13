@@ -375,11 +375,29 @@
           currentReportData = { filterType, fromDate, toDate }; // Store for pagination
           displayReport(data);
         } else {
-          alert(data.message || 'Failed to generate report');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Report Generation Failed',
+              text: data.message || 'Failed to generate report',
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert(data.message || 'Failed to generate report');
+          }
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Failed to generate report');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to generate report',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Failed to generate report');
+        }
       }
     }
 

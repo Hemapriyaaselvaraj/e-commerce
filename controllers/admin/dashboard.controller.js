@@ -14,7 +14,10 @@ const getDashboard = async (req, res) => {
 
   } catch (error) {
     console.error("Dashboard error:", error);
-    return res.redirect('/user/login'); 
+    res.status(500).render('admin/500', { 
+      message: 'We\'re having trouble loading the admin dashboard. Please try refreshing the page or contact technical support if the problem continues.',
+      name: 'Admin'
+    });
   }
 };
 
@@ -26,8 +29,8 @@ const getDashboardDetails = async (req, res) => {
     const validFilters = ['daily', 'weekly', 'monthly', 'yearly'];
     if (!validFilters.includes(timeFilter)) {
       return res.status(400).json({ 
-        error: 'Invalid time filter',
-        message: 'Time filter must be one of: daily, weekly, monthly, yearly'
+        error: 'Invalid time filter selection',
+        message: 'Please select a valid time period: daily, weekly, monthly, or yearly.'
       });
     }
     

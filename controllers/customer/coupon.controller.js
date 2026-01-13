@@ -99,7 +99,10 @@ const applyCoupon = async (req, res) => {
 
   } catch (error) {
     console.error("Coupon Apply Error:", error);
-    res.json({ success: false, message: "Server error. Please try again." });
+    res.json({ 
+      success: false, 
+      message: "Unable to apply coupon at the moment. Please try again later." 
+    });
   }
 };
 
@@ -121,7 +124,10 @@ const removeCoupon = async (req, res) => {
 
   } catch (error) {
     console.error("Remove Coupon Error:", error);
-    res.json({ success: false, message: "Server error" });
+    res.json({ 
+      success: false, 
+      message: "Unable to remove coupon at the moment. Please try again later." 
+    });
   }
 };
 

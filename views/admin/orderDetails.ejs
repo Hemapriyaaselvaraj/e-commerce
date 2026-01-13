@@ -926,7 +926,16 @@
           location.reload();
         } else {
           // Show specific error message
-          alert(data.message || 'Failed to update status');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Update Failed',
+              text: data.message || 'Failed to update status',
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert(data.message || 'Failed to update status');
+          }
           selectElement.disabled = false;
           // Reset to previous value if needed
           location.reload();
@@ -934,7 +943,16 @@
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('Network error: Failed to update status');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: 'Network error: Failed to update status',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Network error: Failed to update status');
+        }
         selectElement.disabled = false;
         location.reload();
       });
@@ -946,7 +964,16 @@
       const reason = document.getElementById('cancelReason').value;
 
       if (!reason.trim()) {
-        alert('Please provide a cancellation reason');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please provide a cancellation reason',
+            confirmButtonColor: '#ffc107'
+          });
+        } else {
+          alert('Please provide a cancellation reason');
+        }
         return;
       }
 
@@ -966,12 +993,30 @@
           bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
           location.reload();
         } else {
-          alert(data.message || 'Failed to cancel order');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Cancel Failed',
+              text: data.message || 'Failed to cancel order',
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert(data.message || 'Failed to cancel order');
+          }
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('Network error: Failed to cancel order');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: 'Network error: Failed to cancel order',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Network error: Failed to cancel order');
+        }
       });
     }
 
@@ -981,7 +1026,16 @@
       const reason = document.getElementById('returnReason').value;
 
       if (!reason.trim()) {
-        alert('Please provide a reason for return');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please provide a reason for return',
+            confirmButtonColor: '#ffc107'
+          });
+        } else {
+          alert('Please provide a reason for return');
+        }
         return;
       }
 
@@ -1001,12 +1055,30 @@
           bootstrap.Modal.getInstance(document.getElementById('returnModal')).hide();
           location.reload();
         } else {
-          alert(data.message || 'Failed to process return');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Return Failed',
+              text: data.message || 'Failed to process return',
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert(data.message || 'Failed to process return');
+          }
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('Network error: Failed to process return');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: 'Network error: Failed to process return',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Network error: Failed to process return');
+        }
       });
     }
 
@@ -1025,15 +1097,44 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          alert(data.message);
-          location.reload();
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'success',
+              title: 'Success',
+              text: data.message,
+              confirmButtonColor: '#28a745'
+            }).then(() => {
+              location.reload();
+            });
+          } else {
+            alert(data.message);
+            location.reload();
+          }
         } else {
-          alert(data.message || 'Failed to verify return');
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Verification Failed',
+              text: data.message || 'Failed to verify return',
+              confirmButtonColor: '#d33'
+            });
+          } else {
+            alert(data.message || 'Failed to verify return');
+          }
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('Network error: Failed to verify return');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: 'Network error: Failed to verify return',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Network error: Failed to verify return');
+        }
       });
     }
 

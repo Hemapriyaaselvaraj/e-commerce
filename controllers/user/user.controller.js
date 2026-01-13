@@ -22,7 +22,7 @@ const signup = async (req, res) => {
 
   if (user && user.isVerified) {
     return res.render("user/signup", {
-      error: "Email already registered, please login",
+      error: "This email address is already registered. Please sign in to your existing account or use a different email address.",
       oldInput: req.body,
     });
   }
@@ -130,11 +130,11 @@ const sendOtp = async(req, res) => {
   const user = await userModel.findOne({email});
 
   if(!user) {
-    return res.render('user/forgotPassword', { error: "Invalid email"})
+    return res.render('user/forgotPassword', { error: "We couldn't find an account with that email address. Please check your email and try again, or create a new account."})
   }
 
   if (user.isBlocked) {
-    return res.render('user/forgotPassword', { error: "Your account is blocked. Please contact support." })
+    return res.render('user/forgotPassword', { error: "Your account has been temporarily suspended. Please contact our support team for assistance." })
   }
 
 
@@ -150,14 +150,14 @@ const verifyOtp = async(req, res) => {
   const otpVerification = await otpVerificationModel.findOne({email});
 
   if (!otpVerification) {
-  return res.render('user/verifyOtp', { error: "Invalid otp", email, flow });
+  return res.render('user/verifyOtp', { error: "The verification code you entered is incorrect. Please check and try again.", email, flow });
 }
 
 if (otpVerification.otp !== otp || otpVerification.expiry < new Date()) {
     if (otpVerification.expiry < new Date()) {
     await otpVerification.deleteOne();
   }
-  return res.render('user/verifyOtp', { error: "Invalid otp", email, flow });
+  return res.render('user/verifyOtp', { error: "Your verification code has expired. Please request a new code and try again.", email, flow });
 }
  await otpVerification.deleteOne();
 
@@ -214,7 +214,7 @@ const changePassword = async(req, res) => {
 
   if(password != confirmPassword){
     
-    return res.render('user/changePassword' , {email ,error : "Passwords does not match" });
+    return res.render('user/changePassword' , {email ,error : "The passwords you entered don't match. Please make sure both password fields are identical." });
 
   }
 
@@ -222,12 +222,12 @@ const changePassword = async(req, res) => {
 
   if (!user) {
 
-    return res.render("user/changePassword", { error: "User does not exist", email });
+    return res.render("user/changePassword", { error: "We couldn't find your account. Please try the password reset process again.", email });
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if(isMatch) {
-         return res.render('user/changePassword' , {email ,error : "New password should not be same as previous one" });
+         return res.render('user/changePassword' , {email ,error : "Your new password must be different from your current password. Please choose a new password." });
 
   }
 
@@ -247,22 +247,22 @@ const changePassword = async(req, res) => {
 
   const user = await userModel.findOne({ email });
 
-  if (!user) return res.render("user/login", { error: "User does not exist" });
+  if (!user) return res.render("user/login", { error: "We couldn't find an account with that email address. Please check your email or create a new account." });
 
   if (user.isBlocked) {
-    return res.render("user/login", { error: "Your account is blocked. Please contact support." });
+    return res.render("user/login", { error: "Your account has been temporarily suspended. Please contact our support team for assistance." });
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
 
-  if (!isMatch) return res.render("user/login", { error: "Incorrrect password" });
+  if (!isMatch) return res.render("user/login", { error: "The password you entered is incorrect. Please check your password and try again." });
 
 
   if (!user.isVerified) {
 
     await sendOtpToVerifyEmail(email);
 
-    return res.render('user/verifyOtp', { error: "Please verify your account with OTP sent to your email", email, flow: 'login'});
+    return res.render('user/verifyOtp', { error: "Please verify your account using the verification code we've sent to your email address.", email, flow: 'login'});
   }
 
   req.session.user = true;
@@ -279,7 +279,10 @@ const changePassword = async(req, res) => {
 const logout = (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      return res.status(500).json({ success: false, message: 'Logout failed' });
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Unable to log out at the moment. Please close your browser or try again.' 
+      });
     }
     res.clearCookie('connect.sid');
     return res.redirect("/user/login");

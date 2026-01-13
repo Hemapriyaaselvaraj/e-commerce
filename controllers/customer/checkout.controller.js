@@ -89,22 +89,12 @@ const checkout = async (req, res) => {
 
 const addAddress = async (req, res) => {
   try {
-    console.log('🔍 Add address request received:', req.body);
-    console.log('🔍 Session data:', {
-      user: req.session.user,
-      userId: req.session.userId,
-      role: req.session.role
-    });
-    
     const userId = req.session.userId;
-    console.log('🔍 User ID from session:', userId);
     
     if (!userId) {
-      console.log('❌ No user ID in session');
       return res.status(401).json({ success: false, message: "Please sign in to save an address." });
     }
 
-    // Data coming from AJAX body
     const {
       name,
       label,
@@ -118,11 +108,8 @@ const addAddress = async (req, res) => {
       phone_number
     } = req.body;
 
-    console.log('🔍 Extracted data:', { name, phone_number, city, state, pincode });
-
     // Validate required fields
     if (!name || !phone_number || !city || !state || !pincode) {
-      console.log('❌ Validation failed - missing required fields');
       return res.status(400).json({ 
         success: false, 
         message: "Name, phone, city, state and pincode are required." 
@@ -132,7 +119,6 @@ const addAddress = async (req, res) => {
     // Validate phone number
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(phone_number.trim())) {
-      console.log('❌ Phone validation failed:', phone_number);
       return res.status(400).json({ 
         success: false, 
         message: "Please enter a valid 10-digit phone number." 
@@ -142,7 +128,6 @@ const addAddress = async (req, res) => {
     // Validate pincode
     const pincodeRegex = /^[0-9]{6}$/;
     if (!pincodeRegex.test(pincode.toString().trim())) {
-      console.log('❌ Pincode validation failed:', pincode);
       return res.status(400).json({ 
         success: false, 
         message: "Please enter a valid 6-digit pincode." 
@@ -160,10 +145,9 @@ const addAddress = async (req, res) => {
     // Check if this is the first address (should be default)
     const addressCount = await Address.countDocuments({ user_id: userId });
     const isDefault = addressCount === 0;
-    
-    console.log('🔍 Address count for user:', addressCount, 'Will be default:', isDefault);
 
-    const addressData = {
+    // Create and save the new address
+    await Address.create({
       user_id: userId,
       name: name.trim(),
       label: label?.trim(),
@@ -176,20 +160,20 @@ const addAddress = async (req, res) => {
       pincode: Number(pincode),
       phone_number: phone_number.trim(),
       isDefault: isDefault
-    };
-    
-    console.log('🔍 Creating address with data:', addressData);
+    });
 
-    // Create and save the new address
-    const newAddress = await Address.create(addressData);
-    
-    console.log('✅ Address created successfully:', newAddress._id);
-
-    return res.json({ success: true, message: "Address saved successfully!" });
+    return res.json({ 
+      success: true, 
+      message: "Address saved successfully!", 
+      redirect: "/addresses" 
+    });
 
   } catch (error) {
-    console.error("❌ Add address error:", error);
-    return res.status(500).json({ success: false, message: "Error saving address: " + error.message });
+    console.error("Add address error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Unable to save address at the moment. Please check your information and try again." 
+    });
   }
 };
 
@@ -274,11 +258,18 @@ const editAddress = async (req, res) => {
       return res.status(404).json({ success: false, message: "Address not found." });
     }
 
-    return res.json({ success: true, message: "Address updated successfully!" });
+    return res.json({ 
+      success: true, 
+      message: "Address updated successfully!", 
+      redirect: "/addresses" 
+    });
 
   } catch (error) {
     console.error("Edit address error:", error);
-    return res.status(500).json({ success: false, message: "Error updating address" });
+    return res.status(500).json({ 
+      success: false, 
+      message: "Unable to update address at the moment. Please check your information and try again." 
+    });
   }
 };
 
@@ -314,13 +305,14 @@ const getAvailableCoupons = async (req, res) => {
     res.json({ success: true, coupons: couponsWithUsage });
   } catch (error) {
     console.error('Error fetching available coupons:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch coupons' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to load available coupons at the moment. Please try again later.' 
+    });
   }
 };
 
 module.exports = {
   checkout,
-  getAvailableCoupons,
-  addAddress,
-  editAddress
+  getAvailableCoupons
 };

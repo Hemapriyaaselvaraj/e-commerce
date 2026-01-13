@@ -14,7 +14,10 @@ const getSalesReportPage = async (req, res) => {
 
   } catch (error) {
     console.error("Error loading sales report page:", error);
-    res.status(500).send("Internal Server Error");
+    res.status(500).render('admin/500', { 
+      message: 'We\'re having trouble loading the sales report page. Please try refreshing or contact technical support if the problem continues.',
+      name: 'Admin'
+    });
   }
 };
 
@@ -199,7 +202,10 @@ const getSalesReportData = async (req, res) => {
     res.json({ success: true, ...data });
   } catch (err) {
     console.error("Sales report error:", err);
-    res.json({ success: false, message: "Server Error" });
+    res.json({ 
+      success: false, 
+      message: "We couldn't generate the sales report due to a technical issue. Please try again or contact support if the problem continues." 
+    });
   }
 };
 
@@ -352,7 +358,10 @@ const downloadPDF = async (req, res) => {
 
   } catch (err) {
     console.error("PDF generation error:", err);
-    res.status(500).send("Error generating PDF");
+    res.status(500).render('admin/500', { 
+      message: 'We couldn\'t generate the PDF report due to a technical issue. Please try again or contact support if the problem continues.',
+      name: 'Admin'
+    });
   }
 };
 
@@ -487,7 +496,10 @@ const downloadExcel = async (req, res) => {
 
   } catch (err) {
     console.error("Excel generation error:", err);
-    res.status(500).send("Excel download failed");
+    res.status(500).render('admin/500', { 
+      message: 'We couldn\'t generate the Excel report due to a technical issue. Please try again or contact support if the problem continues.',
+      name: 'Admin'
+    });
   }
 };
 

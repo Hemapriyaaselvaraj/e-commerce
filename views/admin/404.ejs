@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Page Not Found | Your Store</title>
+  <title>Page Not Found | Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #f9f9f9;
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
+      background: #f8fafc;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -19,36 +19,95 @@
 
     .container {
       text-align: center;
-      padding: 20px;
+      padding: 40px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      max-width: 500px;
     }
 
     h1 {
-      font-size: 100px;
+      font-size: 120px;
       margin: 0;
-      color: #ff6b6b;
+      color: #dc3545;
+      font-weight: 700;
+      line-height: 1;
     }
 
     h2 {
-      margin: 10px 0;
-      font-size: 26px;
+      margin: 20px 0 10px 0;
+      font-size: 28px;
+      color: #222;
+      font-weight: 600;
     }
 
     p {
       color: #666;
       margin-bottom: 30px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .btn-container {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
 
     a {
       text-decoration: none;
       background: #000;
       color: #fff;
-      padding: 12px 25px;
-      border-radius: 5px;
-      font-weight: bold;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
 
     a:hover {
       background: #333;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    .icon {
+      font-size: 16px;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        margin: 20px;
+        padding: 30px 20px;
+      }
+      
+      h1 {
+        font-size: 80px;
+      }
+      
+      h2 {
+        font-size: 24px;
+      }
+      
+      .btn-container {
+        flex-direction: column;
+      }
+      
+      a {
+        width: 100%;
+        justify-content: center;
+      }
     }
   </style>
 </head>
@@ -56,9 +115,18 @@
 
   <div class="container">
     <h1>404</h1>
-    <h2>Oops! Page not found</h2>
-    <p>The page you are looking for doesn’t exist or has been moved.</p>
-    <a href="/">Go Back to Home</a>
+    <h2>Admin Page Not Found</h2>
+    <p>The admin page you are looking for doesn't exist or has been moved. Please check the URL or navigate back to the admin dashboard.</p>
+    <div class="btn-container">
+      <a href="/admin/dashboard">
+        <span class="icon">🏠</span>
+        Admin Dashboard
+      </a>
+      <a href="javascript:history.back()" class="btn-secondary">
+        <span class="icon">←</span>
+        Go Back
+      </a>
+    </div>
   </div>
 
 </body>

@@ -406,7 +406,66 @@
 
             <div class="payment-info">
                 <h3>Payment Method</h3>
-                <p>Charged: ₹<%= order.total.toFixed(2) %></p>
+                <% if (order.paymentDetails && order.paymentDetails.method) { %>
+                    <% let paymentMethodDisplay = ''; %>
+                    <% let paymentIcon = ''; %>
+                    <% switch(order.paymentDetails.method) { 
+                        case 'COD': 
+                            paymentMethodDisplay = 'Cash on Delivery';
+                            paymentIcon = 'fas fa-money-bill-wave';
+                            break;
+                        case 'RAZORPAY':
+                            paymentMethodDisplay = 'Online Payment (Razorpay)';
+                            paymentIcon = 'fas fa-credit-card';
+                            break;
+                        case 'WALLET':
+                            paymentMethodDisplay = 'Wallet Payment';
+                            paymentIcon = 'fas fa-wallet';
+                            break;
+                        default:
+                            paymentMethodDisplay = order.paymentDetails.method;
+                            paymentIcon = 'fas fa-credit-card';
+                    } %>
+                    <p style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <i class="<%= paymentIcon %>" style="margin-right: 8px; color: #4CAF50;"></i>
+                        <span style="font-weight: 600;"><%= paymentMethodDisplay %></span>
+                    </p>
+                    <% if (order.paymentDetails.status) { %>
+                        <% let statusColor = ''; %>
+                        <% let statusIcon = ''; %>
+                        <% switch(order.paymentDetails.status) { 
+                            case 'PAID': 
+                                statusColor = '#4CAF50';
+                                statusIcon = 'fas fa-check-circle';
+                                break;
+                            case 'PENDING':
+                                statusColor = '#FF9800';
+                                statusIcon = 'fas fa-clock';
+                                break;
+                            case 'FAILED':
+                                statusColor = '#f44336';
+                                statusIcon = 'fas fa-times-circle';
+                                break;
+                            default:
+                                statusColor = '#666';
+                                statusIcon = 'fas fa-info-circle';
+                        } %>
+                        <p style="display: flex; align-items: center; margin-bottom: 12px;">
+                            <i class="<%= statusIcon %>" style="margin-right: 8px; color: <%= statusColor %>;"></i>
+                            <span style="color: <%= statusColor %>; font-weight: 500;">
+                                Status: <%= order.paymentDetails.status %>
+                            </span>
+                        </p>
+                    <% } %>
+                <% } else { %>
+                    <p style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <i class="fas fa-credit-card" style="margin-right: 8px; color: #4CAF50;"></i>
+                        <span style="font-weight: 600;">Payment Method</span>
+                    </p>
+                <% } %>
+                <p style="border-top: 1px solid #eee; padding-top: 12px; margin-top: 12px;">
+                    <strong>Amount Charged: ₹<%= order.total.toFixed(2) %></strong>
+                </p>
             </div>
         </div>
 
