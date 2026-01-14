@@ -153,12 +153,6 @@ const getDashboardDetails = async (req, res) => {
     let timeSeriesLabels = [];
     let timeSeriesValues = [];
     
-    console.log(`Dashboard Debug - ${timeFilter} ${viewType}:`, {
-      dateRange: `${startDate.toISOString()} to ${endDate.toISOString()}`,
-      rawDataPoints: timeSeriesData.length,
-      rawData: timeSeriesData
-    });
-    
     if (dateFormat === 'monthly') {
       // Generate last 12 months from current month
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -168,8 +162,6 @@ const getDashboardDetails = async (req, res) => {
       timeSeriesData.forEach(item => {
         dataMap[item._id] = item.sales;
       });
-      
-      console.log('Available months in data:', Object.keys(dataMap));
       
       // Generate last 12 months
       for (let i = 11; i >= 0; i--) {
@@ -183,26 +175,13 @@ const getDashboardDetails = async (req, res) => {
         
         timeSeriesLabels.push(label);
         timeSeriesValues.push(value);
-        
-        if (value > 0) {
-          console.log(`Month with data: ${label} (${monthKey}) = Rs${value}`);
-        }
       }
-      
-      console.log('Generated monthly chart:', { 
-        labels: timeSeriesLabels, 
-        values: timeSeriesValues,
-        nonZeroCount: timeSeriesValues.filter(v => v > 0).length 
-      });
     } else if (dateFormat === 'daily') {
       // Generate all days in the range
       const dayMap = {};
       timeSeriesData.forEach(item => {
         dayMap[item._id] = item.sales;
       });
-      
-      console.log('Available days in data:', Object.keys(dayMap));
-      console.log('Date range for chart:', startDate.toISOString(), 'to', endDate.toISOString());
       
       // Instead of generating all days, use actual days with data plus recent days
       const allDayKeys = Object.keys(dayMap).sort();
@@ -257,16 +236,6 @@ const getDashboardDetails = async (req, res) => {
         recentDaysData.forEach(day => {
           timeSeriesLabels.push(day.label);
           timeSeriesValues.push(day.value);
-          
-          if (day.value > 0) {
-            console.log(`Day with data: ${day.label} (${day.key}) = Rs${day.value}`);
-          }
-        });
-        
-        console.log('Generated daily chart:', { 
-          labels: timeSeriesLabels, 
-          values: timeSeriesValues,
-          nonZeroCount: timeSeriesValues.filter(v => v > 0).length 
         });
       } else {
         // Fallback: generate last 14 days if no data
@@ -277,7 +246,6 @@ const getDashboardDetails = async (req, res) => {
           timeSeriesValues.push(0);
           currentDate.setDate(currentDate.getDate() + 1);
         }
-        console.log('No daily data found, generated empty chart');
       }
     } else if (dateFormat === 'yearly') {
       // Generate all years in the range
@@ -300,8 +268,6 @@ const getDashboardDetails = async (req, res) => {
         timeSeriesData.forEach(item => {
           weekMap[item._id] = item.sales;
         });
-        
-        console.log('Available weeks in data:', Object.keys(weekMap));
         
         // Instead of generating weeks, use the actual weeks from data and fill gaps
         const allWeekKeys = Object.keys(weekMap).sort();
@@ -339,8 +305,6 @@ const getDashboardDetails = async (req, res) => {
             timeSeriesLabels.push(`Week ${week.weekNum}`);
             timeSeriesValues.push(week.value);
           });
-          
-          console.log('Generated weekly chart:', { labels: timeSeriesLabels, values: timeSeriesValues });
         } else {
           // Fallback: generate last 8 weeks if no data
           const currentDate = new Date();
@@ -359,13 +323,6 @@ const getDashboardDetails = async (req, res) => {
         timeSeriesValues = timeSeriesData.map(item => item.sales);
       }
     }
-    
-    console.log(`Chart Data Generated:`, {
-      labels: timeSeriesLabels,
-      values: timeSeriesValues,
-      nonZeroCount: timeSeriesValues.filter(v => v > 0).length,
-      maxValue: Math.max(...timeSeriesValues, 0)
-    });
     
     // Helper function to get week number
     function getWeekNumber(date) {
