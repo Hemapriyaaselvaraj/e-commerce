@@ -51,7 +51,7 @@ const getDashboardDetails = async (req, res) => {
       case 'daily':
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13); // Last 14 days including today
         endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-        groupBy = { $dateToString: { format: "%Y-%m-%d", date: viewType === 'orders' ? "$createdAt" : "$updatedAt" } };
+        groupBy = { $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" } }; // Always use delivery date
         dateFormat = 'daily';
         break;
         
@@ -61,7 +61,7 @@ const getDashboardDetails = async (req, res) => {
         groupBy = { 
           $dateToString: { 
             format: "Week %U, %Y", 
-            date: viewType === 'orders' ? "$createdAt" : "$updatedAt"
+            date: "$updatedAt" // Always use delivery date
           } 
         };
         dateFormat = 'weekly';
@@ -70,53 +70,45 @@ const getDashboardDetails = async (req, res) => {
       case 'yearly':
         startDate = new Date(now.getFullYear() - 4, 0, 1); // Last 5 years
         endDate = new Date(now.getFullYear() + 1, 0, 1);
-        groupBy = { $dateToString: { format: "%Y", date: viewType === 'orders' ? "$createdAt" : "$updatedAt" } };
+        groupBy = { $dateToString: { format: "%Y", date: "$updatedAt" } }; // Always use delivery date
         dateFormat = 'yearly';
         break;
         
       default: // monthly
         startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1); // 12 months ago
         endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1); // End of current month
-        groupBy = { $dateToString: { format: "%Y-%m", date: viewType === 'orders' ? "$createdAt" : "$updatedAt" } };
+        groupBy = { $dateToString: { format: "%Y-%m", date: "$updatedAt" } }; // Always use delivery date
         dateFormat = 'monthly';
     }
 
     // Get basic stats
-    const [totalSalesResult, totalCustomers, totalOrders] = await Promise.all([
-      Order.aggregate([
-        {
-          $match: {
-            status: { $nin: ['CANCELLED'] },
-            payment_status: 'COMPLETED', // Only count completed payments as revenue
-            ...(viewType === 'orders' 
-              ? { createdAt: { $gte: startDate, $lt: endDate } }
-              : { 
-                  updatedAt: { $gte: startDate, $lt: endDate },
-                  status: 'DELIVERED' // Only count delivered orders for delivery view
-                }
-            )
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$total" }
-          }
+    // Total revenue should NEVER be filtered by date - it's total revenue from all time
+    const totalRevenueResult = await Order.aggregate([
+      {
+        $match: {
+          status: { $nin: ['CANCELLED'] },
+          payment_status: 'COMPLETED' // Only count completed payments as revenue
+          // NO date filter - this should be total revenue from all time
         }
-      ]),
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$total" }
+        }
+      }
+    ]);
+
+    // Other stats should be filtered based on delivered items in the selected time period
+    const [totalCustomers, totalDeliveredOrders] = await Promise.all([
       userModel.countDocuments({ role: 'user' }),
       Order.countDocuments({
-        ...(viewType === 'orders' 
-          ? { createdAt: { $gte: startDate, $lt: endDate } }
-          : { 
-              updatedAt: { $gte: startDate, $lt: endDate },
-              status: 'DELIVERED'
-            }
-        )
+        status: 'DELIVERED',
+        updatedAt: { $gte: startDate, $lt: endDate }
       })
     ]);
 
-    const totalSales = totalSalesResult[0]?.total || 0;
+    const totalRevenue = totalRevenueResult[0]?.total || 0;
 
     // Get time series data for chart
     let timeSeriesMatchConditions = {
@@ -536,9 +528,9 @@ const getDashboardDetails = async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalSales: totalSales || 0,
+        totalSales: totalRevenue || 0, // Total revenue from ALL completed payments (never filtered by date)
         customers: totalCustomers || 0,
-        totalOrders: totalOrders || 0,
+        totalOrders: totalDeliveredOrders || 0, // Only delivered orders in selected time period
         timeSeriesLabels: timeSeriesLabels || [],
         timeSeriesData: timeSeriesValues || [],
         recentOrders: formattedRecentOrders || [],
@@ -547,8 +539,8 @@ const getDashboardDetails = async (req, res) => {
         topBrands: topBrands || []
       },
       timeFilter,
-      viewType,
-      chartTitle: viewType === 'orders' ? 'Revenue by Order Date' : 'Revenue by Delivery Date',
+      viewType: 'deliveries', // Always show deliveries view
+      chartTitle: 'Revenue by Delivery Date', // Always show delivery date
       generatedAt: new Date().toISOString()
     });
 
