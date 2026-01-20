@@ -13,7 +13,13 @@ const getOffersList = async (req, res) => {
     const user = await User.findById(req.session.userId);
     const name = user ? user.firstName : 'Admin';
 
-    res.render("admin/offersList", { offers, name });
+    // Get success messages for the list page
+    const success = req.session.success || null;
+    
+    // Clear success messages after getting them
+    delete req.session.success;
+
+    res.render("admin/offersList", { offers, name, success });
 
   } catch (error) {
     console.error("Offers list error:", error);
@@ -30,13 +36,12 @@ const getAddOffer = async (req, res) => {
     const user = await User.findById(req.session.userId);
     const name = user ? user.firstName : 'Admin';
 
-    // Get session messages
+    // Only get error messages for the form (not success messages)
     const error = req.session.error || null;
-    const success = req.session.success || null;
     
-    // Clear session messages
+    // Clear only error messages
     delete req.session.error;
-    delete req.session.success;
+    // Don't clear success messages here - they should be shown on the list page
 
     res.render("admin/offerForm", {
       name,
@@ -44,7 +49,7 @@ const getAddOffer = async (req, res) => {
       categories,
       offer: null,
       error,
-      success
+      success: null // Never pass success messages to the form
     });
 
   } catch (error) {
@@ -98,11 +103,17 @@ const postAddOffer = async (req, res) => {
       return res.redirect("/admin/add-offer");
     }
 
-    // Check if start date is not in the past
-    if (fromDate < today) {
-      req.session.error = "The start date cannot be in the past. Please select today's date or a future date.";
+    // New validation: To date must be in the future (after today)
+    if (toDate <= today) {
+      req.session.error = "The end date must be in the future. Please select a date after today.";
       return res.redirect("/admin/add-offer");
     }
+
+    // From date can be in past or present (no restriction)
+    // This allows creating offers that started in the past but are still active
+
+    // Note: Removed past date validation to allow creating offers for any date range
+    // This is useful for testing, historical data, or backdated promotions
 
     // Check minimum validity period (at least 1 day)
     const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
@@ -143,7 +154,7 @@ const postAddOffer = async (req, res) => {
       validTo: toDate
     });
 
-    req.session.success = "Offer created successfully! It's now available for customers.";
+    req.session.success = `Offer "${offerName.trim()}" created successfully! It is now available for customers.`;
     res.redirect("/admin/offers");
 
   } catch (error) {
@@ -240,11 +251,30 @@ const postEditOffer = async (req, res) => {
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
 
+    // New validation: To date must be in the future (after today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (toDate <= today) {
+      console.log('Validation failed: End date must be in future');
+      req.session.error = "The end date must be in the future. Please select a date after today.";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    // From date can be in past or present (no restriction for editing)
+
     // Check minimum validity period (at least 1 day)
     const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
     if (daysDifference < 1) {
       console.log('Validation failed: Minimum validity period');
       req.session.error = "Offer must be valid for at least 1 day";
+      return res.redirect(`/admin/edit-offer/${offerId}`);
+    }
+
+    // For editing offers, we're more flexible with past dates
+    // Only check if the offer hasn't expired yet
+    if (toDate < new Date().setHours(0, 0, 0, 0)) {
+      console.log('Validation failed: Offer has already expired');
+      req.session.error = "Cannot edit an offer that has already expired";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
 
@@ -289,7 +319,7 @@ const postEditOffer = async (req, res) => {
 
     console.log('Offer updated successfully:', updatedOffer);
 
-    req.session.success = "Offer updated successfully";
+    req.session.success = `Offer "${offerName.trim()}" updated successfully!`;
     console.log('Redirecting to /admin/offers');
     res.redirect("/admin/offers");
 

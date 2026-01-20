@@ -345,6 +345,20 @@
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+  <% if (success) { %>
+    <script>
+      const successMessage = <%- JSON.stringify(success) %>;
+      Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: successMessage,
+        confirmButtonColor: '#000',
+        timer: 3000,
+        showConfirmButton: false
+      });
+    </script>
+  <% } %>
+
   <script>
     function toggleOffer(id, currentStatus) {
       const btn = document.getElementById(`toggle-btn-${id}`);

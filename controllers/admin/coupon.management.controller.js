@@ -68,7 +68,7 @@ const getAddCoupon = async (req, res) => {
         });
       }
 
-      // Date validation
+      // Date validation with flexible rules (same as offers)
       const fromDate = new Date(validFrom);
       const toDate = new Date(validTo);
       const today = new Date();
@@ -90,13 +90,16 @@ const getAddCoupon = async (req, res) => {
         });
       }
 
-      // Check if start date is not in the past
-      if (fromDate < today) {
+      // New validation: To date must be in the future (after today)
+      if (toDate <= today) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Valid from date cannot be in the past' 
+          message: 'The end date must be in the future. Please select a date after today.' 
         });
       }
+
+      // From date can be in past or present (no restriction)
+      // This allows creating coupons that started in the past but are still active
 
       // Check minimum validity period (at least 1 day)
       const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
@@ -233,9 +236,11 @@ const postEditCoupon = async (req, res) => {
         });
       }
 
-      // Date validation
+      // Date validation with flexible rules (same as offers)
       const fromDate = new Date(validFrom);
       const toDate = new Date(validTo);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
       // Check if dates are valid
       if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
@@ -252,6 +257,17 @@ const postEditCoupon = async (req, res) => {
           message: 'Valid to date must be after valid from date' 
         });
       }
+
+      // New validation: To date must be in the future (after today)
+      if (toDate <= today) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'The end date must be in the future. Please select a date after today.' 
+        });
+      }
+
+      // From date can be in past or present (no restriction for editing)
+      // This allows editing coupons that started in the past but are still active
 
       // Check minimum validity period (at least 1 day)
       const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);

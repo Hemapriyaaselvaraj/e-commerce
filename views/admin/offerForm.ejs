@@ -300,7 +300,7 @@
                     type="date" 
                     name="validFrom" 
                     class="form-control"
-                    value="<%= offer ? offer.validFrom.toISOString().split('T')[0] : '' %>"
+                    value="<%= offer && offer.validFrom ? offer.validFrom.toISOString().split('T')[0] : '' %>"
                     required 
                   />
                 </div>
@@ -311,7 +311,7 @@
                     type="date" 
                     name="validTo" 
                     class="form-control"
-                    value="<%= offer ? offer.validTo.toISOString().split('T')[0] : '' %>"
+                    value="<%= offer && offer.validTo ? offer.validTo.toISOString().split('T')[0] : '' %>"
                     required 
                   />
                 </div>
@@ -345,17 +345,6 @@
         icon: 'error',
         title: 'Error',
         text: '<%= error %>',
-        confirmButtonColor: '#000'
-      });
-    </script>
-  <% } %>
-
-  <% if (success) { %>
-    <script>
-      Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: '<%= success %>',
         confirmButtonColor: '#000'
       });
     </script>
@@ -418,6 +407,13 @@
           return;
         }
         
+        // Check if end date is in the future
+        if (toDate <= today) {
+          validTo.style.borderColor = '#dc3545';
+          validTo.title = 'End date must be in the future (after today)';
+          return;
+        }
+        
         // Check minimum validity period
         if (daysDifference < 1) {
           validTo.style.borderColor = '#dc3545';
@@ -436,18 +432,10 @@
         validTo.title = `Valid period: ${Math.ceil(daysDifference)} days`;
       }
 
-      // Check if start date is in the past (only for new offers)
-      if (!isEdit && validFrom.value) {
-        const fromDate = new Date(validFrom.value);
-        const today = new Date().setHours(0,0,0,0);
-        
-        if (fromDate < today) {
-          validFrom.style.borderColor = '#dc3545';
-          validFrom.title = 'Start date cannot be in the past';
-        } else {
-          validFrom.style.borderColor = '#28a745';
-          validFrom.title = 'Valid start date';
-        }
+      // From date can be in past or present (no restriction)
+      if (validFrom.value) {
+        validFrom.style.borderColor = '#28a745';
+        validFrom.title = 'Valid start date (can be past, present, or future)';
       }
     }
 

@@ -325,7 +325,7 @@
                     name="validFrom" 
                     class="form-control" 
                     required
-                    value="<%= coupon ? coupon.validFrom.toISOString().split('T')[0] : '' %>">
+                    value="<%= coupon && coupon.validFrom ? coupon.validFrom.toISOString().split('T')[0] : '' %>">
                 </div>
 
                 <div class="col-md-6 mb-3">
@@ -336,7 +336,7 @@
                     name="validTo" 
                     class="form-control" 
                     required
-                    value="<%= coupon ? coupon.validTo.toISOString().split('T')[0] : '' %>">
+                    value="<%= coupon && coupon.validTo ? coupon.validTo.toISOString().split('T')[0] : '' %>">
                 </div>
               </div>
             </div>
@@ -495,6 +495,17 @@
         return;
       }
 
+      // New validation: To date must be in the future
+      if (new Date(validTo) <= new Date().setHours(0,0,0,0)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'The end date must be in the future. Please select a date after today.',
+          confirmButtonColor: '#343a40'
+        });
+        return;
+      }
+
       // Check minimum validity period (at least 1 day)
       const daysDifference = (new Date(validTo) - new Date(validFrom)) / (1000 * 60 * 60 * 24);
       if (daysDifference < 1) {
@@ -616,7 +627,7 @@
       }
     });
 
-    // Date validation
+    // Date validation with flexible rules (same as offers)
     function validateDates() {
       const validFrom = document.getElementById('validFrom');
       const validTo = document.getElementById('validTo');
@@ -632,6 +643,13 @@
         if (toDate <= fromDate) {
           validTo.style.borderColor = '#dc3545';
           validTo.title = 'End date must be after start date';
+          return;
+        }
+        
+        // Check if end date is in the future
+        if (toDate <= today) {
+          validTo.style.borderColor = '#dc3545';
+          validTo.title = 'End date must be in the future (after today)';
           return;
         }
         
@@ -653,18 +671,10 @@
         validTo.title = `Valid period: ${Math.ceil(daysDifference)} days`;
       }
 
-      // Check if start date is in the past (only for new coupons)
-      if (!isEdit && validFrom.value) {
-        const fromDate = new Date(validFrom.value);
-        const today = new Date().setHours(0,0,0,0);
-        
-        if (fromDate < today) {
-          validFrom.style.borderColor = '#dc3545';
-          validFrom.title = 'Start date cannot be in the past';
-        } else {
-          validFrom.style.borderColor = '#28a745';
-          validFrom.title = 'Valid start date';
-        }
+      // From date can be in past or present (no restriction)
+      if (validFrom.value) {
+        validFrom.style.borderColor = '#28a745';
+        validFrom.title = 'Valid start date (can be past, present, or future)';
       }
     }
 
