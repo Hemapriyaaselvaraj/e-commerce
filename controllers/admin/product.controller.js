@@ -545,6 +545,12 @@ const createProduct = async (req, res) => {
       const variation = variations[i];
       const images = files.filter(file => file.fieldname === `variationImages_${i}`) || [];
       
+      // Validate minimum 4 images per variation
+      if (images.length < 4) {
+        return res.status(400).json({ 
+          error: `Each product variation must have at least 4 images. Variation ${i + 1} (${variation.size} - ${variation.color}) has only ${images.length} image(s). Please add ${4 - images.length} more image(s).` 
+        });
+      }
       
       const imageUrls = images.map((file) => file.path);
 
@@ -565,6 +571,7 @@ const createProduct = async (req, res) => {
 
     res.status(201).json({ message: "Product created successfully!" });
   } catch (err) {
+    console.error('Error creating product:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -676,14 +683,31 @@ const postEditProduct = async (req, res) => {
       const existing = findExistingVar(size, color);
 
       if (existing) {
-        existing.stock_quantity = stock;
-        existing.images = [
+        // Calculate final image count for existing variation
+        const finalImages = [
           ...newImageUrls,
           ...(existing.images || []).filter(url => !deletedImages.includes(url))
         ];
+        
+        // Validate minimum 4 images per variation
+        if (finalImages.length < 4) {
+          return res.status(400).json({ 
+            error: `Each product variation must have at least 4 images. Variation ${i + 1} (${size} - ${color}) will have only ${finalImages.length} image(s) after your changes. Please add ${4 - finalImages.length} more image(s).` 
+          });
+        }
+        
+        existing.stock_quantity = stock;
+        existing.images = finalImages;
         existing.updated_at = new Date();
         changes.push(existing.save());
       } else {
+        // Validate minimum 4 images for new variation
+        if (newImageUrls.length < 4) {
+          return res.status(400).json({ 
+            error: `Each product variation must have at least 4 images. New variation ${i + 1} (${size} - ${color}) has only ${newImageUrls.length} image(s). Please add ${4 - newImageUrls.length} more image(s).` 
+          });
+        }
+        
         changes.push(
           new ProductVariation({
             product_id: savedProduct._id,

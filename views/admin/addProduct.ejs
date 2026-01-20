@@ -314,7 +314,7 @@
               <input type="number" name="variations[${index}][stock]" class="form-control" min="0" value="${data.stock ?? ''}" required />
             </div>
             <div class="col-md-4">
-              <label>Images</label>
+              <label>Images <span class="image-count-badge badge bg-secondary ms-1">0/4</span></label>
               <button type="button" class="btn btn-outline-secondary w-100" onclick="triggerImageUpload(this)">+ Add Image</button>
               <input type="file" accept="image/*" style="display:none" multiple />
               <div class="image-preview mt-2">${imagesHtml}</div>
@@ -357,7 +357,27 @@
 
         const fileInput = container.querySelector('input[type="file"]');
         const previewBox = container.querySelector(".image-preview");
+        const imageCountBadge = container.querySelector('.image-count-badge');
         variationFiles[index] = [];
+
+        // Function to update image count badge
+        function updateImageCount() {
+          // Simply count the visible images in the preview
+          const totalImages = previewBox.querySelectorAll('.image-wrapper').length;
+          
+          imageCountBadge.textContent = `${totalImages}/4`;
+          imageCountBadge.className = `image-count-badge badge ms-1 ${totalImages >= 4 ? 'bg-success' : 'bg-warning'}`;
+          
+          // Update button text based on image count
+          const addButton = container.querySelector('button[onclick="triggerImageUpload(this)"]');
+          if (totalImages >= 4) {
+            addButton.textContent = `✓ ${totalImages} Images Added`;
+            addButton.className = 'btn btn-success w-100';
+          } else {
+            addButton.textContent = `+ Add Image (${totalImages}/4)`;
+            addButton.className = 'btn btn-outline-secondary w-100';
+          }
+        }
 
         
         if (data.images && data.images.length) {
@@ -373,6 +393,8 @@
               delInput.name = `deletedVariationImage_${index}`;
               delInput.value = data.images[imgIdx];
               container.appendChild(delInput);
+              
+              updateImageCount();
             });
           });
         }
@@ -382,7 +404,7 @@
           let fileIdx = 0;
           function cropNext() {
             if (fileIdx < files.length) {
-              startCrop(files[fileIdx], fileInput, previewBox);
+              startCrop(files[fileIdx], fileInput, previewBox, updateImageCount);
               
               
               const modal = document.getElementById('cropperModal');
@@ -401,6 +423,9 @@
 
         document.getElementById("variationsContainer").appendChild(container);
         variationIndex = Math.max(variationIndex, index + 1);
+        
+        // Initial count update
+        updateImageCount();
       }
 
       function triggerImageUpload(button) {
@@ -410,8 +435,34 @@
 
 
       document.getElementById("productForm").addEventListener("submit", function (e) {
+        e.preventDefault();
         
+        // Validate minimum 4 images per variation
         const variationBoxes = document.querySelectorAll('.variation-box');
+        for (let i = 0; i < variationBoxes.length; i++) {
+          const box = variationBoxes[i];
+          const sizeSelect = box.querySelector('select[name*="size"]');
+          const colorSelect = box.querySelector('select[name*="color"]');
+          const imagePreview = box.querySelector('.image-preview');
+          
+          const size = sizeSelect ? sizeSelect.value : 'Unknown';
+          const color = colorSelect ? colorSelect.value : 'Unknown';
+          
+          // Simply count the visible images in the preview
+          const totalImages = imagePreview.querySelectorAll('.image-wrapper').length;
+          
+          if (totalImages < 4) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Insufficient Images',
+              text: `Variation ${i + 1} (${size} - ${color}) has only ${totalImages} image(s). Please add ${4 - totalImages} more image(s). Each variation must have at least 4 images.`,
+              confirmButtonColor: '#d33'
+            });
+            return;
+          }
+        }
+        
+        // If validation passes, proceed with form submission
         variationBoxes.forEach((box, newIdx) => {
           
           box.dataset.index = newIdx;
@@ -479,6 +530,18 @@
               errorMessage = errorData.error || errorData.message || errorMessage;
             } catch (e) {
               // Could not parse error response
+              try {
+                const responseText = await res.text();
+                if (responseText.includes('image')) {
+                  errorMessage = 'Image validation failed. Please ensure each variation has at least 4 images.';
+                } else if (responseText.includes('timeout')) {
+                  errorMessage = 'Request timed out. Please try again with smaller images or fewer variations.';
+                } else if (responseText.includes('PayloadTooLargeError')) {
+                  errorMessage = 'Files are too large. Please use smaller images (max 5MB each).';
+                }
+              } catch (textError) {
+                // Could not parse error response
+              }
             }
             
             Swal.fire({
@@ -489,11 +552,19 @@
             });
           }
         }).catch((error) => {
-          console.error('❌ Fetch error:', error);
+          console.error('Network error:', error);
+          let errorMessage = 'There was a problem connecting to the server. Please check your connection and try again.';
+          
+          if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            errorMessage = 'Network error: Unable to reach the server. Please check your internet connection.';
+          } else if (error.message.includes('timeout')) {
+            errorMessage = 'Request timed out. The server took too long to respond. Please try again.';
+          }
+          
           Swal.fire({
             icon: 'error',
             title: 'Connection Error',
-            text: 'There was a problem connecting to the server. Please check your connection and try again.',
+            text: errorMessage,
             confirmButtonText: 'OK'
           });
         });
@@ -543,8 +614,9 @@
     let activeCropper = null;
     let currentFileInput = null;
     let currentPreviewBox = null;
+    let currentUpdateCallback = null;
     
-    function startCrop(file, fileInput, previewBox) {
+    function startCrop(file, fileInput, previewBox, updateCallback) {
       const reader = new FileReader();
       reader.onload = function(e) {
         const modal = document.getElementById('cropperModal');
@@ -570,6 +642,7 @@
         
         currentFileInput = fileInput;
         currentPreviewBox = previewBox;
+        currentUpdateCallback = updateCallback;
       };
       reader.readAsDataURL(file);
     }
@@ -636,14 +709,23 @@
             const variationIndex = currentFileInput.closest('.variation-box').dataset.index;
             const filesArr = variationFiles[variationIndex];
             
-            const wrappers = Array.from(currentPreviewBox.querySelectorAll('.image-wrapper'));
-            const fileIdx = wrappers.indexOf(wrapper);
-            if (fileIdx > -1) {
-              filesArr.splice(fileIdx - countExistingImages(variationIndex), 1);
+            // Remove from files array
+            if (filesArr && filesArr.length > 0) {
+              filesArr.pop(); // Remove the last added file
+            }
+            
+            // Update image count after removal
+            if (currentUpdateCallback) {
+              currentUpdateCallback();
             }
           });
           wrapper.appendChild(removeBtn);
           currentPreviewBox.appendChild(wrapper);
+          
+          // Update image count after adding
+          if (currentUpdateCallback) {
+            currentUpdateCallback();
+          }
         };
         reader.readAsDataURL(croppedFile);
         
