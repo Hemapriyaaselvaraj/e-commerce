@@ -141,7 +141,7 @@ const getSalesReportDataInternal = async (query, forDownload = false) => {
     const deliveredRatio = deliveredProductsCount / totalProducts;
     const proportionalShipping = (order.shipping_charge || 0) * deliveredRatio;
     
-    totalAmount += orderSubtotal + proportionalShipping;
+    totalAmount += orderSubtotal + proportionalShipping - orderCouponDiscount;
     totalDiscount += orderDiscount;
     totalCouponDeduction += orderCouponDiscount;
   });
@@ -151,15 +151,20 @@ const getSalesReportDataInternal = async (query, forDownload = false) => {
     const deliveredProducts = order.products.filter(p => p.status === 'DELIVERED');
     
     let orderSubtotal = 0;
+    let orderOriginalTotal = 0;
     let orderDiscount = 0;
     let orderCouponDiscount = 0;
     
     deliveredProducts.forEach(product => {
-      orderSubtotal += product.price * product.quantity;
+      const originalPrice = product.original_price || product.price;
+      const currentPrice = product.price;
+      
+      orderOriginalTotal += originalPrice * product.quantity;
+      orderSubtotal += currentPrice * product.quantity;
       
       // Product-level offer discount
-      if (product.original_price && product.price) {
-        orderDiscount += (product.original_price - product.price) * product.quantity;
+      if (originalPrice > currentPrice) {
+        orderDiscount += (originalPrice - currentPrice) * product.quantity;
       }
       
       // ⭐ Use allocated coupon discount (accurate per-product amount)
@@ -171,16 +176,27 @@ const getSalesReportDataInternal = async (query, forDownload = false) => {
     const deliveredProductsCount = deliveredProducts.length;
     const deliveredRatio = deliveredProductsCount / totalProducts;
     const proportionalShipping = (order.shipping_charge || 0) * deliveredRatio;
-    const proportionalTotal = orderSubtotal + proportionalShipping;
+    const proportionalTotal = orderSubtotal + proportionalShipping - orderCouponDiscount;
+    
+    // Calculate discount percentages
+    const offerDiscountPercentage = orderOriginalTotal > 0 ? Math.round((orderDiscount / orderOriginalTotal) * 100) : 0;
+    const couponDiscountPercentage = orderSubtotal > 0 ? Math.round((orderCouponDiscount / orderSubtotal) * 100) : 0;
+    const totalSavings = orderDiscount + orderCouponDiscount;
+    const totalSavingsPercentage = orderOriginalTotal > 0 ? Math.round((totalSavings / orderOriginalTotal) * 100) : 0;
     
     return {
       ...order,
       deliveredProductsCount,
+      original_total: orderOriginalTotal,
       subtotal: orderSubtotal,
       total: proportionalTotal,
       coupon_discount: orderCouponDiscount,
       shipping_charge: proportionalShipping,
-      product_discount: orderDiscount
+      product_discount: orderDiscount,
+      offer_discount_percentage: offerDiscountPercentage,
+      coupon_discount_percentage: couponDiscountPercentage,
+      total_savings: totalSavings,
+      total_savings_percentage: totalSavingsPercentage
     };
   });
 
@@ -248,13 +264,17 @@ const downloadPDF = async (req, res) => {
     // Table Header
     const tableTop = doc.y + 10;
     const colWidths = {
-      orderNo: 95,
-      customer: 70,
-      date: 105,
-      subtotal: 70,
-      discount: 70,
-      total: 70,
-      payment: 65
+      orderNo: 70,
+      customer: 60,
+      date: 80,
+      items: 35,
+      original: 55,
+      offer: 55,
+      subtotal: 55,
+      coupon: 55,
+      shipping: 45,
+      total: 55,
+      savings: 55
     };
 
     const tableWidth = Object.values(colWidths).reduce((a, b) => a + b, 0);
@@ -274,26 +294,34 @@ const downloadPDF = async (req, res) => {
     });
     
     // Header text
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#000000');
-    doc.text("Order No", xPos + 5, tableTop, { width: colWidths.orderNo - 10, align: 'left' });
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#000000');
+    doc.text("Order No", xPos + 2, tableTop, { width: colWidths.orderNo - 4, align: 'left' });
     xPos += colWidths.orderNo;
-    doc.text("User", xPos + 5, tableTop, { width: colWidths.customer - 10, align: 'left' });
+    doc.text("Customer", xPos + 2, tableTop, { width: colWidths.customer - 4, align: 'left' });
     xPos += colWidths.customer;
-    doc.text("Date", xPos + 5, tableTop, { width: colWidths.date - 10, align: 'left' });
+    doc.text("Date", xPos + 2, tableTop, { width: colWidths.date - 4, align: 'left' });
     xPos += colWidths.date;
-    doc.text("Subtotal", xPos + 5, tableTop, { width: colWidths.subtotal - 10, align: 'center' });
+    doc.text("Items", xPos + 2, tableTop, { width: colWidths.items - 4, align: 'center' });
+    xPos += colWidths.items;
+    doc.text("Original", xPos + 2, tableTop, { width: colWidths.original - 4, align: 'center' });
+    xPos += colWidths.original;
+    doc.text("Offer Disc", xPos + 2, tableTop, { width: colWidths.offer - 4, align: 'center' });
+    xPos += colWidths.offer;
+    doc.text("Subtotal", xPos + 2, tableTop, { width: colWidths.subtotal - 4, align: 'center' });
     xPos += colWidths.subtotal;
-    doc.text("Discount", xPos + 5, tableTop, { width: colWidths.discount - 10, align: 'center' });
-    xPos += colWidths.discount;
-    doc.text("Total (Rs)", xPos + 5, tableTop, { width: colWidths.total - 10, align: 'center' });
+    doc.text("Coupon", xPos + 2, tableTop, { width: colWidths.coupon - 4, align: 'center' });
+    xPos += colWidths.coupon;
+    doc.text("Ship", xPos + 2, tableTop, { width: colWidths.shipping - 4, align: 'center' });
+    xPos += colWidths.shipping;
+    doc.text("Total", xPos + 2, tableTop, { width: colWidths.total - 4, align: 'center' });
     xPos += colWidths.total;
-    doc.text("Payment", xPos + 5, tableTop, { width: colWidths.payment - 10, align: 'left' });
+    doc.text("Savings", xPos + 2, tableTop, { width: colWidths.savings - 4, align: 'center' });
 
     doc.fillColor('#000000');
     let yPos = tableTop + 22;
 
     // Table rows
-    doc.fontSize(9).font('Helvetica');
+    doc.fontSize(7).font('Helvetica');
     orders.forEach((order, index) => {
       // Check if we need a new page
       if (yPos > 700) {
@@ -303,46 +331,58 @@ const downloadPDF = async (req, res) => {
 
       const customerName = order.user_id ? order.user_id.firstName : 'Guest';
       
-      // Use the pre-calculated values from processedOrders
-      const productDiscount = order.product_discount || 0;
-      const totalDiscount = productDiscount + (order.coupon_discount || 0);
-      const orderDate = new Date(order.ordered_at).toLocaleString('en-IN', {
+      // Use the detailed price breakdown
+      const originalTotal = order.original_total || 0;
+      const offerDiscount = order.product_discount || 0;
+      const subtotal = order.subtotal || 0;
+      const couponDiscount = order.coupon_discount || 0;
+      const shipping = order.shipping_charge || 0;
+      const finalTotal = order.total || 0;
+      const totalSavings = order.total_savings || 0;
+      const deliveredItems = order.deliveredProductsCount || 0;
+      
+      const orderDate = new Date(order.ordered_at).toLocaleDateString('en-IN', {
         day: '2-digit',
         month: '2-digit', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+        year: '2-digit'
       });
 
       // Draw row border
-      doc.rect(tableLeft, yPos - 3, tableWidth, 20).stroke();
+      doc.rect(tableLeft, yPos - 3, tableWidth, 18).stroke();
 
       // Draw vertical lines for columns
       let vLineX = tableLeft;
       Object.values(colWidths).forEach((width, idx) => {
         if (idx > 0) { // Skip first line (left border)
-          doc.moveTo(vLineX, yPos - 3).lineTo(vLineX, yPos + 17).stroke();
+          doc.moveTo(vLineX, yPos - 3).lineTo(vLineX, yPos + 15).stroke();
         }
         vLineX += width;
       });
 
       xPos = tableLeft;
-      doc.text(order.order_number, xPos + 5, yPos, { width: colWidths.orderNo - 10, align: 'left' });
+      doc.text(order.order_number, xPos + 2, yPos, { width: colWidths.orderNo - 4, align: 'left' });
       xPos += colWidths.orderNo;
-      doc.text(customerName, xPos + 5, yPos, { width: colWidths.customer - 10, align: 'left' });
+      doc.text(customerName, xPos + 2, yPos, { width: colWidths.customer - 4, align: 'left' });
       xPos += colWidths.customer;
-      doc.text(orderDate, xPos + 5, yPos, { width: colWidths.date - 10, align: 'left' });
+      doc.text(orderDate, xPos + 2, yPos, { width: colWidths.date - 4, align: 'left' });
       xPos += colWidths.date;
-      doc.text(`Rs${(order.subtotal || 0).toLocaleString()}`, xPos + 5, yPos, { width: colWidths.subtotal - 10, align: 'right' });
+      doc.text(deliveredItems.toString(), xPos + 2, yPos, { width: colWidths.items - 4, align: 'center' });
+      xPos += colWidths.items;
+      doc.text(`₹${originalTotal.toLocaleString()}`, xPos + 2, yPos, { width: colWidths.original - 4, align: 'right' });
+      xPos += colWidths.original;
+      doc.text(offerDiscount > 0 ? `-₹${offerDiscount.toLocaleString()}` : '-', xPos + 2, yPos, { width: colWidths.offer - 4, align: 'right' });
+      xPos += colWidths.offer;
+      doc.text(`₹${subtotal.toLocaleString()}`, xPos + 2, yPos, { width: colWidths.subtotal - 4, align: 'right' });
       xPos += colWidths.subtotal;
-      doc.text(`Rs${totalDiscount.toLocaleString()}`, xPos + 5, yPos, { width: colWidths.discount - 10, align: 'right' });
-      xPos += colWidths.discount;
-      doc.text(`Rs${order.total.toLocaleString()}`, xPos + 5, yPos, { width: colWidths.total - 10, align: 'right' });
+      doc.text(couponDiscount > 0 ? `-₹${couponDiscount.toLocaleString()}` : '-', xPos + 2, yPos, { width: colWidths.coupon - 4, align: 'right' });
+      xPos += colWidths.coupon;
+      doc.text(shipping > 0 ? `₹${shipping.toLocaleString()}` : 'FREE', xPos + 2, yPos, { width: colWidths.shipping - 4, align: 'right' });
+      xPos += colWidths.shipping;
+      doc.text(`₹${finalTotal.toLocaleString()}`, xPos + 2, yPos, { width: colWidths.total - 4, align: 'right' });
       xPos += colWidths.total;
-      doc.text(order.payment_method || 'N/A', xPos + 5, yPos, { width: colWidths.payment - 10, align: 'left' });
+      doc.text(totalSavings > 0 ? `₹${totalSavings.toLocaleString()}` : '-', xPos + 2, yPos, { width: colWidths.savings - 4, align: 'right' });
 
-      yPos += 20;
+      yPos += 18;
     });
 
     // Footer
@@ -407,7 +447,7 @@ const downloadExcel = async (req, res) => {
 
     // Table headers
     const headerRow = sheet.getRow(6);
-    headerRow.values = ['Order No', 'User', 'Date', 'Subtotal', 'Discount', 'Total (Rs)', 'Payment'];
+    headerRow.values = ['Order No', 'Customer', 'Date', 'Items', 'Original Price', 'Offer Discount', 'Subtotal', 'Coupon Discount', 'Shipping', 'Final Total', 'Total Savings'];
     headerRow.font = { bold: true, size: 10 };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
     headerRow.height = 20;
@@ -420,12 +460,16 @@ const downloadExcel = async (req, res) => {
     // Set column widths
     sheet.columns = [
       { key: 'orderNo', width: 18 },
-      { key: 'user', width: 15 },
+      { key: 'customer', width: 15 },
       { key: 'date', width: 22 },
+      { key: 'items', width: 8 },
+      { key: 'original', width: 15 },
+      { key: 'offer', width: 15 },
       { key: 'subtotal', width: 15 },
-      { key: 'discount', width: 15 },
+      { key: 'coupon', width: 15 },
+      { key: 'shipping', width: 12 },
       { key: 'total', width: 15 },
-      { key: 'payment', width: 15 }
+      { key: 'savings', width: 15 }
     ];
 
     // Add data rows
@@ -433,16 +477,20 @@ const downloadExcel = async (req, res) => {
     orders.forEach((order) => {
       const customerName = order.user_id ? order.user_id.firstName : 'Guest';
       
-      // Use the pre-calculated values from processedOrders
-      const productDiscount = order.product_discount || 0;
-      const totalDiscount = productDiscount + (order.coupon_discount || 0);
-      const orderDate = new Date(order.ordered_at).toLocaleString('en-IN', {
+      // Use the detailed price breakdown
+      const originalTotal = order.original_total || 0;
+      const offerDiscount = order.product_discount || 0;
+      const subtotal = order.subtotal || 0;
+      const couponDiscount = order.coupon_discount || 0;
+      const shipping = order.shipping_charge || 0;
+      const finalTotal = order.total || 0;
+      const totalSavings = order.total_savings || 0;
+      const deliveredItems = order.deliveredProductsCount || 0;
+      
+      const orderDate = new Date(order.ordered_at).toLocaleDateString('en-IN', {
         day: '2-digit',
         month: '2-digit', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+        year: 'numeric'
       });
 
       const row = sheet.getRow(rowNum);
@@ -450,10 +498,14 @@ const downloadExcel = async (req, res) => {
         order.order_number,
         customerName,
         orderDate,
-        `Rs${(order.subtotal || 0).toLocaleString()}`,
-        `Rs${totalDiscount.toLocaleString()}`,
-        `Rs${order.total.toLocaleString()}`,
-        order.payment_method || 'N/A'
+        deliveredItems,
+        `₹${originalTotal.toLocaleString()}`,
+        offerDiscount > 0 ? `-₹${offerDiscount.toLocaleString()}` : '-',
+        `₹${subtotal.toLocaleString()}`,
+        couponDiscount > 0 ? `-₹${couponDiscount.toLocaleString()}` : '-',
+        shipping > 0 ? `₹${shipping.toLocaleString()}` : 'FREE',
+        `₹${finalTotal.toLocaleString()}`,
+        totalSavings > 0 ? `₹${totalSavings.toLocaleString()}` : '-'
       ];
       
       row.alignment = { vertical: 'middle' };

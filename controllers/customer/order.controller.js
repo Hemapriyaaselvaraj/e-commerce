@@ -66,20 +66,28 @@ const placeOrder = async (req, res) => {
     const total = cartCalculation.total;
 
     // Convert cart items to order products format
-    const orderProducts = cartCalculation.items.map(item => ({
-      variation: item.variation,
-      name: item.name,
-      quantity: item.quantity,
-      price: item.price,
-      original_price: item.originalPrice,
-      discount_percentage: Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100),
-      appliedOfferType: 'Calculated Offer',
-      color: item.color,
-      size: item.size,
-      images: item.images,
-      status: 'ORDERED',
-      coupon_discount_allocated: couponDiscount > 0 ? Math.round((couponDiscount * item.total) / subtotal * 100) / 100 : 0
-    }));
+    const orderProducts = cartCalculation.items.map(item => {
+      // Calculate coupon allocation based on original price contribution (fair distribution)
+      const originalItemTotal = item.originalPrice * item.quantity;
+      const originalSubtotal = cartCalculation.items.reduce((sum, i) => sum + (i.originalPrice * i.quantity), 0);
+      const couponAllocation = couponDiscount > 0 ? 
+        Math.round((couponDiscount * originalItemTotal) / originalSubtotal * 100) / 100 : 0;
+
+      return {
+        variation: item.variation,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        original_price: item.originalPrice,
+        discount_percentage: Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100),
+        appliedOfferType: 'Calculated Offer',
+        color: item.color,
+        size: item.size,
+        images: item.images,
+        status: 'ORDERED',
+        coupon_discount_allocated: couponAllocation
+      };
+    });
 
     // Prepare stock updates
     const stockUpdates = cartCalculation.items.map(item => ({
@@ -651,16 +659,20 @@ const getOrderDetails = async(req,res) => {
         name: item.name,
         image: item.images[0],
         price: Math.round(item.price),
+        original_price: Math.round(item.original_price || item.price),
         quantity: item.quantity,
         size: item.size,
         color: item.color,
         status: item.status || order.status, 
-        return_details: item.return_details
+        return_details: item.return_details,
+        coupon_discount_allocated: item.coupon_discount_allocated || 0,
+        offer_discount: Math.round((item.original_price || item.price) - item.price) * item.quantity
       })),
       subtotal: Math.round(order.subtotal),
       shipping_charge: order.shipping_charge,
       tax: Math.round(order.tax),
       coupon_discount: order.coupon_discount || 0,
+      applied_coupon_code: order.applied_coupon_code,
       total: Math.round(order.total)
    }
 
@@ -759,7 +771,7 @@ const downloadInvoice = async (req, res) => {
       return res.status(404).send('Order not found');
     }
 
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -769,100 +781,173 @@ const downloadInvoice = async (req, res) => {
 
     doc.pipe(res);
 
-    // ========== HEADER ==========
-    doc.fontSize(20).text('ToughToes', { align: 'center' });
+    // ========== COMPACT HEADER ==========
+    doc.fontSize(20).font('Helvetica-Bold').text('ToughToes', { align: 'center' });
     doc.fontSize(12).text('Premium Footwear Collection', { align: 'center' });
-    doc.moveDown(1);
+    doc.moveDown(0.5);
+    doc.fontSize(16).font('Helvetica-Bold').text('INVOICE', { align: 'center' });
+    doc.moveDown(0.8);
 
-    doc.fontSize(14).text('INVOICE', { align: 'center', underline: true });
-    doc.moveDown(1);
-
-    // ========== ORDER INFO ==========
-    doc.fontSize(12);
-    doc.text(`Order Number: ${order.order_number || '-'}`);
-    doc.text(`Order Date: ${new Date(order.createdAt).toLocaleDateString()}`);
-    doc.text(`Payment Method: ${order.payment_method || '-'}`);
-    doc.text(`Payment Status: ${order.payment_status || '-'}`);
-    doc.moveDown(1);
-
-    // ========== CUSTOMER INFO ==========
+    // ========== COMPACT ORDER & CUSTOMER INFO ==========
+    let currentY = doc.y;
+    
+    // Left column - Order info
+    doc.fontSize(10).font('Helvetica');
+    doc.text('Order Number: ' + (order.order_number || '-'), 40, currentY);
+    doc.text('Order Date: ' + new Date(order.createdAt).toLocaleDateString(), 40, currentY + 14);
+    doc.text('Payment: ' + (order.payment_method || '-'), 40, currentY + 28);
+    
+    // Right column - Customer info
     const user = order.user_id || {};
-    doc.fontSize(14).text('Customer Details:', { underline: true });
-    doc.fontSize(11);
-    doc.text(`Name: ${(user.firstName || '') + ' ' + (user.lastName || '')}`);
-    doc.text(`Email: ${user.email || '-'}`);
-    doc.moveDown(1);
-
-    // ========== SHIPPING ADDRESS ==========
+    const customerName = (user.firstName || '') + ' ' + (user.lastName || '');
+    doc.text('Customer: ' + customerName, 300, currentY);
+    doc.text('Email: ' + (user.email || '-'), 300, currentY + 14);
+    
+    // Shipping address - compact
     const addr = order.shipping_address || {};
-    doc.fontSize(14).text('Shipping Address:', { underline: true });
-    doc.fontSize(11);
-    doc.text(addr.name || '-');
-    doc.text(`${addr.house_number || ''}, ${addr.locality || ''}`);
-    doc.text(`${addr.city || ''}, ${addr.state || ''} - ${addr.pincode || ''}`);
-    doc.text(`Phone: ${addr.phone_number || '-'}`);
-    doc.moveDown(1);
+    const addressLine1 = (addr.house_number || '') + ', ' + (addr.locality || '');
+    const addressLine2 = (addr.city || '') + ', ' + (addr.state || '') + ' - ' + (addr.pincode || '');
+    doc.text('Ship to: ' + (addr.name || ''), 300, currentY + 28);
+    doc.text(addressLine1, 300, currentY + 42);
+    doc.text(addressLine2, 300, currentY + 56);
 
-    // ========== ORDER ITEMS ==========
-    doc.fontSize(14).text('Order Items:', { underline: true });
+    doc.y = currentY + 75;
+
+    // ========== COMPACT ORDER ITEMS TABLE ==========
+    doc.fontSize(14).font('Helvetica-Bold').text('Order Items', 40, doc.y);
     doc.moveDown(0.5);
 
     const tableTop = doc.y;
+    
+    // Compact table headers
     doc.fontSize(11).font('Helvetica-Bold');
     doc.text('Product', 40, tableTop);
-    doc.text('Qty', 300, tableTop);
-    doc.text('Price', 350, tableTop);
+    doc.text('Qty', 280, tableTop);
+    doc.text('Original', 320, tableTop);
+    doc.text('Discount', 380, tableTop);
     doc.text('Total', 450, tableTop);
-    doc.moveTo(40, tableTop + 15).lineTo(550, tableTop + 15).stroke();
-
-    doc.font('Helvetica');
+    
+    // Header line
+    doc.moveTo(40, tableTop + 15).lineTo(500, tableTop + 15).stroke();
 
     let y = tableTop + 25;
+    let totalOriginalAmount = 0;
+    let totalOfferDiscount = 0;
 
-    const addRow = (item) => {
-      if (y > 720) {
-        doc.addPage();
-        y = 50;
+    // Process each item
+    order.products.forEach((item) => {
+      const originalPrice = item.original_price || item.price;
+      const finalPrice = item.price;
+      const quantity = item.quantity || 0;
+      const offerDiscount = (originalPrice - finalPrice) * quantity;
+      const itemTotal = finalPrice * quantity;
+
+      totalOriginalAmount += originalPrice * quantity;
+      totalOfferDiscount += offerDiscount;
+
+      doc.fontSize(10).font('Helvetica');
+      
+      // Product name (truncated if too long)
+      const productName = (item.name || '-').substring(0, 35);
+      doc.text(productName, 40, y, { width: 230 });
+      
+      // Numbers without template literals
+      doc.text(quantity + '', 280, y);
+      doc.text('Rs.' + Math.round(originalPrice), 320, y);
+      
+      if (offerDiscount > 0) {
+        doc.text('-Rs.' + Math.round(offerDiscount), 380, y);
+      } else {
+        doc.text('-', 380, y);
       }
+      
+      doc.text('Rs.' + Math.round(itemTotal), 450, y);
 
-      doc.text(item.name || '-', 40, y, { width: 240 });
-      doc.text(item.quantity?.toString() || '0', 300, y);
-      doc.text(`₹${(item.price || 0).toFixed(2)}`, 350, y);
-      doc.text(`₹${((item.price || 0) * (item.quantity || 0)).toFixed(2)}`, 450, y);
-
-      y += 25;
-    };
-
-    order.products.forEach(addRow);
-
-    doc.moveTo(40, y).lineTo(550, y).stroke();
-    y += 10;
-
-    // ========== TOTALS ==========
-    doc.fontSize(11);
-
-    const totals = [
-      ['Subtotal:', order.subtotal],
-      ['Shipping:', order.shipping_charge],
-      ['Tax:', order.tax],
-    ];
-
-    totals.forEach(([label, value]) => {
-      doc.text(label, 350, y);
-      doc.text(`₹${(value || 0).toFixed(2)}`, 450, y);
-      y += 20;
+      y += 18;
     });
 
-    doc.font('Helvetica-Bold').fontSize(13);
-    doc.text('Total:', 350, y);
-    doc.text(`₹${(order.total || 0).toFixed(2)}`, 450, y);
+    // Table bottom line
+    doc.moveTo(40, y).lineTo(500, y).stroke();
+    y += 25;
 
-    // FOOTER
+    // ========== COMPACT PRICE BREAKDOWN ==========
+    doc.fontSize(14).font('Helvetica-Bold').text('Price Summary', 40, y);
+    y += 25;
+
+    doc.fontSize(11).font('Helvetica');
+    
+    // Two column layout for breakdown
+    const leftCol = 40;
+    const rightCol = 400;
+    
+    // Original amount
+    doc.text('Original Amount:', leftCol, y);
+    doc.text('Rs.' + Math.round(totalOriginalAmount), rightCol, y);
+    y += 16;
+
+    // Product offers
+    if (totalOfferDiscount > 0) {
+      doc.text('Product Offers:', leftCol, y);
+      doc.text('-Rs.' + Math.round(totalOfferDiscount), rightCol, y);
+      y += 16;
+    }
+
+    // Subtotal
+    const subtotalAfterOffers = totalOriginalAmount - totalOfferDiscount;
+    doc.text('Subtotal:', leftCol, y);
+    doc.text('Rs.' + Math.round(subtotalAfterOffers), rightCol, y);
+    y += 16;
+
+    // Coupon discount
+    if (order.coupon_discount && order.coupon_discount > 0) {
+      const couponText = order.applied_coupon_code ? 
+        'Coupon (' + order.applied_coupon_code + '):' : 'Coupon Discount:';
+      doc.text(couponText, leftCol, y);
+      doc.text('-Rs.' + Math.round(order.coupon_discount), rightCol, y);
+      y += 16;
+    }
+
+    // Shipping
+    doc.text('Shipping:', leftCol, y);
+    if (order.shipping_charge > 0) {
+      doc.text('Rs.' + Math.round(order.shipping_charge), rightCol, y);
+    } else {
+      doc.text('FREE', rightCol, y);
+    }
+    y += 16;
+
+    // Tax
+    if (order.tax && order.tax > 0) {
+      doc.text('Tax:', leftCol, y);
+      doc.text('Rs.' + Math.round(order.tax), rightCol, y);
+      y += 16;
+    }
+
+    // Separator
+    y += 8;
+    doc.moveTo(leftCol, y).lineTo(450, y).stroke();
+    y += 15;
+
+    // Final total
+    doc.fontSize(13).font('Helvetica-Bold');
+    doc.text('Final Total:', leftCol, y);
+    doc.text('Rs.' + Math.round(order.total || 0), rightCol, y);
+    y += 25;
+
+    // Savings
+    const totalSavings = totalOfferDiscount + (order.coupon_discount || 0);
+    if (totalSavings > 0) {
+      doc.fontSize(11).font('Helvetica-Bold');
+      doc.text('You saved Rs.' + Math.round(totalSavings) + ' on this order!', 
+               leftCol, y, { width: 400, align: 'center' });
+    }
+
+    // Footer
     doc.fontSize(10).font('Helvetica').text(
       'Thank you for shopping with ToughToes!',
-      50,
-      doc.page.height - 60,
-      { align: 'center' }
+      40,
+      doc.page.height - 50,
+      { align: 'center', width: doc.page.width - 80 }
     );
 
     doc.end();

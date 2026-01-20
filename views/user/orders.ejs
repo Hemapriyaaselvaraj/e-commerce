@@ -11,73 +11,12 @@
   <link rel="stylesheet" href="/css/footer.css" />
   
   <style>
-    /* Sidebar styles */
-    .sidebar {
-      width: 200px;
-      background: #f8f9fa;
-    }
-    .sidebar ul li {
-      margin-bottom: 10px;
-    }
-    .sidebar a {
-      display: block;
-      padding: 10px;
-      text-decoration: none;
-      color: #333;
-      border-radius: 6px;
-      transition: background 0.3s ease;
-    }
-    .sidebar a.active,
-    .sidebar a:hover {
-      background-color: #e0e0e0;
-      font-weight: 500;
-    }
-    .sidebar ul li a,
-    .sidebar ul li form button {
-      display: block;
-      padding: 8px 15px;
-      color: #333;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      width: 100%;
-      text-align: left;
-      border: none;
-      background: none;
-    }
-    .sidebar ul li a:hover,
-    .sidebar ul li form button:hover {
-      background-color: #f8f9fa;
-      border-radius: 5px;
-    }
-    .sidebar ul li a.active {
-      background-color: #f8f9fa;
-      border-radius: 5px;
-      font-weight: 500;
-    }
-    .sidebar ul li form {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-    }
-    #logoutForm button {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      font-size: inherit;
-      font-family: inherit;
-      padding: 8px 15px;
-      cursor: pointer;
-      color: #333;
-      background: none;
-      border: none;
-      text-align: left;
-    }
-    #logoutForm button:hover {
-      background-color: #f8f9fa;
-      border-radius: 5px;
+    /* Keep original background and basic styling */
+    body {
+      padding-top: 0;
     }
 
-    /* Navbar */
+    /* Navbar styles - matching profile page */
     .navbar {
       position: fixed;
       top: 0;
@@ -92,11 +31,13 @@
       padding: 1rem 1.5rem;
       border-bottom: 1px solid #ddd;
     }
+
     .nav-links a {
       margin: 0 1rem;
       text-decoration: none;
       color: #000;
     }
+
     .nav-right {
       display: flex;
       align-items: center;
@@ -104,16 +45,156 @@
       margin-left: auto;
       margin-right: 1.5rem;
     }
+
     .search-input {
       padding: 0.5rem;
       border: 1px solid #ccc;
       min-width: 180px;
     }
-    .logo {
-      margin-left: 0.5rem;
+
+    /* Sidebar styles - matching profile page */
+    .sidebar {
+      width: 200px;
+      background: #f8f9fa;
     }
 
-    /* Pagination */
+    .sidebar ul li {
+      margin-bottom: 10px;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 8px 15px;
+      text-decoration: none;
+      color: #333;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar a.active,
+    .sidebar a:hover {
+      background-color: #f8f9fa;
+      font-weight: 500;
+    }
+
+    .sidebar a.active {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      font-weight: 500;
+    }
+
+    #logoutForm button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 8px 15px;
+      cursor: pointer;
+      color: #333;
+      background: none;
+      border: none;
+      text-align: left;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+
+    #logoutForm button:hover {
+      background-color: #f8f9fa;
+    }
+
+    /* Badges with gradient styling */
+    .badge {
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .bg-success {
+      background: linear-gradient(135deg, #48bb78, #38a169) !important;
+      color: white !important;
+    }
+
+    .bg-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2) !important;
+      color: white !important;
+    }
+
+    /* Buttons with gradient theme */
+    .btn {
+      border-radius: 12px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      border: none;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-outline-primary {
+      background: rgba(102, 126, 234, 0.1);
+      border: 2px solid rgba(102, 126, 234, 0.3);
+      color: #667eea;
+    }
+
+    .btn-outline-primary:hover {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-color: #667eea;
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-outline-secondary {
+      background: rgba(102, 126, 234, 0.05);
+      border: 2px solid rgba(102, 126, 234, 0.2);
+      color: #667eea;
+    }
+
+    .btn-outline-secondary:hover {
+      background: linear-gradient(135deg, #764ba2, #667eea);
+      color: white;
+      border-color: #764ba2;
+      box-shadow: 0 8px 25px rgba(118, 75, 162, 0.3);
+    }
+
+    .btn-dark {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .btn-dark:hover {
+      background: linear-gradient(135deg, #764ba2, #667eea);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-sm {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      border-radius: 10px;
+    }
+
+    /* Pagination with black and white theme */
     .pagination {
       gap: 4px;
     }
@@ -124,39 +205,52 @@
 
     .pagination .page-link {
       font-size: 14px;
-      padding: 8px 14px;
-      border: 1px solid #e5e7eb;
+      padding: 8px 12px;
+      border: 1px solid #dee2e6;
       background: #fff;
-      color: #333;
-      border-radius: 6px;
-      transition: all 0.2s;
-      margin: 0 2px;
+      color: #6c757d;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-weight: normal;
     }
 
     .pagination .page-item.active .page-link {
-      background: #000;
-      color: #fff;
-      border-color: #000;
+      background: #212529;
+      color: white;
+      border-color: #212529;
     }
 
     .pagination .page-item.disabled .page-link {
-      background: #f5f5f5;
-      color: #999;
+      background: #fff;
+      color: #6c757d;
       cursor: not-allowed;
-      border-color: #e5e7eb;
+      border-color: #dee2e6;
+      opacity: 0.5;
     }
 
     .pagination .page-link:hover:not(.disabled) {
-      background: #f5f5f5;
-      border-color: #d0d0d0;
+      background: #e9ecef;
+      border-color: #adb5bd;
+      color: #495057;
+    }
+
+    .pagination .page-item.active .page-link:hover {
+      background: #212529;
+      border-color: #212529;
+      color: white;
     }
 
     /* Responsive adjustments */
     @media (max-width: 768px) {
+      body {
+        padding-top: 80px;
+      }
+
       .container.d-flex {
         flex-direction: column;
         padding: 0 15px;
       }
+
       .sidebar {
         width: 100%;
         margin-bottom: 20px;
@@ -171,7 +265,7 @@
     wishlistCount: 0 
   }) %>
 
-  <div class="container my-5 d-flex" style="margin-top: 90px !important;">
+  <div class="container my-5 d-flex" style="margin-top: 90px !important; padding-top: 0;">
     
     <div class="sidebar p-3 me-4 border rounded">
       <ul class="list-unstyled">

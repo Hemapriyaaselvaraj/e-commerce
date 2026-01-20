@@ -69,12 +69,13 @@ const checkout = async (req, res) => {
 
   const shipping = subtotal > 1000 ? 0 : 50;
   let total = subtotal + shipping;
+  let grandTotal = total; // This will be the final amount after coupon
   
   // Apply any session coupon discount for display consistency
   let couponDiscount = 0;
   if (req.session.appliedCoupon) {
     couponDiscount = req.session.appliedCoupon.discount || 0;
-    total = total - couponDiscount;
+    grandTotal = total - couponDiscount; // Grand total is after coupon discount
   }
 
   const razorpayKeyId = process.env.RAZORPAY_KEY_ID; 
@@ -91,7 +92,8 @@ const checkout = async (req, res) => {
     shipping,
     couponDiscount: Math.round(couponDiscount),
     appliedCoupon: req.session.appliedCoupon || null,
-    total: Math.round(total),
+    total: Math.round(total), // Total before coupon (subtotal + shipping)
+    grandTotal: Math.round(grandTotal), // Final total after coupon
     razorpayKeyId
   });
 };

@@ -687,17 +687,17 @@
           <span>Shipping</span>
           <span>₹<%= typeof shipping !== 'undefined' ? shipping : 0 %></span>
         </div>
-        
+<!--         
         <% if (typeof couponDiscount !== 'undefined' && couponDiscount > 0) { %>
         <div class="summary-row" style="color: #16a34a;">
           <span>Coupon Discount</span>
           <span>- ₹<%= couponDiscount %></span>
         </div>
         <% } %>
-        
+         -->
         <div class="summary-total">
           <span>Total</span>
-          <span>₹<%= typeof total !== 'undefined' ? total : 0 %></span>
+          <span id="summaryTotal">₹<%= typeof total !== 'undefined' ? total : 0 %></span>
         </div>
         
         <p style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">* All prices include applicable taxes</p>
@@ -732,7 +732,7 @@
         <div style="margin-top: 1rem; padding: 1rem; background-color: #f8f9fa; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 1.2rem; font-weight: 700; color: #0f172a;">Grand Total</span>
-            <span id="grandTotal" style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">₹<%= total %></span>
+            <span id="grandTotal" style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">₹<%= typeof grandTotal !== 'undefined' ? grandTotal : total %></span>
           </div>
         </div>
 
@@ -1067,14 +1067,11 @@ async function applyCoupon() {
     document.getElementById("appliedCouponCode").innerText = code;
     document.getElementById("discountValue").innerText = "-₹" + data.discount;
     
-    // Update the grand total to match backend calculation
+    // Update the grand total (final amount after coupon)
     document.getElementById("grandTotal").innerText = "₹" + data.grandTotal;
     
-    // Also update the main total in summary if it exists
-    const summaryTotal = document.querySelector('.summary-total span:last-child');
-    if (summaryTotal) {
-      summaryTotal.innerText = "₹" + data.grandTotal;
-    }
+    // Keep the main summary total unchanged (this is subtotal + shipping before coupon)
+    // The main total should remain the same, only grand total changes
     
     // Update or add coupon discount row in main summary
     let couponRow = document.querySelector('.coupon-discount-row');

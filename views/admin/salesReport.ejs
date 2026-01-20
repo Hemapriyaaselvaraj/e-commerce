@@ -106,17 +106,61 @@
       color: #fff;
       font-weight: 600;
       border: none;
-      padding: 1rem;
+      padding: 0.75rem 0.5rem;
+      font-size: 0.9rem;
+      text-align: center;
     }
 
     .table td {
       vertical-align: middle;
-      padding: 1rem;
+      padding: 0.75rem 0.5rem;
       border-color: #dee2e6;
+      font-size: 0.9rem;
     }
 
     .table tbody tr:hover {
       background-color: #f8f9fa;
+    }
+
+    /* Specific column styling */
+    .table th:first-child,
+    .table td:first-child {
+      text-align: left;
+      padding-left: 1rem;
+    }
+
+    .table th:nth-child(4),
+    .table td:nth-child(4) {
+      text-align: center;
+    }
+
+    .table th:nth-child(n+5),
+    .table td:nth-child(n+5) {
+      text-align: right;
+      padding-right: 1rem;
+    }
+
+    /* Badge styling */
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.35em 0.65em;
+    }
+
+    /* Color coding for discounts and savings */
+    .text-success {
+      color: #28a745 !important;
+    }
+
+    .text-warning {
+      color: #ffc107 !important;
+    }
+
+    .text-primary {
+      color: #007bff !important;
+    }
+
+    .text-muted {
+      color: #6c757d !important;
     }
 
     .btn-generate {
@@ -303,10 +347,14 @@
                     <th>Order #</th>
                     <th>Date</th>
                     <th>Customer</th>
-                    <th>Delivered Items</th>
+                    <th>Items</th>
+                    <th>Original Price</th>
+                    <th>Offer Discount</th>
                     <th>Subtotal</th>
-                    <th>Discount</th>
-                    <th>Total</th>
+                    <th>Coupon Discount</th>
+                    <th>Shipping</th>
+                    <th>Final Total</th>
+                    <th>Total Savings</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -440,29 +488,70 @@
       tbody.innerHTML = '';
       
       if (data.orders.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No orders with delivered products found for this period</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center">No orders with delivered products found for this period</td></tr>';
         document.getElementById('paginationContainer').style.display = 'none';
       } else {
         data.orders.forEach(order => {
           const customerName = order.user_id ? order.user_id.firstName : 'Guest';
           const deliveredItemsCount = order.deliveredProductsCount || 0;
           
-          // Use pre-calculated discount values
-          const productDiscount = order.product_discount || 0;
-          const couponDiscount = order.coupon_discount || 0;
-          const totalDiscount = productDiscount + couponDiscount;
+          // Use detailed price breakdown
+          const originalTotal = order.original_total || 0;
+          const offerDiscount = order.product_discount || 0;
           const subtotal = order.subtotal || 0;
+          const couponDiscount = order.coupon_discount || 0;
+          const shipping = order.shipping_charge || 0;
+          const finalTotal = order.total || 0;
+          const totalSavings = order.total_savings || 0;
+          
+          // Calculate percentages for display
+          const offerPercentage = order.offer_discount_percentage || 0;
+          const couponPercentage = order.coupon_discount_percentage || 0;
+          const savingsPercentage = order.total_savings_percentage || 0;
           
           const row = `
             <tr>
-              <td>${order.order_number}</td>
+              <td><strong>${order.order_number}</strong></td>
               <td>${new Date(order.ordered_at).toLocaleDateString()}</td>
               <td>${customerName}</td>
-              <td>${deliveredItemsCount}</td>
-              <td>Rs${subtotal.toLocaleString()}</td>
-              <td>Rs${totalDiscount.toLocaleString()}</td>
-              <td>Rs${order.total.toLocaleString()}</td>
-              <td><span class="badge bg-success">${order.status}</span></td>
+              <td class="text-center">
+                <span class="badge bg-primary">${deliveredItemsCount}</span>
+              </td>
+              <td class="text-end">
+                <span class="text-muted">₹${originalTotal.toLocaleString()}</span>
+              </td>
+              <td class="text-end">
+                ${offerDiscount > 0 ? 
+                  `<span class="text-success">-₹${offerDiscount.toLocaleString()}</span>
+                   ${offerPercentage > 0 ? `<br><small class="text-success">(${offerPercentage}% OFF)</small>` : ''}` 
+                  : '<span class="text-muted">-</span>'}
+              </td>
+              <td class="text-end">
+                <strong>₹${subtotal.toLocaleString()}</strong>
+              </td>
+              <td class="text-end">
+                ${couponDiscount > 0 ? 
+                  `<span class="text-warning">-₹${couponDiscount.toLocaleString()}</span>
+                   ${couponPercentage > 0 ? `<br><small class="text-warning">(${couponPercentage}% OFF)</small>` : ''}` 
+                  : '<span class="text-muted">-</span>'}
+              </td>
+              <td class="text-end">
+                ${shipping > 0 ? 
+                  `₹${shipping.toLocaleString()}` : 
+                  '<span class="text-success">FREE</span>'}
+              </td>
+              <td class="text-end">
+                <strong class="text-primary">₹${finalTotal.toLocaleString()}</strong>
+              </td>
+              <td class="text-end">
+                ${totalSavings > 0 ? 
+                  `<span class="text-success">₹${totalSavings.toLocaleString()}</span>
+                   ${savingsPercentage > 0 ? `<br><small class="text-success">(${savingsPercentage}% saved)</small>` : ''}` 
+                  : '<span class="text-muted">-</span>'}
+              </td>
+              <td>
+                <span class="badge bg-success">${order.status}</span>
+              </td>
             </tr>
           `;
           tbody.innerHTML += row;
