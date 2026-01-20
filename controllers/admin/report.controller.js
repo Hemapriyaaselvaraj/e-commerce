@@ -231,168 +231,150 @@ const downloadPDF = async (req, res) => {
     const response = await getSalesReportDataInternal({ filterType, startDate, endDate }, true);
     const { orders, summary } = response;
 
-    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const doc = new PDFDocument({ 
+      margin: 30, 
+      size: 'A4', 
+      layout: 'landscape',
+      bufferPages: true 
+    });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename=sales-report-${filterType}-${Date.now()}.pdf`);
 
     doc.pipe(res);
 
-    // Title
-    doc.fontSize(22).font('Helvetica-Bold').text("Sales Report", { align: "center" });
-    doc.fontSize(12).font('Helvetica').text(`Filter: ${filterType}`, { align: "center" });
-    doc.moveDown(1.5);
+    // Title and Summary
+    doc.fontSize(16).font('Helvetica-Bold').text("Sales Report", { align: "center" });
+    doc.fontSize(10).font('Helvetica').text(`Filter: ${filterType}`, { align: "center" });
+    doc.moveDown(0.5);
 
-    // Summary Box - Single Line
-    const summaryBoxTop = doc.y;
-    const summaryBoxLeft = 40;
-    const summaryBoxWidth = doc.page.width - 80;
-    
-    doc.rect(summaryBoxLeft, summaryBoxTop, summaryBoxWidth, 35).stroke();
-    
-    const totalDiscount = summary.totalDiscount + summary.totalCouponDeduction;
-    const summaryText = `Delivered Products: ${summary.totalSalesCount}  |  Total Revenue: Rs${summary.totalAmount.toLocaleString()}  |  Total Discount: Rs${totalDiscount.toLocaleString()}`;
-    
-    doc.fontSize(11).font('Helvetica-Bold');
-    doc.text(summaryText, summaryBoxLeft + 15, summaryBoxTop + 12, { 
-      width: summaryBoxWidth - 30,
-      align: 'left'
-    });
+    const totalDiscount = Math.round(summary.totalDiscount + summary.totalCouponDeduction);
+    doc.fontSize(9).font('Helvetica-Bold')
+       .text('Delivered Products: ' + summary.totalSalesCount + ' | Total Revenue: Rs.' + Math.round(summary.totalAmount) + ' | Total Discount: Rs.' + totalDiscount, 
+             { align: 'center' });
+    doc.moveDown(1);
 
-    doc.moveDown(2);
+    // Table setup with exact measurements
+    const margin = 30;
+    const pageWidth = doc.page.width - (2 * margin); // 782px for landscape A4
+    const startX = margin;
+    let currentY = doc.y;
 
-    // Table Header
-    const tableTop = doc.y + 10;
-    const colWidths = {
-      orderNo: 70,
-      customer: 60,
-      date: 80,
-      items: 35,
-      original: 55,
-      offer: 55,
-      subtotal: 55,
-      coupon: 55,
-      shipping: 45,
-      total: 55,
-      savings: 55
+    // Fixed column widths that add up to exactly pageWidth
+    const columnWidths = [
+      90,  // Order No
+      70,  // Customer  
+      60,  // Date
+      40,  // Items
+      70,  // Original
+      70,  // Offer
+      70,  // Subtotal
+      70,  // Coupon
+      50,  // Ship
+      70,  // Total
+      62   // Savings
+    ];
+
+    const totalWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+
+    const headers = ["Order No", "Customer", "Date", "Items", "Original", "Offer", "Subtotal", "Coupon", "Ship", "Total", "Savings"];
+    const rowHeight = 20;
+
+    // Function to draw table row
+    const drawTableRow = (y, data, isHeader = false) => {
+      let x = startX;
+      
+      // Draw row background
+      if (isHeader) {
+        doc.rect(startX, y, totalWidth, rowHeight).fill('#f0f0f0');
+      }
+      
+      // Draw cell borders and text
+      data.forEach((cellData, i) => {
+        // Draw cell border
+        doc.rect(x, y, columnWidths[i], rowHeight).stroke();
+        
+        // Set font
+        if (isHeader) {
+          doc.fontSize(8).font('Helvetica-Bold').fillColor('#000000');
+        } else {
+          doc.fontSize(7).font(i === 9 ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000000');
+        }
+        
+        // Determine alignment
+        let align = 'left';
+        if (i === 2 || i === 3) align = 'center'; // Date, Items
+        if (i >= 4) align = 'right'; // All price columns
+        
+        // Draw text with proper padding
+        const padding = 3;
+        doc.text(cellData, x + padding, y + 6, {
+          width: columnWidths[i] - (2 * padding),
+          align: align,
+          lineBreak: false
+        });
+        
+        x += columnWidths[i];
+      });
     };
 
-    const tableWidth = Object.values(colWidths).reduce((a, b) => a + b, 0);
-    const tableLeft = 40;
-    let xPos = tableLeft;
-    
-    // Draw header background
-    doc.rect(tableLeft, tableTop - 5, tableWidth, 22).fill('#e8e8e8');
-    
-    // Draw vertical lines in header
-    let vLineX = tableLeft;
-    Object.values(colWidths).forEach((width, idx) => {
-      vLineX += width;
-      if (idx < Object.values(colWidths).length - 1) { // Don't draw after last column
-        doc.moveTo(vLineX, tableTop - 5).lineTo(vLineX, tableTop + 17).stroke();
-      }
-    });
-    
-    // Header text
-    doc.fontSize(8).font('Helvetica-Bold').fillColor('#000000');
-    doc.text("Order No", xPos + 2, tableTop, { width: colWidths.orderNo - 4, align: 'left' });
-    xPos += colWidths.orderNo;
-    doc.text("Customer", xPos + 2, tableTop, { width: colWidths.customer - 4, align: 'left' });
-    xPos += colWidths.customer;
-    doc.text("Date", xPos + 2, tableTop, { width: colWidths.date - 4, align: 'left' });
-    xPos += colWidths.date;
-    doc.text("Items", xPos + 2, tableTop, { width: colWidths.items - 4, align: 'center' });
-    xPos += colWidths.items;
-    doc.text("Original", xPos + 2, tableTop, { width: colWidths.original - 4, align: 'center' });
-    xPos += colWidths.original;
-    doc.text("Offer Disc", xPos + 2, tableTop, { width: colWidths.offer - 4, align: 'center' });
-    xPos += colWidths.offer;
-    doc.text("Subtotal", xPos + 2, tableTop, { width: colWidths.subtotal - 4, align: 'center' });
-    xPos += colWidths.subtotal;
-    doc.text("Coupon", xPos + 2, tableTop, { width: colWidths.coupon - 4, align: 'center' });
-    xPos += colWidths.coupon;
-    doc.text("Ship", xPos + 2, tableTop, { width: colWidths.shipping - 4, align: 'center' });
-    xPos += colWidths.shipping;
-    doc.text("Total", xPos + 2, tableTop, { width: colWidths.total - 4, align: 'center' });
-    xPos += colWidths.total;
-    doc.text("Savings", xPos + 2, tableTop, { width: colWidths.savings - 4, align: 'center' });
+    // Draw header
+    drawTableRow(currentY, headers, true);
+    currentY += rowHeight;
 
-    doc.fillColor('#000000');
-    let yPos = tableTop + 22;
-
-    // Table rows
-    doc.fontSize(7).font('Helvetica');
+    // Draw data rows
     orders.forEach((order, index) => {
-      // Check if we need a new page
-      if (yPos > 700) {
-        doc.addPage();
-        yPos = 50;
+      // Check for page break
+      if (currentY > doc.page.height - 100) {
+        doc.addPage({ layout: 'landscape' });
+        currentY = 50;
+        // Redraw header on new page
+        drawTableRow(currentY, headers, true);
+        currentY += rowHeight;
       }
 
       const customerName = order.user_id ? order.user_id.firstName : 'Guest';
       
-      // Use the detailed price breakdown
-      const originalTotal = order.original_total || 0;
-      const offerDiscount = order.product_discount || 0;
-      const subtotal = order.subtotal || 0;
-      const couponDiscount = order.coupon_discount || 0;
-      const shipping = order.shipping_charge || 0;
-      const finalTotal = order.total || 0;
-      const totalSavings = order.total_savings || 0;
-      const deliveredItems = order.deliveredProductsCount || 0;
+      // Clean numeric values - ensure no extra characters
+      const originalTotal = Math.round(parseFloat(order.original_total) || 0);
+      const offerDiscount = Math.round(parseFloat(order.product_discount) || 0);
+      const subtotal = Math.round(parseFloat(order.subtotal) || 0);
+      const couponDiscount = Math.round(parseFloat(order.coupon_discount) || 0);
+      const shipping = Math.round(parseFloat(order.shipping_charge) || 0);
+      const finalTotal = Math.round(parseFloat(order.total) || 0);
+      const totalSavings = Math.round(parseFloat(order.total_savings) || 0);
+      const deliveredItems = parseInt(order.deliveredProductsCount) || 0;
       
       const orderDate = new Date(order.ordered_at).toLocaleDateString('en-IN', {
         day: '2-digit',
-        month: '2-digit', 
+        month: '2-digit',
         year: '2-digit'
       });
 
-      // Draw row border
-      doc.rect(tableLeft, yPos - 3, tableWidth, 18).stroke();
+      const rowData = [
+        order.order_number,
+        customerName.length > 9 ? customerName.substring(0, 9) : customerName,
+        orderDate,
+        deliveredItems.toString(),
+        originalTotal > 0 ? 'Rs.' + originalTotal : 'Rs.0',
+        offerDiscount > 0 ? '-Rs.' + offerDiscount : '-',
+        subtotal > 0 ? 'Rs.' + subtotal : 'Rs.0',
+        couponDiscount > 0 ? '-Rs.' + couponDiscount : '-',
+        shipping > 0 ? 'Rs.' + shipping : 'FREE',
+        finalTotal > 0 ? 'Rs.' + finalTotal : 'Rs.0',
+        totalSavings > 0 ? 'Rs.' + totalSavings : '-'
+      ];
 
-      // Draw vertical lines for columns
-      let vLineX = tableLeft;
-      Object.values(colWidths).forEach((width, idx) => {
-        if (idx > 0) { // Skip first line (left border)
-          doc.moveTo(vLineX, yPos - 3).lineTo(vLineX, yPos + 15).stroke();
-        }
-        vLineX += width;
-      });
-
-      xPos = tableLeft;
-      doc.text(order.order_number, xPos + 2, yPos, { width: colWidths.orderNo - 4, align: 'left' });
-      xPos += colWidths.orderNo;
-      doc.text(customerName, xPos + 2, yPos, { width: colWidths.customer - 4, align: 'left' });
-      xPos += colWidths.customer;
-      doc.text(orderDate, xPos + 2, yPos, { width: colWidths.date - 4, align: 'left' });
-      xPos += colWidths.date;
-      doc.text(deliveredItems.toString(), xPos + 2, yPos, { width: colWidths.items - 4, align: 'center' });
-      xPos += colWidths.items;
-      doc.text(`₹${originalTotal.toLocaleString()}`, xPos + 2, yPos, { width: colWidths.original - 4, align: 'right' });
-      xPos += colWidths.original;
-      doc.text(offerDiscount > 0 ? `-₹${offerDiscount.toLocaleString()}` : '-', xPos + 2, yPos, { width: colWidths.offer - 4, align: 'right' });
-      xPos += colWidths.offer;
-      doc.text(`₹${subtotal.toLocaleString()}`, xPos + 2, yPos, { width: colWidths.subtotal - 4, align: 'right' });
-      xPos += colWidths.subtotal;
-      doc.text(couponDiscount > 0 ? `-₹${couponDiscount.toLocaleString()}` : '-', xPos + 2, yPos, { width: colWidths.coupon - 4, align: 'right' });
-      xPos += colWidths.coupon;
-      doc.text(shipping > 0 ? `₹${shipping.toLocaleString()}` : 'FREE', xPos + 2, yPos, { width: colWidths.shipping - 4, align: 'right' });
-      xPos += colWidths.shipping;
-      doc.text(`₹${finalTotal.toLocaleString()}`, xPos + 2, yPos, { width: colWidths.total - 4, align: 'right' });
-      xPos += colWidths.total;
-      doc.text(totalSavings > 0 ? `₹${totalSavings.toLocaleString()}` : '-', xPos + 2, yPos, { width: colWidths.savings - 4, align: 'right' });
-
-      yPos += 18;
+      drawTableRow(currentY, rowData, false);
+      currentY += rowHeight;
     });
 
     // Footer
-    doc.fontSize(8).font('Helvetica').fillColor('#999999');
-    doc.text(
-      `Generated on ${new Date().toLocaleString()}`,
-      40,
-      doc.page.height - 40,
-      { align: 'center', width: tableWidth }
-    );
+    doc.fontSize(7).font('Helvetica').fillColor('#666666');
+    doc.text(`Generated on ${new Date().toLocaleString()}`, startX, doc.page.height - 40, {
+      width: totalWidth,
+      align: 'center'
+    });
 
     doc.end();
 

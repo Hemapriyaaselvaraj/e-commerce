@@ -99,6 +99,15 @@
       border-radius: 8px;
       overflow: hidden;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 0;
+      table-layout: auto;
+      width: 100%;
+    }
+
+    .table-responsive {
+      border-radius: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .table th {
@@ -106,16 +115,18 @@
       color: #fff;
       font-weight: 600;
       border: none;
-      padding: 0.75rem 0.5rem;
-      font-size: 0.9rem;
+      padding: 12px 8px;
+      font-size: 0.85rem;
       text-align: center;
+      white-space: nowrap;
     }
 
     .table td {
       vertical-align: middle;
-      padding: 0.75rem 0.5rem;
+      padding: 12px 8px;
       border-color: #dee2e6;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
+      white-space: nowrap;
     }
 
     .table tbody tr:hover {
@@ -126,18 +137,76 @@
     .table th:first-child,
     .table td:first-child {
       text-align: left;
-      padding-left: 1rem;
+      padding-left: 12px;
+      min-width: 120px;
+    }
+
+    .table th:nth-child(2),
+    .table td:nth-child(2) {
+      text-align: left;
+      min-width: 100px;
+    }
+
+    .table th:nth-child(3),
+    .table td:nth-child(3) {
+      text-align: center;
+      min-width: 90px;
     }
 
     .table th:nth-child(4),
     .table td:nth-child(4) {
       text-align: center;
+      min-width: 60px;
     }
 
     .table th:nth-child(n+5),
     .table td:nth-child(n+5) {
       text-align: right;
-      padding-right: 1rem;
+      padding-right: 12px;
+      min-width: 90px;
+    }
+
+    /* Specific width adjustments for better alignment */
+    .table th:nth-child(5),
+    .table td:nth-child(5) {
+      min-width: 100px; /* Original Price */
+    }
+
+    .table th:nth-child(6),
+    .table td:nth-child(6) {
+      min-width: 100px; /* Offer Discount */
+    }
+
+    .table th:nth-child(7),
+    .table td:nth-child(7) {
+      min-width: 90px; /* Subtotal */
+    }
+
+    .table th:nth-child(8),
+    .table td:nth-child(8) {
+      min-width: 100px; /* Coupon Discount */
+    }
+
+    .table th:nth-child(9),
+    .table td:nth-child(9) {
+      min-width: 80px; /* Shipping */
+    }
+
+    .table th:nth-child(10),
+    .table td:nth-child(10) {
+      min-width: 100px; /* Final Total */
+      font-weight: 600;
+    }
+
+    .table th:nth-child(11),
+    .table td:nth-child(11) {
+      min-width: 100px; /* Total Savings */
+    }
+
+    .table th:nth-child(12),
+    .table td:nth-child(12) {
+      text-align: center;
+      min-width: 80px; /* Status */
     }
 
     /* Badge styling */
@@ -156,7 +225,7 @@
     }
 
     .text-primary {
-      color: #007bff !important;
+      color: #6c757d !important;
     }
 
     .text-muted {
@@ -164,7 +233,7 @@
     }
 
     .btn-generate {
-      background-color: #343a40;
+      background-color: #6c757d;
       color: #fff;
       border: none;
       padding: 10px 20px;
@@ -174,13 +243,13 @@
     }
 
     .btn-generate:hover {
-      background-color: #23272b;
+      background-color: #5a6268;
     }
 
     .btn-download {
-      background-color: #fff;
-      color: #343a40;
-      border: 1px solid #343a40;
+      background-color: #6c757d;
+      color: #fff;
+      border: 1px solid #6c757d;
       padding: 8px 16px;
       border-radius: 6px;
       font-weight: 500;
@@ -190,8 +259,9 @@
     }
 
     .btn-download:hover {
-      background-color: #343a40;
+      background-color: #5a6268;
       color: #fff;
+      border-color: #5a6268;
     }
 
     /* Pagination */
@@ -336,7 +406,7 @@
 
           <!-- ORDERS TABLE -->
           <div class="mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-3"></div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
               <h5 class="mb-0">Order Details</h5>
               <div id="paginationInfo" class="text-muted" style="font-size: 14px;"></div>
             </div>
@@ -344,18 +414,18 @@
               <table class="table table-bordered" id="ordersTable">
                 <thead>
                   <tr>
-                    <th>Order #</th>
-                    <th>Date</th>
-                    <th>Customer</th>
-                    <th>Items</th>
-                    <th>Original Price</th>
-                    <th>Offer Discount</th>
-                    <th>Subtotal</th>
-                    <th>Coupon Discount</th>
-                    <th>Shipping</th>
-                    <th>Final Total</th>
-                    <th>Total Savings</th>
-                    <th>Status</th>
+                    <th style="min-width: 120px;">Order #</th>
+                    <th style="min-width: 100px;">Customer</th>
+                    <th style="min-width: 90px;">Date</th>
+                    <th style="min-width: 60px;">Items</th>
+                    <th style="min-width: 100px;">Original Price</th>
+                    <th style="min-width: 100px;">Offer Discount</th>
+                    <th style="min-width: 90px;">Subtotal</th>
+                    <th style="min-width: 100px;">Coupon Discount</th>
+                    <th style="min-width: 80px;">Shipping</th>
+                    <th style="min-width: 100px;">Final Total</th>
+                    <th style="min-width: 100px;">Total Savings</th>
+                    <th style="min-width: 80px;">Status</th>
                   </tr>
                 </thead>
                 <tbody id="ordersTableBody">
@@ -512,10 +582,10 @@
           const row = `
             <tr>
               <td><strong>${order.order_number}</strong></td>
-              <td>${new Date(order.ordered_at).toLocaleDateString()}</td>
               <td>${customerName}</td>
+              <td>${new Date(order.ordered_at).toLocaleDateString()}</td>
               <td class="text-center">
-                <span class="badge bg-primary">${deliveredItemsCount}</span>
+                <span class="badge bg-dark">${deliveredItemsCount}</span>
               </td>
               <td class="text-end">
                 <span class="text-muted">₹${originalTotal.toLocaleString()}</span>
@@ -541,7 +611,7 @@
                   '<span class="text-success">FREE</span>'}
               </td>
               <td class="text-end">
-                <strong class="text-primary">₹${finalTotal.toLocaleString()}</strong>
+                <strong class="text-dark">₹${finalTotal.toLocaleString()}</strong>
               </td>
               <td class="text-end">
                 ${totalSavings > 0 ? 
@@ -549,8 +619,8 @@
                    ${savingsPercentage > 0 ? `<br><small class="text-success">(${savingsPercentage}% saved)</small>` : ''}` 
                   : '<span class="text-muted">-</span>'}
               </td>
-              <td>
-                <span class="badge bg-success">${order.status}</span>
+              <td class="text-center">
+                <span class="badge bg-secondary">${order.status}</span>
               </td>
             </tr>
           `;
