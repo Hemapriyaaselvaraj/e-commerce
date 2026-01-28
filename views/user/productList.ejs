@@ -852,8 +852,8 @@
         });
 
         if (res.status === 401) {
-          // not logged in
-          window.location.href = '/user/login';
+          // not logged in - redirect to login with message
+          window.location.href = '/user/login?message=' + encodeURIComponent('Please login to add items to your wishlist') + '&redirect=' + encodeURIComponent(window.location.pathname);
           return;
         }
 

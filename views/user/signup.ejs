@@ -65,6 +65,25 @@
       padding: 30px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
+    
+    /* Validation styles */
+    .is-invalid {
+      border-color: #dc3545 !important;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    }
+    
+    .invalid-feedback {
+      display: block;
+      width: 100%;
+      margin-top: 0.25rem;
+      font-size: 0.875rem;
+      color: #dc3545;
+    }
+    
+    .is-valid {
+      border-color: #28a745 !important;
+      box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    }
     footer {
       background-color: #1c1c1c;
       color: #ffffff;
@@ -267,34 +286,232 @@
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       var form = document.getElementById("signupForm");
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var email = document.getElementById("email").value;
-        var password = document.getElementById("password").value;
-        var confirmPassword = document.getElementById("confirmPassword").value;
-        if (email === "" || password === "" || confirmPassword === "") {
-          swal("All fields are required");
-          return false;
-        } else if (password !== confirmPassword) {
-          swal("Passwords do not match");
-          return false;
+      
+      // Real-time validation feedback
+      function showFieldError(field, message) {
+        field.classList.add('is-invalid');
+        let errorDiv = field.parentNode.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+          errorDiv = document.createElement('div');
+          errorDiv.className = 'invalid-feedback';
+          field.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+      }
+      
+      function clearFieldError(field) {
+        field.classList.remove('is-invalid');
+        let errorDiv = field.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+          errorDiv.remove();
+        }
+      }
+      
+      // Name validation
+      function validateName(name, fieldName) {
+        if (!name.trim()) {
+          return `${fieldName} is required`;
+        }
+        if (name.trim().length < 2) {
+          return `${fieldName} must be at least 2 characters`;
+        }
+        if (name.trim().length > 50) {
+          return `${fieldName} must be less than 50 characters`;
+        }
+        if (!/^[a-zA-Z\s'-]+$/.test(name.trim())) {
+          return `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`;
+        }
+        return null;
+      }
+      
+      // Email validation
+      function validateEmail(email) {
+        if (!email.trim()) {
+          return 'Email is required';
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+          return 'Please enter a valid email address';
+        }
+        if (email.length > 100) {
+          return 'Email must be less than 100 characters';
+        }
+        return null;
+      }
+      
+      // Phone validation
+      function validatePhone(phone) {
+        if (!phone.trim()) {
+          return 'Phone number is required';
+        }
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!phoneRegex.test(phone.trim())) {
+          return 'Please enter a valid 10-digit Indian mobile number';
+        }
+        return null;
+      }
+      
+      // Password validation
+      function validatePassword(password) {
+        if (!password) {
+          return 'Password is required';
         }
         if (password.length < 8) {
-          swal("Password must be at least 8 characters.");
-          return false;
-        } else if (!/[A-Z]/.test(password)) {
-          swal("Password must contain at least one uppercase letter.");
-          return false;
-        } else if (!/[a-z]/.test(password)) {
-          swal("Password must contain at least one lowercase letter.");
-          return false;
-        } else if (!/[0-9]/.test(password)) {
-          swal("Password must contain at least one number.");
-          return false;
-        } else if (!/[^A-Za-z0-9]/.test(password)) {
-          swal("Password must contain at least one special character.");
+          return 'Password must be at least 8 characters';
+        }
+        if (password.length > 128) {
+          return 'Password must be less than 128 characters';
+        }
+        if (!/[A-Z]/.test(password)) {
+          return 'Password must contain at least one uppercase letter';
+        }
+        if (!/[a-z]/.test(password)) {
+          return 'Password must contain at least one lowercase letter';
+        }
+        if (!/[0-9]/.test(password)) {
+          return 'Password must contain at least one number';
+        }
+        if (!/[^A-Za-z0-9]/.test(password)) {
+          return 'Password must contain at least one special character';
+        }
+        return null;
+      }
+      
+      // Real-time validation
+      const firstName = document.querySelector('input[name="firstName"]');
+      const lastName = document.querySelector('input[name="lastName"]');
+      const email = document.getElementById('email');
+      const phone = document.querySelector('input[name="phoneNumber"]');
+      const password = document.getElementById('password');
+      const confirmPassword = document.getElementById('confirmPassword');
+      const termsCheckbox = document.querySelector('input[name="termsAgreed"]');
+      
+      firstName.addEventListener('blur', function() {
+        const error = validateName(this.value, 'First name');
+        if (error) {
+          showFieldError(this, error);
+        } else {
+          clearFieldError(this);
+        }
+      });
+      
+      lastName.addEventListener('blur', function() {
+        const error = validateName(this.value, 'Last name');
+        if (error) {
+          showFieldError(this, error);
+        } else {
+          clearFieldError(this);
+        }
+      });
+      
+      email.addEventListener('blur', function() {
+        const error = validateEmail(this.value);
+        if (error) {
+          showFieldError(this, error);
+        } else {
+          clearFieldError(this);
+        }
+      });
+      
+      phone.addEventListener('blur', function() {
+        const error = validatePhone(this.value);
+        if (error) {
+          showFieldError(this, error);
+        } else {
+          clearFieldError(this);
+        }
+      });
+      
+      password.addEventListener('input', function() {
+        const error = validatePassword(this.value);
+        if (error) {
+          showFieldError(this, error);
+        } else {
+          clearFieldError(this);
+        }
+        
+        // Also validate confirm password if it has a value
+        if (confirmPassword.value) {
+          if (this.value !== confirmPassword.value) {
+            showFieldError(confirmPassword, 'Passwords do not match');
+          } else {
+            clearFieldError(confirmPassword);
+          }
+        }
+      });
+      
+      confirmPassword.addEventListener('input', function() {
+        if (password.value !== this.value) {
+          showFieldError(this, 'Passwords do not match');
+        } else {
+          clearFieldError(this);
+        }
+      });
+      
+      // Form submission validation
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        
+        let hasErrors = false;
+        
+        // Validate all fields
+        const firstNameError = validateName(firstName.value, 'First name');
+        if (firstNameError) {
+          showFieldError(firstName, firstNameError);
+          hasErrors = true;
+        } else {
+          clearFieldError(firstName);
+        }
+        
+        const lastNameError = validateName(lastName.value, 'Last name');
+        if (lastNameError) {
+          showFieldError(lastName, lastNameError);
+          hasErrors = true;
+        } else {
+          clearFieldError(lastName);
+        }
+        
+        const emailError = validateEmail(email.value);
+        if (emailError) {
+          showFieldError(email, emailError);
+          hasErrors = true;
+        } else {
+          clearFieldError(email);
+        }
+        
+        const phoneError = validatePhone(phone.value);
+        if (phoneError) {
+          showFieldError(phone, phoneError);
+          hasErrors = true;
+        } else {
+          clearFieldError(phone);
+        }
+        
+        const passwordError = validatePassword(password.value);
+        if (passwordError) {
+          showFieldError(password, passwordError);
+          hasErrors = true;
+        } else {
+          clearFieldError(password);
+        }
+        
+        if (password.value !== confirmPassword.value) {
+          showFieldError(confirmPassword, 'Passwords do not match');
+          hasErrors = true;
+        } else {
+          clearFieldError(confirmPassword);
+        }
+        
+        if (!termsCheckbox.checked) {
+          swal("Please agree to the Terms of Service and Privacy Policy");
+          hasErrors = true;
+        }
+        
+        if (hasErrors) {
+          swal("Please fix the errors above before submitting");
           return false;
         }
+        
         form.submit();
       });
     });

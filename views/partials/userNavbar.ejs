@@ -65,13 +65,13 @@
       </button>
     </form>
     <div class="nav-icon-container">
-      <i class="fas fa-shopping-cart" onclick="window.location.href='/cart'"></i>
+      <i class="fas fa-shopping-cart" onclick="handleCartClick()"></i>
       <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
         <span class="nav-badge"><%= cartCount > 99 ? '99+' : cartCount %></span>
       <% } %>
     </div>
     <div class="nav-icon-container">
-      <i class="fas fa-heart" onclick="window.location.href='/wishlist'"></i>
+      <i class="fas fa-heart" onclick="handleWishlistClick()"></i>
       <% if (typeof wishlistCount !== 'undefined' && wishlistCount > 0) { %>
         <span class="nav-badge"><%= wishlistCount > 99 ? '99+' : wishlistCount %></span>
       <% } %>
@@ -88,6 +88,30 @@
 <script>
   function selectCategory(category) {
     window.location.href = '/products?category=' + encodeURIComponent(category);
+  }
+  
+  // Function to handle cart click
+  function handleCartClick() {
+    const isLoggedIn = <% if (typeof name === 'string' && name.trim().length > 0) { %>true<% } else { %>false<% } %>;
+    
+    if (isLoggedIn) {
+      window.location.href = '/cart';
+    } else {
+      // Redirect to login page with message
+      window.location.href = '/user/login?message=' + encodeURIComponent('Please login to view your cart') + '&redirect=' + encodeURIComponent('/cart');
+    }
+  }
+
+  // Function to handle wishlist click
+  function handleWishlistClick() {
+    const isLoggedIn = <% if (typeof name === 'string' && name.trim().length > 0) { %>true<% } else { %>false<% } %>;
+    
+    if (isLoggedIn) {
+      window.location.href = '/wishlist';
+    } else {
+      // Redirect to login page with message
+      window.location.href = '/user/login?message=' + encodeURIComponent('Please login to view your wishlist') + '&redirect=' + encodeURIComponent('/wishlist');
+    }
   }
   
   (function() {

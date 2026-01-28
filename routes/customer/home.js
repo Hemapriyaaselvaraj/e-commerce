@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const homeController = require('../../controllers/customer/home.controller')
-const { isCustomerAccessible } = require('../../middlewares/auth');
 
-router.use(isCustomerAccessible);
-
+// Remove authentication middleware - home page should be accessible to everyone
 router.get('/', homeController.home )
 
 module.exports = router;

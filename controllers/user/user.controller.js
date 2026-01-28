@@ -16,88 +16,209 @@ const transporter = nodemailer.createTransport({
 });
 
 const signup = async (req, res) => {
-  const { firstName, lastName, email, phoneNumber, password, referralCode } = req.body;
+  try {
+    const { firstName, lastName, email, phoneNumber, password, confirmPassword, referralCode } = req.body;
 
-  let user = await userModel.findOne({ email });
+    // Comprehensive input validation
+    const errors = [];
 
-  if (user && user.isVerified) {
+    // Name validation
+    if (!firstName || !firstName.trim()) {
+      errors.push('First name is required');
+    } else if (firstName.trim().length < 2) {
+      errors.push('First name must be at least 2 characters');
+    } else if (firstName.trim().length > 50) {
+      errors.push('First name must be less than 50 characters');
+    } else if (!/^[a-zA-Z\s'-]+$/.test(firstName.trim())) {
+      errors.push('First name can only contain letters, spaces, hyphens, and apostrophes');
+    }
+
+    if (!lastName || !lastName.trim()) {
+      errors.push('Last name is required');
+    } else if (lastName.trim().length < 2) {
+      errors.push('Last name must be at least 2 characters');
+    } else if (lastName.trim().length > 50) {
+      errors.push('Last name must be less than 50 characters');
+    } else if (!/^[a-zA-Z\s'-]+$/.test(lastName.trim())) {
+      errors.push('Last name can only contain letters, spaces, hyphens, and apostrophes');
+    }
+
+    // Email validation
+    if (!email || !email.trim()) {
+      errors.push('Email is required');
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        errors.push('Please enter a valid email address');
+      } else if (email.length > 100) {
+        errors.push('Email must be less than 100 characters');
+      }
+    }
+
+    // Phone validation
+    if (!phoneNumber || !phoneNumber.trim()) {
+      errors.push('Phone number is required');
+    } else {
+      const phoneRegex = /^[6-9]\d{9}$/;
+      if (!phoneRegex.test(phoneNumber.trim())) {
+        errors.push('Please enter a valid 10-digit Indian mobile number');
+      }
+    }
+
+    // Password validation
+    if (!password) {
+      errors.push('Password is required');
+    } else {
+      if (password.length < 8) {
+        errors.push('Password must be at least 8 characters');
+      }
+      if (password.length > 128) {
+        errors.push('Password must be less than 128 characters');
+      }
+      if (!/[A-Z]/.test(password)) {
+        errors.push('Password must contain at least one uppercase letter');
+      }
+      if (!/[a-z]/.test(password)) {
+        errors.push('Password must contain at least one lowercase letter');
+      }
+      if (!/[0-9]/.test(password)) {
+        errors.push('Password must contain at least one number');
+      }
+      if (!/[^A-Za-z0-9]/.test(password)) {
+        errors.push('Password must contain at least one special character');
+      }
+    }
+
+    // Confirm password validation
+    if (!confirmPassword) {
+      errors.push('Please confirm your password');
+    } else if (password !== confirmPassword) {
+      errors.push('Passwords do not match');
+    }
+
+    // Referral code validation (if provided)
+    if (referralCode && referralCode.trim()) {
+      if (referralCode.trim().length < 6 || referralCode.trim().length > 10) {
+        errors.push('Referral code must be between 6-10 characters');
+      }
+      if (!/^[A-Z0-9]+$/.test(referralCode.trim().toUpperCase())) {
+        errors.push('Referral code can only contain letters and numbers');
+      }
+    }
+
+    // If there are validation errors, return them
+    if (errors.length > 0) {
+      return res.render("user/signup", {
+        error: errors.join('. '),
+        oldInput: req.body,
+      });
+    }
+
+    // Check if user already exists
+    let user = await userModel.findOne({ email: email.trim().toLowerCase() });
+
+    if (user && user.isVerified) {
+      return res.render("user/signup", {
+        error: "This email address is already registered. Please sign in to your existing account or use a different email address.",
+        oldInput: req.body,
+      });
+    }
+
+    // Check if phone number already exists
+    const existingPhone = await userModel.findOne({ phoneNumber: phoneNumber.trim() });
+    if (existingPhone && existingPhone.isVerified) {
+      return res.render("user/signup", {
+        error: "This phone number is already registered. Please use a different phone number.",
+        oldInput: req.body,
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, saltround);
+
+    if (user) {
+      // Update existing unverified user
+      user.firstName = firstName.trim();
+      user.lastName = lastName.trim();
+      user.phoneNumber = phoneNumber.trim();
+      user.password = hashedPassword;
+
+      if (!user.referralCode) {
+        user.referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      }
+
+      if (!user.referredBy && referralCode && referralCode.trim()) {
+        const referrer = await userModel.findOne({ referralCode: referralCode.trim().toUpperCase() });
+
+        if (referrer) {
+          user.referredBy = referrer._id;
+          user.wallet += 50;
+
+          await WalletTransaction.create({
+            user_id: user._id,
+            type: "credit",
+            amount: 50,
+            description: "Referral signup bonus"
+          });
+        } else {
+          return res.render("user/signup", {
+            error: "Invalid referral code. Please check and try again.",
+            oldInput: req.body,
+          });
+        }
+      }
+
+      await user.save();
+
+    } else {
+      // Create new user
+      user = new userModel({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim().toLowerCase(),
+        phoneNumber: phoneNumber.trim(),
+        password: hashedPassword,
+        isVerified: false,
+        signupMethod: "email",
+        referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
+        wallet: 0,
+        referredBy: null
+      });
+
+      if (referralCode && referralCode.trim()) {
+        const referrer = await userModel.findOne({ referralCode: referralCode.trim().toUpperCase() });
+
+        if (referrer) {
+          user.referredBy = referrer._id;
+          user.wallet = 50;
+
+          await WalletTransaction.create({
+            user_id: user._id,
+            type: "credit",
+            amount: 50,
+            description: "Referral signup bonus"
+          });
+        } else {
+          return res.render("user/signup", {
+            error: "Invalid referral code. Please check and try again.",
+            oldInput: req.body,
+          });
+        }
+      }
+
+      await user.save();
+    }
+
+    await sendOtpToVerifyEmail(email.trim().toLowerCase());
+
+    return res.render("user/verifyOtp", { error: null, email: email.trim().toLowerCase(), flow: "sign-up" });
+
+  } catch (error) {
+    console.error('Signup error:', error);
     return res.render("user/signup", {
-      error: "This email address is already registered. Please sign in to your existing account or use a different email address.",
+      error: "An error occurred during signup. Please try again.",
       oldInput: req.body,
     });
   }
-
-  const hashedPassword = await bcrypt.hash(password, saltround);
-
-  if (user) {
-
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.phoneNumber = phoneNumber;
-    user.password = hashedPassword;
-
-    
-    if (!user.referralCode) {
-      user.referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-    }
-
-    if (!user.referredBy && referralCode) {
-      const referrer = await userModel.findOne({ referralCode });
-
-      if (referrer) {
-        user.referredBy = referrer._id;
-
-        user.wallet += 50;
-
-        await WalletTransaction.create({
-          user_id: user._id,
-          type: "credit",
-          amount: 50,
-          description: "Referral signup bonus"
-        });
-      }
-    }
-
-    await user.save();
-
-  } else {
-
-    user = new userModel({
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-      password: hashedPassword,
-      isVerified: false,
-      signupMethod: "email",
-      referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
-      wallet: 0,
-      referredBy: null
-    });
-
-    if (referralCode) {
-      const referrer = await userModel.findOne({ referralCode });
-
-      if (referrer) {
-        user.referredBy = referrer._id;
-        
-        user.wallet = 50;
-
-        await WalletTransaction.create({
-          user_id: user._id,
-          type: "credit",
-          amount: 50,
-          description: "Referral signup bonus"
-        });
-      }
-    }
-
-    await user.save();
-  }
-
-  await sendOtpToVerifyEmail(email);
-
-  return res.render("user/verifyOtp", { error: null, email, flow: "sign-up" });
 };
 
 const viewSignup = (req, res) => {
@@ -111,12 +232,23 @@ const viewSignup = (req, res) => {
 
 const viewLogin = (req, res) => {
     const loginError = req.session.loginError || null;
+    const message = req.query.message || null;
+    const redirect = req.query.redirect || null;
   
   if (req.session.loginError) {
     delete req.session.loginError;
   }
 
-  return res.render("user/login", { error: loginError });
+  // Store redirect URL in session for after login
+  if (redirect) {
+    req.session.redirectAfterLogin = redirect;
+  }
+
+  return res.render("user/login", { 
+    error: loginError,
+    message: message,
+    redirect: redirect
+  });
 };
 
 const forgotPassword = (req, res) => {
@@ -268,6 +400,13 @@ const changePassword = async(req, res) => {
   req.session.user = true;
   req.session.role = user.role;
   req.session.userId = user._id;
+
+  // Check if there's a redirect URL stored in session
+  const redirectUrl = req.session.redirectAfterLogin;
+  if (redirectUrl) {
+    delete req.session.redirectAfterLogin; // Clean up
+    return res.redirect(redirectUrl);
+  }
 
   if (user.role == "user") {
     return res.redirect("/");

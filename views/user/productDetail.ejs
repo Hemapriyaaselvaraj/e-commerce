@@ -300,10 +300,8 @@
           <div id="qty-limit-message"></div>
           <input type="hidden" id="currentCartQuantity" value="<%= typeof currentCartQuantity !== 'undefined' && currentCartQuantity !== null ? Number(currentCartQuantity) : 0 %>">
         </div>
-        <% if (typeof name === 'string' && name.trim().length > 0) { %>
-          <button class="add-to-cart" id="addToCartBtn">🛒 Add to Cart</button>
-          <button class="add-to-wishlist" id="addToWishlistBtn">♡ Add to Wishlist</button>
-        <% } %>
+        <button class="add-to-cart" id="addToCartBtn">🛒 Add to Cart</button>
+        <button class="add-to-wishlist" id="addToWishlistBtn">♡ Add to Wishlist</button>
         <div class="features">
           <p>🚚 Free shipping on orders over ₹ 1000</p>
           <p>↩️ 30-day return policy</p>
@@ -823,6 +821,15 @@
     updateQtyButtons();
 
     document.getElementById('addToCartBtn').onclick = function () {
+      // Check if user is logged in first
+      const isLoggedIn = <% if (typeof name === 'string' && name.trim().length > 0) { %>true<% } else { %>false<% } %>;
+      
+      if (!isLoggedIn) {
+        // Redirect to login page with message
+        window.location.href = '/user/login?message=' + encodeURIComponent('Please login to add items to your cart') + '&redirect=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
+
       const selectedSize = document.querySelector('.size-btn.selected')?.dataset.size;
       const selectedColor = document.querySelector('.color-btn.selected')?.dataset.color;
       const quantity = parseInt(qtyInput.value, 10);
@@ -948,6 +955,15 @@
     const addToWishlistBtn = document.getElementById('addToWishlistBtn');
     if (addToWishlistBtn) {
       addToWishlistBtn.onclick = function() {
+        // Check if user is logged in first
+        const isLoggedIn = <% if (typeof name === 'string' && name.trim().length > 0) { %>true<% } else { %>false<% } %>;
+        
+        if (!isLoggedIn) {
+          // Redirect to login page with message
+          window.location.href = '/user/login?message=' + encodeURIComponent('Please login to add items to your wishlist') + '&redirect=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+
         const selectedSize = document.querySelector('.size-btn.selected')?.dataset.size;
         const selectedColor = document.querySelector('.color-btn.selected')?.dataset.color;
 
