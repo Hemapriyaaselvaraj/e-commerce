@@ -6,6 +6,7 @@
   <title>Verify OTP - ToughToes</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <meta http-equiv="Cache-Control" content="no-store" />
 
   <style>
@@ -171,7 +172,7 @@
 <body>
     <%- include('../partials/userNavbar') %>
 
-  <div class="container main-content d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+  <div class="container main-content d-flex justify-content-center align-items-center" style="min-height: 70vh;" data-otp-expiry="<%- JSON.stringify(otpExpiry) %>">
     <div class="verify-box p-4 shadow rounded bg-white" style="max-width: 400px; width: 100%;">
       <div class="text-center mb-3">
         <i class="fas fa-mobile-alt fa-2x mb-2"></i>
@@ -180,7 +181,10 @@
       </div>
 
       <% if (error) { %>
-        <div class="alert alert-danger text-center"><%= error %></div>
+        <div class="alert alert-danger text-center" id="errorAlert">
+          <%= error %>
+          <br><small class="mt-2 d-block">You can request a new verification code using the "Resend OTP" link below.</small>
+        </div>
       <% } %>
 
       <form method="post" action="/user/verifyOtp" onsubmit="return collectOTP()">
@@ -202,7 +206,10 @@
           <small class="text-muted"><i class="fas fa-clock me-1"></i>Code expires in <span id="timer"></span></small>
           <p class="small mt-1 mb-0">Didn't receive the code?</p>
           <p class="small">
-            <a href="#" id="resendOtpLink" style="pointer-events:none;opacity:0.5;">Resend OTP</a>
+            <a href="#" id="resendOtpLink" style="pointer-events:none;opacity:0.5;text-decoration:none;color:black;">Resend OTP</a>
+            <span id="resendAvailable" style="display:none;" class="text-success">
+              <i class="fas fa-check-circle me-1"></i>Available now!
+            </span>
           </p>
         </div>
         <hr />
@@ -253,9 +260,31 @@
   <script>
     const inputs = document.querySelectorAll(".otp-input");
     inputs.forEach((input, index) => {
-      input.addEventListener("input", () => {
-        if (input.value.length === 1 && index < inputs.length - 1) {
+      input.addEventListener("input", (e) => {
+        // Only allow numeric input
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = value;
+        
+        if (value.length === 1 && index < inputs.length - 1) {
           inputs[index + 1].focus();
+        }
+      });
+      
+      // Handle backspace to move to previous input
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !e.target.value && index > 0) {
+          inputs[index - 1].focus();
+        }
+        
+        // Prevent Enter key from submitting form unless all fields are filled
+        if (e.key === "Enter") {
+          e.preventDefault();
+          
+          // Check if all inputs are filled
+          const allFilled = Array.from(inputs).every(inp => inp.value.length === 1);
+          if (allFilled) {
+            document.querySelector('form').submit();
+          }
         }
       });
     });
@@ -263,74 +292,234 @@
     let timerSeconds = 60;
     const timerSpan = document.getElementById('timer');
     const resendOtpLink = document.getElementById('resendOtpLink');
-    let timerInterval = setInterval(() => {
-      let min = Math.floor(timerSeconds / 60);
-      let sec = timerSeconds % 60;
-      timerSpan.textContent = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-      if (timerSeconds <= 0) {
+    let timerInterval;
+    
+    // Much simpler approach: Only persist timer for very short time
+    // This handles accidental refresh but clears for navigation
+    
+    const storedExpiry = sessionStorage.getItem('otpTimerExpiry');
+    if (storedExpiry) {
+      const now = new Date().getTime();
+      const expiry = parseInt(storedExpiry);
+      const timeSinceExpiry = now - expiry;
+      
+      // If the stored expiry is more than 2 minutes old, clear it
+      // This handles cases where user navigated away long ago
+      if (timeSinceExpiry > 120000) { // 2 minutes
+        sessionStorage.removeItem('otpTimerExpiry');
+      }
+    }
+    
+    // Simple timer function
+    function startTimer() {
+      if (timerInterval) {
         clearInterval(timerInterval);
+      }
+      
+      // Store the expiry time when starting timer
+      const expiryTime = new Date().getTime() + (timerSeconds * 1000);
+      sessionStorage.setItem('otpTimerExpiry', expiryTime.toString());
+      
+      // Update display immediately
+      updateTimerDisplay();
+      
+      timerInterval = setInterval(() => {
+        timerSeconds--;
+        updateTimerDisplay();
+        
+        if (timerSeconds <= 0) {
+          clearInterval(timerInterval);
+          sessionStorage.removeItem('otpTimerExpiry');
+          enableResendButton();
+        }
+      }, 1000);
+    }
+    
+    function updateTimerDisplay() {
+      if (timerSpan) {
+        let min = Math.floor(timerSeconds / 60);
+        let sec = timerSeconds % 60;
+        timerSpan.textContent = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+      }
+    }
+    
+    function enableResendButton() {
+      if (resendOtpLink) {
         resendOtpLink.style.pointerEvents = 'auto';
         resendOtpLink.style.opacity = '1';
         resendOtpLink.textContent = 'Resend OTP';
-      } else {
-        timerSeconds--;
       }
-    }, 1000);
+    }
+    
+    function disableResendButton() {
+      if (resendOtpLink) {
+        resendOtpLink.style.pointerEvents = 'none';
+        resendOtpLink.style.opacity = '0.5';
+        resendOtpLink.textContent = 'Resend OTP';
+      }
+    }
+    
+    // Calculate remaining time from sessionStorage
+    function getRemainingTime() {
+      const storedExpiry = sessionStorage.getItem('otpTimerExpiry');
+      
+      console.log('getRemainingTime - storedExpiry:', storedExpiry);
+      
+      if (storedExpiry) {
+        const now = new Date().getTime();
+        const expiry = parseInt(storedExpiry);
+        const remainingMs = expiry - now;
+        
+        console.log('Timer calculation:', {
+          now: new Date(now).toLocaleTimeString(),
+          expiry: new Date(expiry).toLocaleTimeString(),
+          remainingMs,
+          remainingSeconds: Math.floor(remainingMs / 1000)
+        });
+        
+        if (remainingMs > 0) {
+          return Math.floor(remainingMs / 1000);
+        } else {
+          // Timer expired, clean up
+          sessionStorage.removeItem('otpTimerExpiry');
+          return 0;
+        }
+      }
+      
+      // No stored timer - this could be:
+      // 1. First time loading the page (start fresh timer)
+      // 2. Wrong OTP case (should still have timer, but backend didn't pass expiry)
+      // 3. Timer already expired
+      
+      // Check if there's an error message (wrong OTP case)
+      const errorAlert = document.getElementById('errorAlert');
+      const hasError = errorAlert && errorAlert.textContent.trim().length > 0;
+      
+      console.log('No stored timer, hasError:', hasError);
+      
+      if (hasError) {
+        // This is a wrong OTP case, but we don't have stored timer
+        // We should still start a timer (backend should pass the remaining time)
+        // For now, let's check if backend passed otpExpiry
+        const container = document.querySelector('.container.main-content');
+        const otpExpiryTime = container ? JSON.parse(container.getAttribute('data-otp-expiry')) : null;
+        
+        console.log('Backend otpExpiry:', otpExpiryTime);
+        
+        if (otpExpiryTime) {
+          const now = new Date().getTime();
+          const expiry = new Date(otpExpiryTime).getTime();
+          const remainingMs = expiry - now;
+          
+          console.log('Using backend expiry:', {
+            now: new Date(now).toLocaleTimeString(),
+            expiry: new Date(expiry).toLocaleTimeString(),
+            remainingMs,
+            remainingSeconds: Math.floor(remainingMs / 1000)
+          });
+          
+          if (remainingMs > 0) {
+            return Math.floor(remainingMs / 1000);
+          }
+        }
+        
+        // If no valid server expiry, don't start timer for error case
+        return 0;
+      }
+      
+      // Fresh page load, start new timer
+      console.log('Fresh page load, starting 60 second timer');
+      return 60;
+    }
+    
+    // Initialize timer
+    const remainingTime = getRemainingTime();
+    
+    console.log('Timer initialization - remainingTime:', remainingTime);
+    
+    if (remainingTime > 0) {
+      // Start timer with remaining time
+      timerSeconds = remainingTime;
+      disableResendButton();
+      startTimer();
+    } else {
+      // Timer expired or no valid timer
+      timerSeconds = 0;
+      updateTimerDisplay();
+      enableResendButton();
+      
+      // Show available indicator if there's an error and no active timer
+      const errorAlert = document.getElementById('errorAlert');
+      const resendAvailable = document.getElementById('resendAvailable');
+      if (errorAlert && errorAlert.textContent.trim().length > 0 && resendAvailable) {
+        resendAvailable.style.display = 'inline';
+      }
+    }
 
     resendOtpLink.addEventListener('click', function(e) {
       if (resendOtpLink.style.pointerEvents === 'auto') {
         e.preventDefault();
+        
+        // Clear any existing error messages
+        const errorAlert = document.getElementById('errorAlert');
+        if (errorAlert) {
+          errorAlert.style.display = 'none';
+        }
+        
+        // Hide resend available indicator
+        const resendAvailable = document.getElementById('resendAvailable');
+        if (resendAvailable) {
+          resendAvailable.style.display = 'none';
+        }
+        
+        // Clear OTP input fields
+        const otpInputs = document.querySelectorAll('.otp-input');
+        otpInputs.forEach(input => {
+          input.value = '';
+        });
+        if (otpInputs.length > 0) {
+          otpInputs[0].focus();
+        }
+        
         resendOtpLink.textContent = 'Resending...';
         resendOtpLink.style.pointerEvents = 'none';
         resendOtpLink.style.opacity = '0.5';
-        fetch('/user/sendOtp', {
+        
+        fetch('/user/resendOtp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: document.querySelector('input[name="email"]').value })
         })
+        .then(response => response.json())
         .then(data => {
+          // Clear any existing timer
+          if (timerInterval) {
+            clearInterval(timerInterval);
+          }
+          
+          // Reset timer to 60 seconds and start
           timerSeconds = 60;
-          resendOtpLink.textContent = 'Resend OTP';
-          resendOtpLink.style.pointerEvents = 'none';
-          resendOtpLink.style.opacity = '0.5';
-          timerInterval = setInterval(() => {
-            let min = Math.floor(timerSeconds / 60);
-            let sec = timerSeconds % 60;
-            timerSpan.textContent = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-            if (timerSeconds <= 0) {
-              clearInterval(timerInterval);
-              resendOtpLink.style.pointerEvents = 'auto';
-              resendOtpLink.style.opacity = '1';
-              resendOtpLink.textContent = 'Resend OTP';
-            } else {
-              timerSeconds--;
-            }
-          }, 1000);
-          if (typeof Swal !== 'undefined') {
-            Swal.fire({
-              icon: 'success',
-              title: 'OTP Sent',
-              text: 'OTP resent to your email.',
-              confirmButtonColor: '#28a745'
-            });
-          } else {
-            alert('OTP resent to your email.');
-          }
+          disableResendButton();
+          startTimer();
+          
+          // Show success message with SweetAlert
+          Swal.fire({
+            icon: 'success',
+            title: 'OTP Sent!',
+            text: 'A new verification code has been sent to your email.',
+            confirmButtonColor: '#28a745'
+          });
         })
-        .catch(() => {
-          resendOtpLink.textContent = 'Resend OTP';
-          resendOtpLink.style.pointerEvents = 'auto';
-          resendOtpLink.style.opacity = '1';
-          if (typeof Swal !== 'undefined') {
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'Failed to resend OTP. Please try again.',
-              confirmButtonColor: '#d33'
-            });
-          } else {
-            alert('Failed to resend OTP. Please try again.');
-          }
+        .catch(error => {
+          enableResendButton();
+          
+          // Show error message with SweetAlert
+          Swal.fire({
+            icon: 'error',
+            title: 'Failed to Send OTP',
+            text: 'Unable to resend verification code. Please try again.',
+            confirmButtonColor: '#d33'
+          });
         });
       }
     });
@@ -343,19 +532,50 @@
       inputs.forEach(input => { otp += input.value; });
       document.getElementById('otp-full').value = otp;
       if (otp.length !== 6) {
-        if (typeof Swal !== 'undefined') {
-          Swal.fire({
-            icon: 'warning',
-            title: 'Incomplete OTP',
-            text: 'Please enter all 6 digits of the OTP',
-            confirmButtonColor: '#ffc107'
-          });
-        } else {
-          alert('Please enter all 6 digits of the OTP');
-        }
+        Swal.fire({
+          icon: 'warning',
+          title: 'Incomplete OTP',
+          text: 'Please enter all 6 digits of the verification code',
+          confirmButtonColor: '#ffc107'
+        });
         return false;
       }
       return true; 
+    }
+
+    // This function is called on DOMContentLoaded to handle any edge cases
+    function enableResendOnError() {
+      // The main logic is now handled in initialization
+      // This is just a safety check
+    }
+
+    // Check for error on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      enableResendOnError();
+    });
+
+    // Clear timer when OTP is successfully submitted
+    document.querySelector('form').addEventListener('submit', function() {
+      // Only clear if the form validation passes (all 6 digits entered)
+      const inputs = document.querySelectorAll('.otp-input');
+      const allFilled = Array.from(inputs).every(inp => inp.value.length === 1);
+      if (allFilled) {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+        }
+        sessionStorage.removeItem('otpTimerExpiry');
+      }
+    });
+
+    // Clear timer when user clicks "Back to login" link
+    const backToLoginLink = document.querySelector('a[href="/user/login"]');
+    if (backToLoginLink) {
+      backToLoginLink.addEventListener('click', function() {
+        sessionStorage.removeItem('otpTimerExpiry');
+        if (timerInterval) {
+          clearInterval(timerInterval);
+        }
+      });
     }
   </script>
 

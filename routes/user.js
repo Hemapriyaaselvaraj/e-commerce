@@ -12,6 +12,7 @@ router.post('/login',isNotLogin, userController.login)
 router.get('/forgotPassword',isNotLogin, userController.forgotPassword)
 router.post('/sendOtp', isNotLogin,userController.sendOtp)
 router.post('/verifyOtp',isNotLogin, userController.verifyOtp)
+router.post('/resendOtp', isNotLogin, userController.resendOtp)
 router.post('/changePassword', isNotLogin,userController.changePassword)
 
 

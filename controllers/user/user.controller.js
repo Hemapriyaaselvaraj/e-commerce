@@ -210,7 +210,16 @@ const signup = async (req, res) => {
 
     await sendOtpToVerifyEmail(email.trim().toLowerCase());
 
-    return res.render("user/verifyOtp", { error: null, email: email.trim().toLowerCase(), flow: "sign-up" });
+    // Get the OTP expiry time to pass to frontend
+    const otpVerification = await otpVerificationModel.findOne({ email: email.trim().toLowerCase() });
+    const otpExpiry = otpVerification ? otpVerification.expiry.getTime() : null;
+
+    return res.render("user/verifyOtp", { 
+      error: null, 
+      email: email.trim().toLowerCase(), 
+      flow: "sign-up",
+      otpExpiry: otpExpiry
+    });
 
   } catch (error) {
     console.error('Signup error:', error);
@@ -272,7 +281,11 @@ const sendOtp = async(req, res) => {
 
   await sendOtpToVerifyEmail(email);
 
-  return res.render('user/verifyOtp', { error: null, email, flow: 'forgot-password'});
+  // Get the OTP expiry time to pass to frontend
+  const otpVerification = await otpVerificationModel.findOne({ email });
+  const otpExpiry = otpVerification ? otpVerification.expiry.getTime() : null;
+
+  return res.render('user/verifyOtp', { error: null, email, flow: 'forgot-password', otpExpiry: otpExpiry });
 
 }
 
@@ -282,62 +295,87 @@ const verifyOtp = async(req, res) => {
   const otpVerification = await otpVerificationModel.findOne({email});
 
   if (!otpVerification) {
-  return res.render('user/verifyOtp', { error: "The verification code you entered is incorrect. Please check and try again.", email, flow });
-}
+    // OTP not found - this means it might have been deleted or never existed
+    // Don't pass expiry time since there's no valid OTP
+    return res.status(400).render('user/verifyOtp', { 
+      error: "The verification code you entered is incorrect. Please check and try again.", 
+      email, 
+      flow,
+      otpExpiry: null
+    });
+  }
 
-if (otpVerification.otp !== otp || otpVerification.expiry < new Date()) {
-    if (otpVerification.expiry < new Date()) {
+  // Check if OTP is expired first
+  if (otpVerification.expiry < new Date()) {
     await otpVerification.deleteOne();
+    return res.status(400).render('user/verifyOtp', { 
+      error: "Your verification code has expired. Please request a new code and try again.", 
+      email, 
+      flow,
+      otpExpiry: null
+    });
   }
-  return res.render('user/verifyOtp', { error: "Your verification code has expired. Please request a new code and try again.", email, flow });
-}
- await otpVerification.deleteOne();
 
- if (flow == 'sign-up') {
-      const user = await userModel.findOne({ email });
+  // Check if OTP is wrong
+  if (otpVerification.otp !== otp) {
+    // For wrong OTP, pass the current expiry time so timer continues
+    const otpExpiry = otpVerification.expiry.getTime();
+    
+    return res.status(400).render('user/verifyOtp', { 
+      error: "The verification code you entered is incorrect. Please check and try again.", 
+      email, 
+      flow,
+      otpExpiry: otpExpiry
+    });
+  }
+  
+  await otpVerification.deleteOne();
 
-      user.isVerified = true;
+  if (flow == 'sign-up') {
+    const user = await userModel.findOne({ email });
 
-      await user.save();
+    user.isVerified = true;
 
-      if (user.referredBy && !user.isReferralRewarded) {
-    const referrer = await userModel.findById(user.referredBy);
+    await user.save();
 
-    if (referrer) {
-      referrer.wallet += 100;
+    if (user.referredBy && !user.isReferralRewarded) {
+      const referrer = await userModel.findById(user.referredBy);
 
-      await WalletTransaction.create({
-        user_id: referrer._id,
-        type: "credit",
-        amount: 100,
-        description: "Referral reward - new user verified"
-      });
+      if (referrer) {
+        referrer.wallet += 100;
 
-      await referrer.save();
+        await WalletTransaction.create({
+          user_id: referrer._id,
+          type: "credit",
+          amount: 100,
+          description: "Referral reward - new user verified"
+        });
 
-      user.isReferralRewarded = true;
-      await user.save();
+        await referrer.save();
+
+        user.isReferralRewarded = true;
+        await user.save();
+      }
     }
-  }
-     return res.redirect('/user/login');
+    return res.redirect('/user/login');
 
   } else if (flow == 'login') {
 
-     const user = await userModel.findOne({ email });
+    const user = await userModel.findOne({ email });
 
-      user.isVerified = true;
+    user.isVerified = true;
 
-      await user.save();
+    await user.save();
 
-      req.session.user = true;
-      req.session.role = user.role;
-       req.session.userId = user._id;
+    req.session.user = true;
+    req.session.role = user.role;
+    req.session.userId = user._id;
 
-       return res.redirect('/');
+    return res.redirect('/');
 
       
   } else {
-     return res.render('user/changePassword', {email, error: null});
+    return res.render('user/changePassword', {email, error: null});
   }
 }
 
@@ -394,7 +432,16 @@ const changePassword = async(req, res) => {
 
     await sendOtpToVerifyEmail(email);
 
-    return res.render('user/verifyOtp', { error: "Please verify your account using the verification code we've sent to your email address.", email, flow: 'login'});
+    // Get the OTP expiry time to pass to frontend
+    const otpVerification = await otpVerificationModel.findOne({ email });
+    const otpExpiry = otpVerification ? otpVerification.expiry.getTime() : null;
+
+    return res.render('user/verifyOtp', { 
+      error: "Please verify your account using the verification code we've sent to your email address.", 
+      email, 
+      flow: 'login',
+      otpExpiry: otpExpiry
+    });
   }
 
   req.session.user = true;
@@ -428,15 +475,52 @@ const logout = (req, res) => {
   });
 };
 
+const resendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Check if user exists
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Send new OTP
+    await sendOtpToVerifyEmail(email);
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully'
+    });
+
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP. Please try again.'
+    });
+  }
+};
+
 async function sendOtpToVerifyEmail(email) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 10 * 60 * 1000);
+  const expiry = new Date(Date.now() + 1 * 60 * 1000); // 1 minute expiry
 
   await transporter.sendMail({
     from: `"Tough Toes" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Your otp to verify your account',
-    html: `<h3>Your OTP is: <b>${otp}</b></h3>`
+    html: `<h3>Your OTP is: <b>${otp}</b></h3><p>This code will expire in 1 minute.</p>`
   });
 
   let otpVerification = await otpVerificationModel.findOne({ email });
@@ -465,7 +549,8 @@ module.exports = {
     verifyOtp,
     changePassword,
     login,
-    logout
+    logout,
+    resendOtp
 }
 
 
