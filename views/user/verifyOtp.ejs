@@ -363,19 +363,10 @@
     function getRemainingTime() {
       const storedExpiry = sessionStorage.getItem('otpTimerExpiry');
       
-      console.log('getRemainingTime - storedExpiry:', storedExpiry);
-      
       if (storedExpiry) {
         const now = new Date().getTime();
         const expiry = parseInt(storedExpiry);
         const remainingMs = expiry - now;
-        
-        console.log('Timer calculation:', {
-          now: new Date(now).toLocaleTimeString(),
-          expiry: new Date(expiry).toLocaleTimeString(),
-          remainingMs,
-          remainingSeconds: Math.floor(remainingMs / 1000)
-        });
         
         if (remainingMs > 0) {
           return Math.floor(remainingMs / 1000);
@@ -395,8 +386,6 @@
       const errorAlert = document.getElementById('errorAlert');
       const hasError = errorAlert && errorAlert.textContent.trim().length > 0;
       
-      console.log('No stored timer, hasError:', hasError);
-      
       if (hasError) {
         // This is a wrong OTP case, but we don't have stored timer
         // We should still start a timer (backend should pass the remaining time)
@@ -404,19 +393,10 @@
         const container = document.querySelector('.container.main-content');
         const otpExpiryTime = container ? JSON.parse(container.getAttribute('data-otp-expiry')) : null;
         
-        console.log('Backend otpExpiry:', otpExpiryTime);
-        
         if (otpExpiryTime) {
           const now = new Date().getTime();
           const expiry = new Date(otpExpiryTime).getTime();
           const remainingMs = expiry - now;
-          
-          console.log('Using backend expiry:', {
-            now: new Date(now).toLocaleTimeString(),
-            expiry: new Date(expiry).toLocaleTimeString(),
-            remainingMs,
-            remainingSeconds: Math.floor(remainingMs / 1000)
-          });
           
           if (remainingMs > 0) {
             return Math.floor(remainingMs / 1000);
@@ -428,14 +408,11 @@
       }
       
       // Fresh page load, start new timer
-      console.log('Fresh page load, starting 60 second timer');
       return 60;
     }
     
     // Initialize timer
     const remainingTime = getRemainingTime();
-    
-    console.log('Timer initialization - remainingTime:', remainingTime);
     
     if (remainingTime > 0) {
       // Start timer with remaining time

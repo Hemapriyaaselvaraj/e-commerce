@@ -307,19 +307,33 @@
         }
       }
       
-      // Name validation
-      function validateName(name, fieldName) {
+      // First name validation
+      function validateFirstName(name) {
         if (!name.trim()) {
-          return `${fieldName} is required`;
+          return 'First name is required';
         }
         if (name.trim().length < 2) {
-          return `${fieldName} must be at least 2 characters`;
+          return 'First name must be at least 2 characters';
         }
         if (name.trim().length > 50) {
-          return `${fieldName} must be less than 50 characters`;
+          return 'First name must be less than 50 characters';
         }
         if (!/^[a-zA-Z\s'-]+$/.test(name.trim())) {
-          return `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`;
+          return 'First name can only contain letters, spaces, hyphens, and apostrophes';
+        }
+        return null;
+      }
+      
+      // Last name validation (allows single characters for initials)
+      function validateLastName(name) {
+        if (!name.trim()) {
+          return 'Last name is required';
+        }
+        if (name.trim().length > 50) {
+          return 'Last name must be less than 50 characters';
+        }
+        if (!/^[a-zA-Z\s'-]+$/.test(name.trim())) {
+          return 'Last name can only contain letters, spaces, hyphens, and apostrophes';
         }
         return null;
       }
@@ -387,7 +401,7 @@
       const termsCheckbox = document.querySelector('input[name="termsAgreed"]');
       
       firstName.addEventListener('blur', function() {
-        const error = validateName(this.value, 'First name');
+        const error = validateFirstName(this.value);
         if (error) {
           showFieldError(this, error);
         } else {
@@ -396,7 +410,7 @@
       });
       
       lastName.addEventListener('blur', function() {
-        const error = validateName(this.value, 'Last name');
+        const error = validateLastName(this.value);
         if (error) {
           showFieldError(this, error);
         } else {
@@ -455,7 +469,7 @@
         let hasErrors = false;
         
         // Validate all fields
-        const firstNameError = validateName(firstName.value, 'First name');
+        const firstNameError = validateFirstName(firstName.value);
         if (firstNameError) {
           showFieldError(firstName, firstNameError);
           hasErrors = true;
@@ -463,7 +477,7 @@
           clearFieldError(firstName);
         }
         
-        const lastNameError = validateName(lastName.value, 'Last name');
+        const lastNameError = validateLastName(lastName.value);
         if (lastNameError) {
           showFieldError(lastName, lastNameError);
           hasErrors = true;

@@ -166,9 +166,15 @@
       <h4 class="mb-3">Sign In</h4>
 
       <% if (typeof message !== 'undefined' && message) { %>
-      <div class="alert alert-info text-center">
-        <i class="fas fa-info-circle me-2"></i><%= message %>
-      </div>
+        <% if (message.includes('successfully')) { %>
+          <div class="alert alert-success text-center">
+            <i class="fas fa-check-circle me-2"></i><%= message %>
+          </div>
+        <% } else { %>
+          <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i><%= message %>
+          </div>
+        <% } %>
       <% } %>
 
       <% if (error) { %>
