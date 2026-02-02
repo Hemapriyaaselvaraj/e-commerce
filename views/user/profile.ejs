@@ -180,7 +180,7 @@
 <body>
   <%- include('../partials/userNavbar', { name: name }) %>
 
-  <div class="container my-5 d-flex" style="margin-top: 90px !important;">
+  <div class="container my-5 d-flex" style="margin-top: 90px !important;">>
     <div class="sidebar p-3 me-4 border rounded">
       <ul class="list-unstyled">
         <li><a href="/profile"  class="active"><i class="fas fa-user me-2"></i>Profile</a></li>
@@ -386,6 +386,19 @@
   <%- include('../partials/footer') %>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <% if (success) { %>
+  <script>
+    Swal.fire({
+      title: "Success!",
+      text: "<%= success %>",
+      icon: "success",
+      timer: 2000,
+      showConfirmButton: false
+    });
+  </script>
+  <% } %>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
   <script>
   const input = document.getElementById("profileImageInput");
@@ -401,7 +414,40 @@
   // When the user picks a file we show an instant preview and open crop modal.
   input.addEventListener("change", () => {
     if (input.files && input.files[0]) {
-  const file = input.files[0];
+      const file = input.files[0];
+      
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid File Type',
+            text: 'Please upload JPG, JPEG, PNG, or WebP images only.',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Please upload JPG, JPEG, PNG, or WebP images only.');
+        }
+        input.value = ''; // Clear the input
+        return;
+      }
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'File Too Large',
+            text: 'Please upload an image smaller than 5MB.',
+            confirmButtonColor: '#d33'
+          });
+        } else {
+          alert('Please upload an image smaller than 5MB.');
+        }
+        input.value = ''; // Clear the input
+        return;
+      }
 
       // Set up cropper image and show modal
       cropperImage.src = URL.createObjectURL(file);

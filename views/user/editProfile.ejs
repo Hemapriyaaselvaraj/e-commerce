@@ -89,6 +89,35 @@
       background-color: #333;
       border-color: #333;
     }
+    
+    /* Validation styling */
+    .form-control.is-invalid {
+      border-color: #dc3545;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    
+    .form-control.is-valid {
+      border-color: #28a745;
+      box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .invalid-feedback {
+      display: none;
+      width: 100%;
+      margin-top: 0.25rem;
+      font-size: 0.875em;
+      color: #dc3545;
+    }
+    
+    .form-text {
+      margin-top: 0.25rem;
+      font-size: 0.875em;
+      color: #6c757d;
+    }
+    
+    .text-danger {
+      color: #dc3545 !important;
+    }
   </style>
 </head>
 <body>
@@ -103,16 +132,22 @@
       <h4 class="mb-3">Edit Profile</h4>
       <form id="editProfileForm">
         <div class="mb-3">
-          <label for="firstName" class="form-label">First Name</label>
+          <label for="firstName" class="form-label">First Name <span class="text-danger">*</span></label>
           <input type="text" class="form-control" id="firstName" name="firstName" value="<%= user.firstName %>" required>
+          <div class="invalid-feedback" id="firstNameError"></div>
+          <div class="form-text">2-50 characters, letters only</div>
         </div>
         <div class="mb-3">
-          <label for="lastName" class="form-label">Last Name</label>
+          <label for="lastName" class="form-label">Last Name <span class="text-danger">*</span></label>
           <input type="text" class="form-control" id="lastName" name="lastName" value="<%= user.lastName %>" required>
+          <div class="invalid-feedback" id="lastNameError"></div>
+          <div class="form-text">1-50 characters, letters only</div>
         </div>
         <div class="mb-3">
-          <label for="phoneNumber" class="form-label">Phone Number</label>
-          <input type="text" class="form-control" id="phoneNumber" name="phoneNumber" value="<%= user.phoneNumber %>" required>
+          <label for="phoneNumber" class="form-label">Phone Number <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="phoneNumber" name="phoneNumber" value="<%= user.phoneNumber %>" required maxlength="10">
+          <div class="invalid-feedback" id="phoneNumberError"></div>
+          <div class="form-text">10-digit Indian mobile number (starts with 6-9)</div>
         </div>
         <div class="mb-3">
           <label for="email" class="form-label">Email</label>
@@ -132,32 +167,121 @@
     </div>
   </div>
 
-  
-  <div class="modal fade" id="emailOtpModal" tabindex="-1" aria-labelledby="emailOtpModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="emailOtpModalLabel">Verify Email Change</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="emailOtpForm">
-            <div class="mb-3">
-              <label for="otpInput" class="form-label">Enter OTP sent to <span id="otpEmailDisplay"></span></label>
-              <input type="text" class="form-control" id="otpInput" placeholder="Enter OTP" required>
-            </div>
-            <button type="submit" class="btn btn-dark w-100">Verify OTP</button>
-          </form>
-          <div id="emailOtpError" class="text-danger mt-2"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <%- include('../partials/footer') %>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    // Validation functions
+    function validateFirstName(firstName) {
+      const errors = [];
+      const trimmed = firstName.trim();
+      
+      if (!trimmed) {
+        errors.push('First name is required');
+      } else if (trimmed.length < 2) {
+        errors.push('First name must be at least 2 characters long');
+      } else if (trimmed.length > 50) {
+        errors.push('First name cannot exceed 50 characters');
+      } else if (!/^[a-zA-Z\s]+$/.test(trimmed)) {
+        errors.push('First name can only contain letters and spaces');
+      }
+      
+      return errors;
+    }
+    
+    function validateLastName(lastName) {
+      const errors = [];
+      const trimmed = lastName.trim();
+      
+      if (!trimmed) {
+        errors.push('Last name is required');
+      } else if (trimmed.length > 50) {
+        errors.push('Last name cannot exceed 50 characters');
+      } else if (!/^[a-zA-Z\s]+$/.test(trimmed)) {
+        errors.push('Last name can only contain letters and spaces');
+      }
+      
+      return errors;
+    }
+    
+    function validatePhoneNumber(phoneNumber) {
+      const errors = [];
+      const trimmed = phoneNumber.trim();
+      const cleanPhone = trimmed.replace(/\D/g, ''); // Remove non-digits
+      
+      if (!trimmed) {
+        errors.push('Phone number is required');
+      } else if (cleanPhone.length !== 10) {
+        errors.push('Phone number must be exactly 10 digits');
+      } else if (!/^[6-9]/.test(cleanPhone)) {
+        errors.push('Phone number must start with 6, 7, 8, or 9');
+      } else if (!/^[6-9][0-9]{9}$/.test(cleanPhone)) {
+        errors.push('Please enter a valid Indian mobile number');
+      }
+      
+      return errors;
+    }
+    
+    function showFieldError(fieldId, errors) {
+      const field = document.getElementById(fieldId);
+      const errorDiv = document.getElementById(fieldId + 'Error');
+      
+      if (errors.length > 0) {
+        field.classList.add('is-invalid');
+        field.classList.remove('is-valid');
+        errorDiv.textContent = errors[0];
+        errorDiv.style.display = 'block';
+      } else {
+        field.classList.remove('is-invalid');
+        field.classList.add('is-valid');
+        errorDiv.textContent = '';
+        errorDiv.style.display = 'none';
+      }
+    }
+    
+    function clearFieldError(fieldId) {
+      const field = document.getElementById(fieldId);
+      const errorDiv = document.getElementById(fieldId + 'Error');
+      
+      field.classList.remove('is-invalid', 'is-valid');
+      errorDiv.textContent = '';
+      errorDiv.style.display = 'none';
+    }
+    
+    // Real-time validation
+    document.getElementById('firstName').addEventListener('input', function() {
+      const errors = validateFirstName(this.value);
+      showFieldError('firstName', errors);
+    });
+    
+    document.getElementById('firstName').addEventListener('blur', function() {
+      const errors = validateFirstName(this.value);
+      showFieldError('firstName', errors);
+    });
+    
+    document.getElementById('lastName').addEventListener('input', function() {
+      const errors = validateLastName(this.value);
+      showFieldError('lastName', errors);
+    });
+    
+    document.getElementById('lastName').addEventListener('blur', function() {
+      const errors = validateLastName(this.value);
+      showFieldError('lastName', errors);
+    });
+    
+    document.getElementById('phoneNumber').addEventListener('input', function() {
+      // Allow only digits and limit to 10 characters
+      this.value = this.value.replace(/\D/g, '').substring(0, 10);
+      const errors = validatePhoneNumber(this.value);
+      showFieldError('phoneNumber', errors);
+    });
+    
+    document.getElementById('phoneNumber').addEventListener('blur', function() {
+      const errors = validatePhoneNumber(this.value);
+      showFieldError('phoneNumber', errors);
+    });
+
+    // Email functionality
     const emailInput = document.getElementById('emailInput');
     const editEmailBtn = document.getElementById('editEmailBtn');
     const newEmailGroup = document.getElementById('newEmailGroup');
@@ -165,12 +289,6 @@
     const sendOtpBtn = document.getElementById('sendOtpBtn');
     const newEmailError = document.getElementById('newEmailError');
     let originalEmail = emailInput.value;
-    let pendingNewEmail = '';
-    const emailOtpModal = new bootstrap.Modal(document.getElementById('emailOtpModal'));
-    const emailOtpForm = document.getElementById('emailOtpForm');
-    const otpInput = document.getElementById('otpInput');
-    const emailOtpError = document.getElementById('emailOtpError');
-    const otpEmailDisplay = document.getElementById('otpEmailDisplay');
 
     editEmailBtn.onclick = function() {
       newEmailGroup.style.display = '';
@@ -186,8 +304,18 @@
         newEmailError.textContent = 'Please enter a different email address.';
         return;
       }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmail)) {
+        newEmailError.textContent = 'Please enter a valid email address.';
+        return;
+      }
+      
       newEmailError.textContent = '';
       sendOtpBtn.disabled = true;
+      sendOtpBtn.textContent = 'Sending...';
+      
       fetch('/user/request-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -196,108 +324,52 @@
       .then(res => res.json())
       .then(data => {
         sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = 'Send OTP';
         if (data.success) {
-          pendingNewEmail = newEmail;
-          otpEmailDisplay.textContent = pendingNewEmail;
-          emailOtpModal.show();
-          emailOtpError.textContent = '';
+          // Redirect to the existing OTP verification page
+          window.location.href = `/user/verifyOtp?email=${encodeURIComponent(newEmail)}&flow=email-change`;
         } else {
           newEmailError.textContent = data.message || 'Could not send OTP.';
         }
       })
       .catch(() => {
         sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = 'Send OTP';
         newEmailError.textContent = 'Could not send OTP.';
       });
     };
 
-    emailOtpForm.onsubmit = function(e) {
-      e.preventDefault();
-      emailOtpError.textContent = '';
-      otpInput.disabled = true;
-      emailOtpForm.querySelector('button[type="submit"]').disabled = true;
-      fetch('/user/verify-email-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newEmail: pendingNewEmail, otp: otpInput.value })
-      })
-      .then(async res => {
-        let data;
-        try {
-          data = await res.json();
-        } catch (err) {
-          data = { success: false, message: 'Server error. Please try again.' };
-        }
-        otpInput.disabled = false;
-        emailOtpForm.querySelector('button[type="submit"]').disabled = false;
-        if (data.success) {
-          emailOtpModal.hide();
-          originalEmail = pendingNewEmail;
-          emailInput.value = pendingNewEmail;
-          emailInput.readOnly = true;
-          newEmailGroup.style.display = 'none';
-          editEmailBtn.style.display = '';
-          emailInput.setAttribute('name', 'email');
-          if (newEmailInput) newEmailInput.removeAttribute('name');
-          Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            text: 'Email updated successfully!',
-            showConfirmButton: false,
-            timer: 2000,
-            didClose: () => {
-              window.location.href = '/profile';
-            }
-          });
-        } else {
-          emailOtpError.textContent = data.message || 'Invalid OTP.';
-        }
-      })
-      .catch(() => {
-        otpInput.disabled = false;
-        emailOtpForm.querySelector('button[type="submit"]').disabled = false;
-        emailOtpError.textContent = 'Could not verify OTP. Please try again.';
-      });
-    };
-
-    
-    document.getElementById('emailOtpModal').addEventListener('hidden.bs.modal', function () {
-      otpInput.value = '';
-      emailOtpError.textContent = '';
-    });
-
-    // Handle profile form submission
+    // Handle profile form submission with comprehensive validation
     document.getElementById('editProfileForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
-      const formData = new FormData(this);
-      const submitBtn = this.querySelector('button[type="submit"]');
-      const originalText = submitBtn.textContent;
+      const firstName = document.getElementById('firstName').value;
+      const lastName = document.getElementById('lastName').value;
+      const phoneNumber = document.getElementById('phoneNumber').value;
       
-      // Validate required fields
-      const firstName = formData.get('firstName').trim();
-      const lastName = formData.get('lastName').trim();
-      const phoneNumber = formData.get('phoneNumber').trim();
+      // Validate all fields
+      const firstNameErrors = validateFirstName(firstName);
+      const lastNameErrors = validateLastName(lastName);
+      const phoneNumberErrors = validatePhoneNumber(phoneNumber);
       
-      if (!firstName || !lastName || !phoneNumber) {
+      // Show validation errors
+      showFieldError('firstName', firstNameErrors);
+      showFieldError('lastName', lastNameErrors);
+      showFieldError('phoneNumber', phoneNumberErrors);
+      
+      // Check if there are any errors
+      if (firstNameErrors.length > 0 || lastNameErrors.length > 0 || phoneNumberErrors.length > 0) {
         Swal.fire({
           icon: 'error',
           title: 'Validation Error',
-          text: 'Please fill in all required fields.'
+          text: 'Please fix the errors in the form before submitting.',
+          confirmButtonColor: '#d33'
         });
         return;
       }
       
-      // Validate phone number (basic validation)
-      const phoneRegex = /^[0-9]{10}$/;
-      if (!phoneRegex.test(phoneNumber)) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Invalid Phone Number',
-          text: 'Please enter a valid 10-digit phone number.'
-        });
-        return;
-      }
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
       
       submitBtn.disabled = true;
       submitBtn.textContent = 'Updating...';
@@ -308,9 +380,9 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          firstName: firstName,
-          lastName: lastName,
-          phoneNumber: phoneNumber
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phoneNumber: phoneNumber.trim()
         })
       })
       .then(response => response.json())
@@ -334,7 +406,8 @@
         Swal.fire({
           icon: 'error',
           title: 'Update Failed',
-          text: 'Failed to update profile. Please try again.'
+          text: error.message || 'Failed to update profile. Please try again.',
+          confirmButtonColor: '#d33'
         });
       })
       .finally(() => {
@@ -343,6 +416,7 @@
       });
     });
     
+    // Handle form submission for non-AJAX fallback
     document.querySelector('form[method="POST"]').addEventListener('submit', function() {
       emailInput.setAttribute('name', 'email');
       if (newEmailInput) newEmailInput.removeAttribute('name');

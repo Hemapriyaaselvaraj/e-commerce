@@ -11,6 +11,27 @@ const isNotLogin = (req, res, next) => {
     next(); 
 };
 
+const isNotLoginOrEmailChange = (req, res, next) => {
+    // Allow access if user is not logged in (normal case)
+    if (!req.session.user) {
+        return next();
+    }
+    
+    // Allow access if user is logged in but this is email-change flow
+    // Check both query params (GET) and body (POST)
+    const flow = req.query.flow || req.body.flow;
+    if (flow === 'email-change' && req.session.role === 'user') {
+        return next();
+    }
+    
+    // Otherwise, redirect logged-in users
+    if (req.session.role === 'admin') {
+        return res.redirect('/admin/dashboard');
+    } else {
+        return res.redirect('/');
+    }
+};
+
 
 const isCustomerAccessible = (req, res, next) => {
     if (!req.session.user) {
@@ -47,4 +68,4 @@ const validateObjectId = (req, res, next) => {
 };
 
 
-module.exports = {isNotLogin, isCustomerAccessible, isAdminAccessible, validateObjectId}
+module.exports = {isNotLogin, isNotLoginOrEmailChange, isCustomerAccessible, isAdminAccessible, validateObjectId}

@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router();
 const passport = require('../config/passport')
 const userController = require('../controllers/user/user.controller');
-const { isNotLogin, isCustomerAccessible } = require('../middlewares/auth');
+const { isNotLogin, isNotLoginOrEmailChange, isCustomerAccessible } = require('../middlewares/auth');
 
 
 router.get('/signup', isNotLogin, userController.viewSignup)
@@ -10,11 +10,14 @@ router.post('/signup',isNotLogin, userController.signup)
 router.get('/login',isNotLogin, userController.viewLogin)
 router.post('/login',isNotLogin, userController.login)
 router.get('/forgotPassword',isNotLogin, userController.forgotPassword)
-router.get('/verifyOtp', isNotLogin, userController.viewVerifyOtp)
+router.get('/verifyOtp', isNotLoginOrEmailChange, userController.viewVerifyOtp)
 router.post('/sendOtp', isNotLogin,userController.sendOtp)
-router.post('/verifyOtp',isNotLogin, userController.verifyOtp)
-router.post('/resendOtp', isNotLogin, userController.resendOtp)
+router.post('/verifyOtp',isNotLoginOrEmailChange, userController.verifyOtp)
+router.post('/resendOtp', isNotLoginOrEmailChange, userController.resendOtp)
 router.post('/changePassword', isNotLogin,userController.changePassword)
+
+// Email change OTP routes
+router.post('/request-email-otp', isCustomerAccessible, userController.requestEmailOtp)
 
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['openid','profile', 'email'],prompt: 'consent' }));

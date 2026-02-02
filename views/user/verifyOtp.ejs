@@ -176,8 +176,13 @@
     <div class="verify-box p-4 shadow rounded bg-white" style="max-width: 400px; width: 100%;">
       <div class="text-center mb-3">
         <i class="fas fa-mobile-alt fa-2x mb-2"></i>
-        <h5>Enter Verification Code</h5>
-        <p class="text-muted">We've sent a 6-digit code to your mail ending in ****il.com</p>
+        <% if (flow === 'email-change') { %>
+          <h5>Verify Email Change</h5>
+          <p class="text-muted">We've sent a 6-digit code to your new email address</p>
+        <% } else { %>
+          <h5>Enter Verification Code</h5>
+          <p class="text-muted">We've sent a 6-digit code to your mail ending in ****il.com</p>
+        <% } %>
       </div>
 
       <% if (error) { %>
@@ -197,8 +202,8 @@
           <input type="text" class="otp-input" maxlength="1" />
         </div>
         <input type="hidden" name="otp" id="otp-full" />
-        <input type="hidden" name="email" value="<%= email %>" />
-        <input type="hidden" name="flow" value="<%= flow %>" />
+        <input type="hidden" name="email" id="email-input" value="<%= email %>" />
+        <input type="hidden" name="flow" id="flow-input" value="<%= flow %>" />
 
         <button class="btn btn-dark w-100" type="submit">Verify Code</button>
 
@@ -214,7 +219,11 @@
         </div>
         <hr />
         <div class="text-start">
-          <a href="/user/login" class="text-decoration-none small"><i class="fas fa-arrow-left me-1"></i> Back to login</a>
+          <% if (flow === 'email-change') { %>
+            <a href="/profile/edit" class="text-decoration-none small"><i class="fas fa-arrow-left me-1"></i> Back to profile</a>
+          <% } else { %>
+            <a href="/user/login" class="text-decoration-none small"><i class="fas fa-arrow-left me-1"></i> Back to login</a>
+          <% } %>
         </div>
       </form>
     </div>
@@ -465,7 +474,10 @@
         fetch('/user/resendOtp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: document.querySelector('input[name="email"]').value })
+          body: JSON.stringify({ 
+            email: document.getElementById('email-input').value,
+            flow: document.getElementById('flow-input').value
+          })
         })
         .then(response => response.json())
         .then(data => {

@@ -288,18 +288,27 @@ const viewSignup = (req, res) => {
   });
 };
 
-const viewVerifyOtp = (req, res) => {
+const viewVerifyOtp = async (req, res) => {
   const { email, flow } = req.query;
   
   if (!email || !flow) {
     return res.redirect('/user/signup');
   }
   
+  // Get OTP expiry time for timer
+  let otpExpiry = null;
+  try {
+    const otpVerification = await otpVerificationModel.findOne({ email });
+    otpExpiry = otpVerification ? otpVerification.expiry.getTime() : null;
+  } catch (error) {
+    console.error('Error getting OTP expiry:', error);
+  }
+  
   return res.render("user/verifyOtp", {
     error: null,
     email: email,
     flow: flow,
-    otpExpiry: null
+    otpExpiry: otpExpiry
   });
 };
 
@@ -439,6 +448,37 @@ const verifyOtp = async(req, res) => {
 
     return res.redirect('/');
 
+  } else if (flow == 'email-change') {
+    // Handle email change verification
+    const user = await userModel.findById(req.session.userId);
+    if (!user) {
+      return res.status(400).render('user/verifyOtp', { 
+        error: "User session expired. Please try again.", 
+        email, 
+        flow,
+        otpExpiry: null
+      });
+    }
+
+    // Verify that this email matches the one stored in session
+    if (req.session.pendingEmailChange !== email.trim().toLowerCase()) {
+      return res.status(400).render('user/verifyOtp', { 
+        error: "Email verification session expired. Please try again.", 
+        email, 
+        flow,
+        otpExpiry: null
+      });
+    }
+
+    user.email = email.trim().toLowerCase();
+    await user.save();
+
+    // Clean up session
+    delete req.session.pendingEmailChange;
+
+    // Redirect to profile with success message
+    req.session.success = 'Email updated successfully!';
+    return res.redirect('/profile');
       
   } else {
     return res.render('user/changePassword', {email, error: null});
@@ -579,7 +619,7 @@ const logout = (req, res) => {
 
 const resendOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, flow } = req.body;
 
     if (!email) {
       return res.status(400).json({
@@ -588,7 +628,27 @@ const resendOtp = async (req, res) => {
       });
     }
 
-    // Check if user exists
+    // For email-change flow, we don't need to check if user exists
+    // because we're sending OTP to a new email address
+    if (flow === 'email-change') {
+      // Verify that this is the email stored in session for email change
+      if (req.session.pendingEmailChange !== email.trim().toLowerCase()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email verification session expired. Please try again.'
+        });
+      }
+      
+      // Send new OTP to the new email
+      await sendOtpToVerifyEmail(email);
+
+      return res.status(200).json({
+        success: true,
+        message: 'OTP sent successfully'
+      });
+    }
+
+    // For other flows (signup, login, forgot password), check if user exists
     const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(404).json({
@@ -607,6 +667,59 @@ const resendOtp = async (req, res) => {
 
   } catch (error) {
     console.error('Resend OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP. Please try again.'
+    });
+  }
+};
+
+const requestEmailOtp = async (req, res) => {
+  try {
+    const { newEmail } = req.body;
+
+    if (!newEmail || !newEmail.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email address is required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid email address'
+      });
+    }
+
+    // Check if email is already in use by another user
+    const existingUser = await userModel.findOne({ 
+      email: newEmail.trim().toLowerCase(),
+      _id: { $ne: req.session.userId }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email address is already registered to another account'
+      });
+    }
+
+    // Store the new email in session for verification
+    req.session.pendingEmailChange = newEmail.trim().toLowerCase();
+
+    // Reuse existing sendOtpToVerifyEmail function
+    await sendOtpToVerifyEmail(newEmail.trim().toLowerCase());
+
+    return res.json({
+      success: true,
+      message: 'OTP sent to your new email address'
+    });
+
+  } catch (error) {
+    console.error('Request email OTP error:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to send OTP. Please try again.'
@@ -653,7 +766,8 @@ module.exports = {
     changePassword,
     login,
     logout,
-    resendOtp
+    resendOtp,
+    requestEmailOtp
 }
 
 

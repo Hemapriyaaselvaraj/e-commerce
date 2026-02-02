@@ -14,10 +14,15 @@ const getProfile = async (req, res) => {
       isDefault: true 
     }).lean();
 
+    // Get success message from session
+    const success = req.session.success || null;
+    delete req.session.success;
+
     res.render('user/profile', {
       name: user.firstName,
       user,
-      defaultAddress
+      defaultAddress,
+      success
     });
   } catch (err) {
     console.error('Error loading profile:', err);
@@ -57,15 +62,41 @@ const updateProfileImage = async (req, res) => {
       });
     }
 
-    const imageUrl = req.file?.path || req.file?.secure_url || req.file?.url || req.file?.location || null;
-
-    if (!imageUrl) {
+    // Check if file was uploaded
+    if (!req.file) {
       return res.status(400).json({ 
         success: false, 
         message: 'Please select an image file to upload.' 
       });
     }
 
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid file type. Please upload JPG, JPEG, PNG, or WebP images only.' 
+      });
+    }
+
+    // Validate file size (5MB limit)
+    if (req.file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'File size too large. Please upload an image smaller than 5MB.' 
+      });
+    }
+
+    const imageUrl = req.file?.path || req.file?.secure_url || req.file?.url || req.file?.location || null;
+
+    if (!imageUrl) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Failed to upload image. Please try again.' 
+      });
+    }
+
+    // Update user profile image
     await userModel.findByIdAndUpdate(userId, { profileImage: imageUrl });
 
     return res.json({ 
@@ -76,6 +107,29 @@ const updateProfileImage = async (req, res) => {
 
   } catch (error) {
     console.error("Error updating profile image:", error);
+    
+    // Handle specific multer errors
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: "File size too large. Please upload an image smaller than 5MB."
+      });
+    }
+    
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: "Too many files. Please upload only one image at a time."
+      });
+    }
+    
+    if (error.message && error.message.includes('Only image files are allowed')) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid file type. Please upload JPG, JPEG, PNG, or WebP images only."
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "We're having trouble updating your profile picture. Please try again or contact support if the problem continues."
@@ -127,23 +181,70 @@ const postEditProfile = async (req, res) => {
     
     const { firstName, lastName, phoneNumber } = req.body;
     
-    // Validate required fields
-    if (!firstName || !lastName || !phoneNumber) {
-      if (req.headers['content-type'] === 'application/json') {
-        return res.status(400).json({ success: false, message: 'All fields are required' });
-      }
-      return res.status(400).send('All fields are required');
+    // Comprehensive validation
+    const errors = [];
+    
+    // First Name validation
+    if (!firstName || !firstName.trim()) {
+      errors.push('First name is required');
+    } else if (firstName.trim().length < 2) {
+      errors.push('First name must be at least 2 characters long');
+    } else if (firstName.trim().length > 50) {
+      errors.push('First name cannot exceed 50 characters');
+    } else if (!/^[a-zA-Z\s]+$/.test(firstName.trim())) {
+      errors.push('First name can only contain letters and spaces');
     }
     
-    // Validate phone number
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(phoneNumber.trim())) {
-      if (req.headers['content-type'] === 'application/json') {
-        return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit phone number' });
-      }
-      return res.status(400).send('Please enter a valid 10-digit phone number');
+    // Last Name validation
+    if (!lastName || !lastName.trim()) {
+      errors.push('Last name is required');
+    } else if (lastName.trim().length < 1) {
+      errors.push('Last name is required');
+    } else if (lastName.trim().length > 50) {
+      errors.push('Last name cannot exceed 50 characters');
+    } else if (!/^[a-zA-Z\s]+$/.test(lastName.trim())) {
+      errors.push('Last name can only contain letters and spaces');
     }
     
+    // Phone Number validation
+    if (!phoneNumber || !phoneNumber.trim()) {
+      errors.push('Phone number is required');
+    } else {
+      const cleanPhone = phoneNumber.trim().replace(/\D/g, ''); // Remove non-digits
+      if (cleanPhone.length !== 10) {
+        errors.push('Phone number must be exactly 10 digits');
+      } else if (!/^[6-9]/.test(cleanPhone)) {
+        errors.push('Phone number must start with 6, 7, 8, or 9');
+      } else if (!/^[6-9][0-9]{9}$/.test(cleanPhone)) {
+        errors.push('Please enter a valid Indian mobile number');
+      }
+    }
+    
+    // Check for duplicate phone number
+    if (errors.length === 0) {
+      const existingUser = await userModel.findOne({ 
+        phoneNumber: phoneNumber.trim(),
+        _id: { $ne: req.session.userId }
+      });
+      
+      if (existingUser) {
+        errors.push('This phone number is already registered with another account');
+      }
+    }
+    
+    // Return validation errors
+    if (errors.length > 0) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(400).json({ 
+          success: false, 
+          message: errors[0], // Return first error for simplicity
+          errors: errors 
+        });
+      }
+      return res.status(400).send(errors[0]);
+    }
+    
+    // Update user profile
     await userModel.findByIdAndUpdate(req.session.userId, {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
