@@ -19,18 +19,22 @@ router.get('/products/configuration' , productController.getProductConfiguration
 router.post('/products/category', productController.createCategory)
 router.put('/products/category/:id', validateObjectId, productController.updateCategory)
 router.delete('/products/category/:id', validateObjectId, productController.deleteCategory)
+router.patch('/products/category/:id/toggle', validateObjectId, productController.toggleCategoryStatus)
 
 router.post('/products/type', productController.createType);
 router.put('/products/type/:id', validateObjectId, productController.updateType);
 router.delete('/products/type/:id', validateObjectId, productController.deleteType);
+router.patch('/products/type/:id/toggle', validateObjectId, productController.toggleTypeStatus);
 
 router.post('/products/size', productController.createSize);
 router.put('/products/size/:id', validateObjectId, productController.updateSize);
 router.delete('/products/size/:id', validateObjectId, productController.deleteSize);
+router.patch('/products/size/:id/toggle', validateObjectId, productController.toggleSizeStatus);
 
 router.post('/products/color', productController.createColor);
 router.put('/products/color/:id', validateObjectId, productController.updateColor);
 router.delete('/products/color/:id', validateObjectId, productController.deleteColor);
+router.patch('/products/color/:id/toggle', validateObjectId, productController.toggleColorStatus);
 
 router.get('/products', productController.getProducts);
 router.get('/products/addProduct', productController.getAddProduct)

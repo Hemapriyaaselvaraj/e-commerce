@@ -47,7 +47,44 @@ const productList = async (req, res) => {
     const variations = await ProductVariation.find(variationFilter, "product_id").lean();
     variationProductIds = [...new Set(variations.map(v => v.product_id.toString()))];
     if (!variationProductIds.length) {
-      return renderEmpty();
+      // Still need to fetch filter data even when no products match
+      const [categories, types, sizesRaw, colors] = await Promise.all([
+        productCategoryModel.find({ isActive: true }).lean(),
+        productTypeModel.find({ isActive: true }).lean(),
+        productSizeModel.find({ isActive: true }).lean(),
+        productColorModel.find({ isActive: true }).lean()
+      ]);
+      
+      // Sort sizes numerically
+      const sizes = sizesRaw.sort((a, b) => Number(a.size) - Number(b.size));
+      const priceRanges = [
+        { label: "0 - 500", min: 0, max: 500 },
+        { label: "500 - 1000", min: 500, max: 1000 },
+        { label: "1000 - 2000", min: 1000, max: 2000 },
+        { label: "2000 - 5000", min: 2000, max: 5000 },
+        { label: "5000 - 10000", min: 5000, max: 10000 }
+      ];
+      
+      return res.render("user/productList", {
+        products: [],
+        categories,
+        types,
+        sizes,
+        colors,
+        priceRanges,
+        selectedCategory,
+        selectedType,
+        selectedSize,
+        selectedColor,
+        selectedPrice,
+        currentPage: 1,
+        totalPages: 0,
+        totalResults: 0,
+        pageSize,
+        sort,
+        query: req.query,
+        wishlistMap: {}
+      });
     }
     filter._id = { $in: variationProductIds };
   }
@@ -135,12 +172,15 @@ const productList = async (req, res) => {
     }
   }
 
-  const [categories, types, sizes, colors] = await Promise.all([
-    productCategoryModel.find({}).lean(),
-    productTypeModel.find({}).lean(),
-    productSizeModel.find({}).lean(),
-    productColorModel.find({}).lean()
+  const [categories, types, sizesRaw, colors] = await Promise.all([
+    productCategoryModel.find({ isActive: true }).lean(),
+    productTypeModel.find({ isActive: true }).lean(),
+    productSizeModel.find({ isActive: true }).lean(),
+    productColorModel.find({ isActive: true }).lean()
   ]);
+  
+  // Sort sizes numerically
+  const sizes = sizesRaw.sort((a, b) => Number(a.size) - Number(b.size));
   const priceRanges = [
     { label: "0 - 500", min: 0, max: 500 },
     { label: "500 - 1000", min: 500, max: 1000 },
@@ -148,7 +188,6 @@ const productList = async (req, res) => {
     { label: "2000 - 5000", min: 2000, max: 5000 },
     { label: "5000 - 10000", min: 5000, max: 10000 }
   ];
-
 
   return res.render("user/productList", {
     products,
@@ -170,29 +209,6 @@ const productList = async (req, res) => {
     query: req.query,
     wishlistMap
   });
-
-  function renderEmpty() {
-    return res.render("user/productList", {
-      products: [],
-      categories: [],
-      types: [],
-      sizes: [],
-      colors: [],
-      priceRanges: [],
-      selectedCategory,
-      selectedType,
-      selectedSize,
-      selectedColor,
-      selectedPrice,
-      currentPage,
-      totalPages: 0,
-      totalResults: 0,
-      pageSize,
-      sort,
-      query: req.query,
-      wishlistMap: {}
-    });
-  }
 
   function sortProducts(products, order) {
     switch (order) {

@@ -261,6 +261,7 @@
     </div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const passwordInput = document.getElementById('passwordInput');
@@ -270,6 +271,94 @@
       passwordInput.type = isPassword ? 'text' : 'password';
       this.classList.toggle('fa-eye');
       this.classList.toggle('fa-eye-slash');
+    });
+
+    // Handle form submission with AJAX and SweetAlert
+    const loginForm = document.querySelector('form');
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const submitButton = loginForm.querySelector('button[type="submit"]');
+      const originalText = submitButton.textContent;
+      
+      // Show loading state
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+      
+      // Get form data
+      const formData = new FormData(loginForm);
+      
+      // Convert FormData to URLSearchParams for proper encoding
+      const urlEncodedData = new URLSearchParams();
+      for (const [key, value] of formData.entries()) {
+        urlEncodedData.append(key, value);
+      }
+      
+      // Submit via fetch
+      fetch('/user/login', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: urlEncodedData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Show success SweetAlert
+          Swal.fire({
+            title: 'Welcome Back!',
+            text: data.message,
+            icon: 'success',
+            confirmButtonText: 'Continue',
+            confirmButtonColor: '#28a745',
+            allowOutsideClick: false
+          }).then(() => {
+            // Redirect to appropriate page
+            window.location.href = data.redirectUrl;
+          });
+        } else if (data.requiresVerification) {
+          // Handle unverified account
+          Swal.fire({
+            title: 'Account Verification Required',
+            text: data.message,
+            icon: 'info',
+            confirmButtonText: 'Verify Now',
+            confirmButtonColor: '#007bff'
+          }).then(() => {
+            // Store data and redirect to OTP page
+            if (data.otpExpiry) {
+              sessionStorage.setItem('otpExpiry', data.otpExpiry);
+            }
+            window.location.href = data.redirectUrl + '?email=' + encodeURIComponent(data.email) + '&flow=' + data.flow;
+          });
+        } else {
+          // Show error message
+          Swal.fire({
+            title: 'Sign In Failed',
+            text: data.message,
+            icon: 'error',
+            confirmButtonText: 'Try Again',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Login error:', error);
+        Swal.fire({
+          title: 'Network Error',
+          text: 'Unable to sign in. Please check your connection and try again.',
+          icon: 'error',
+          confirmButtonText: 'Try Again',
+          confirmButtonColor: '#dc3545'
+        });
+      })
+      .finally(() => {
+        // Reset button state
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+      });
     });
   </script>
 </body>

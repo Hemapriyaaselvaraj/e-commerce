@@ -7,6 +7,46 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="/frontend/public/css/adminDashboard.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
+  <style>
+    .badge {
+      vertical-align: middle !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      font-size: 0.75rem !important;
+      line-height: 1 !important;
+    }
+    .d-flex.align-items-center {
+      align-items: center !important;
+    }
+    .table {
+      table-layout: fixed;
+      width: 100%;
+    }
+    .table td, .table th {
+      padding: 0.5rem 0.75rem;
+      vertical-align: middle;
+    }
+    .table td:first-child {
+      width: 50%;
+    }
+    .table td:nth-child(2) {
+      width: 25%;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .table td:nth-child(2) .badge {
+      display: inline-block;
+      margin: 0 auto;
+    }
+    .table td:last-child {
+      width: 25%;
+      text-align: center;
+    }
+    .btn-group-sm > .btn, .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+  </style>
 </head>
 <body>
   <div class="container-fluid">
@@ -40,25 +80,60 @@
                     <strong><%= section.title %></strong>
                     <button class="btn btn-sm btn-dark" onclick="addItem('<%= section.field %>')">+ Add New</button>
                   </div>
-                  <ul class="list-group list-group-flush" id="<%= section.field %>-list">
-                    <% if (data[section.field]) { %>
-                      <% data[section.field].forEach((item, index) => { %>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                          <span id="<%= section.field %>-name-<%= index %>"><%= item[section.field] %></span>
-                          <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-secondary" 
-                              onclick="editItem('<%= section.field %>', '<%= index %>', '<%= item._id %>')">
-                              <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" 
-                              onclick="deleteItem('<%= section.field %>', '<%= item._id %>')">
-                              <i class="fas fa-trash"></i>
-                            </button>
-                          </div>
-                        </li>
-                      <% }) %>
-                    <% } %>
-                  </ul>
+                  <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th style="width: 50%;">Name</th>
+                          <th style="width: 25%; text-align: center;">Status</th>
+                          <th style="width: 25%; text-align: center;">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="<%= section.field %>-list">
+                        <% if (data[section.field]) { %>
+                        <% data[section.field].forEach((item, index) => { %>
+                            <tr>
+                              <td>
+                                <span id="<%= section.field %>-name-<%= index %>"><%= item[section.field] %></span>
+                              </td>
+                              <td>
+                                <% if (item.isActive) { %>
+                                  <span class="badge bg-success">Active</span>
+                                <% } else { %>
+                                  <span class="badge bg-secondary">Inactive</span>
+                                <% } %>
+                              </td>
+                              <td>
+                                <div class="btn-group btn-group-sm">
+                                  <button class="btn btn-outline-secondary" 
+                                    onclick="editItem('<%= section.field %>', '<%= index %>', '<%= item._id %>')">
+                                    <i class="fas fa-edit"></i>
+                                  </button>
+                                  <% if (item.isActive) { %>
+                                    <button class="btn btn-outline-warning" 
+                                      onclick="toggleItem('<%= section.field %>', '<%= item._id %>', true)"
+                                      id="toggle-btn-<%= item._id %>">
+                                      <i class="fas fa-toggle-on"></i> Deactivate
+                                    </button>
+                                  <% } else { %>
+                                    <button class="btn btn-outline-success" 
+                                      onclick="toggleItem('<%= section.field %>', '<%= item._id %>', false)"
+                                      id="toggle-btn-<%= item._id %>">
+                                      <i class="fas fa-toggle-off"></i> Activate
+                                    </button>
+                                  <% } %>
+                                </div>
+                              </td>
+                            </tr>
+                          <% }) %>
+                        <% } else { %>
+                          <tr>
+                            <td colspan="3" class="text-center text-muted">No <%= section.title.toLowerCase() %> found</td>
+                          </tr>
+                        <% } %>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             <% }) %>
@@ -72,94 +147,237 @@
 
   <script>
     function addItem(field) {
-      const list = document.getElementById(`${field}-list`);
+      const tbody = document.querySelector(`#${field}-list`);
       const inputType = (field === 'size') ? 'number' : 'text';
-      const li = document.createElement('li');
-      li.className = 'list-group-item d-flex justify-content-between align-items-center';
-      li.innerHTML = `
-        <input type="${inputType}" class="form-control me-2" placeholder="Enter ${field}" onkeydown="handleEnter(event, '${field}', this)">
-        <div class="btn-group btn-group-sm">
-          <button class="btn btn-success" onclick="saveNewItem('${field}', this)">✓</button>
-          <button class="btn btn-danger" onclick="this.closest('li').remove()">×</button>
-        </div>
+      
+      // Remove "No items found" row if it exists
+      const noItemsRow = tbody.querySelector('td[colspan="3"]');
+      if (noItemsRow) {
+        noItemsRow.closest('tr').remove();
+      }
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <input type="${inputType}" class="form-control form-control-sm" placeholder="Enter ${field}" onkeydown="handleEnter(event, '${field}', this)">
+        </td>
+        <td>
+          <span class="badge bg-success">Active</span>
+        </td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-success btn-sm" onclick="saveNewItem('${field}', this)">✓</button>
+            <button class="btn btn-danger btn-sm" onclick="cancelAddItem(this, '${field}')">×</button>
+          </div>
+        </td>
       `;
-      list.appendChild(li);
+      tbody.appendChild(tr);
+      
+      // Focus on the input
+      tr.querySelector('input').focus();
+    }
+
+    function cancelAddItem(btn, field) {
+      const row = btn.closest('tr');
+      const tbody = row.closest('tbody');
+      row.remove();
+      
+      // If no items left, show "No items found" message
+      if (tbody.children.length === 0) {
+        const fieldTitle = getFieldTitle(field);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="text-center text-muted">No ${fieldTitle.toLowerCase()} found</td>
+          </tr>
+        `;
+      }
+    }
+
+    function getFieldTitle(field) {
+      const titles = {
+        'category': 'categories',
+        'type': 'shoe types', 
+        'size': 'sizes',
+        'color': 'colors'
+      };
+      return titles[field] || field;
     }
 
     async function saveNewItem(field, btn) {
-      const input = btn.closest('li').querySelector('input');
+      const input = btn.closest('tr').querySelector('input');
       const value = input.value.trim();
 
       if (!value) {
-        return Swal.fire({ icon: 'error', title: 'Error', text: 'Cannot be empty' });
+        return Swal.fire({ 
+          icon: 'error', 
+          title: 'Error', 
+          text: 'Cannot be empty',
+          confirmButtonColor: '#000'
+        });
       }
 
       if (field === 'size') {
         const num = Number(value);
         if (!Number.isFinite(num) || value === '' || value.includes('e')) {
-          return Swal.fire({ icon: 'error', title: 'Error', text: 'Size must be a valid number!' });
+          return Swal.fire({ 
+            icon: 'error', 
+            title: 'Error', 
+            text: 'Size must be a valid number!',
+            confirmButtonColor: '#000'
+          });
         }
       }
 
-      const res = await fetch(`/admin/products/${field}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value })
-      });
-      const data = await res.json();
+      try {
+        console.log(`Attempting to create ${field} with value:`, value);
+        
+        const res = await fetch(`/admin/products/${field}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value })
+        });
+        
+        console.log('Response status:', res.status);
+        const data = await res.json();
+        console.log('Response data:', data);
 
-      if (!res.ok) {
-        return Swal.fire({
+        if (!res.ok) {
+          console.log('Error response received:', data.message);
+          return Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.message || 'Failed to save',
+            confirmButtonColor: '#000'
+          });
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: data.message || 'Saved successfully',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          window.location.reload();
+        });
+      } catch (error) {
+        console.error('Network error:', error);
+        Swal.fire({
           icon: 'error',
-          title: 'Error',
-          text: data.message || 'Failed to save'
+          title: 'Network Error',
+          text: 'Unable to save. Please try again.',
+          confirmButtonColor: '#000'
         });
       }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: data.message || 'Saved successfully',
-        timer: 1500,
-        showConfirmButton: false
-      }).then(() => {
-        window.location.reload();
-      });
     }
 
     function editItem(field, index, id) {
       const span = document.getElementById(`${field}-name-${index}`);
       const current = span.innerText;
       const inputType = (field === 'size') ? 'number' : 'text';
+      const row = span.closest('tr');
+      const actionsCell = row.cells[2]; // Third column (Actions)
 
       span.outerHTML = `
-        <input type="${inputType}" class="form-control me-2" id="${field}-input-${index}" value="${current}" />
+        <input type="${inputType}" class="form-control form-control-sm" id="${field}-input-${index}" value="${current}" />
       `;
 
-      const parent = document.getElementById(`${field}-input-${index}`).closest('li');
-      const btnGroup = parent.querySelector('.btn-group');
-
-      btnGroup.innerHTML = `
-        <button class="btn btn-success" onclick="finalizeEdit('${field}', '${id}', '${index}')">✓</button>
-        <button class="btn btn-danger" onclick="cancelEdit('${field}', ${index}, '${current}', '${id}')">×</button>
+      actionsCell.innerHTML = `
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-success btn-sm" onclick="finalizeEdit('${field}', '${id}', '${index}')">✓</button>
+          <button class="btn btn-danger btn-sm" onclick="cancelEdit('${field}', ${index}, '${current}', '${id}')">×</button>
+        </div>
       `;
+      
+      // Focus on the input
+      document.getElementById(`${field}-input-${index}`).focus();
     }
 
     function cancelEdit(field, index, originalValue, id) {
       const input = document.getElementById(`${field}-input-${index}`);
-      const parent = input.closest('li');
+      const row = input.closest('tr');
+      const statusCell = row.cells[1]; // Second column (Status)
+      const actionsCell = row.cells[2]; // Third column (Actions)
+      
+      // Get the current item data to determine button state
+      const badge = statusCell.querySelector('.badge');
+      const isActive = badge && badge.textContent.trim() === 'Active';
 
       input.outerHTML = `<span id="${field}-name-${index}">${originalValue}</span>`;
 
-      const btnGroup = parent.querySelector('.btn-group');
-      btnGroup.innerHTML = `
-        <button class="btn btn-outline-secondary" onclick="editItem('${field}', ${index}, '${id}')">
-          <i class="fas fa-edit"></i>
-        </button>
-        <button class="btn btn-outline-danger" onclick="deleteItem('${field}', '${id}')">
-          <i class="fas fa-trash"></i>
-        </button>
+      actionsCell.innerHTML = `
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" onclick="editItem('${field}', ${index}, '${id}')">
+            <i class="fas fa-edit"></i>
+          </button>
+          ${isActive ? 
+            `<button class="btn btn-outline-warning" onclick="toggleItem('${field}', '${id}', true)" id="toggle-btn-${id}">
+              <i class="fas fa-toggle-on"></i> Deactivate
+            </button>` :
+            `<button class="btn btn-outline-success" onclick="toggleItem('${field}', '${id}', false)" id="toggle-btn-${id}">
+              <i class="fas fa-toggle-off"></i> Activate
+            </button>`
+          }
+        </div>
       `;
+    }
+
+    async function toggleItem(field, id, currentStatus) {
+      const btn = document.getElementById(`toggle-btn-${id}`);
+      const row = btn.closest('tr');
+      const statusCell = row.cells[1]; // Second column (Status)
+      const badge = statusCell.querySelector('.badge');
+      
+      try {
+        const res = await fetch(`/admin/products/${field}/${id}/toggle`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+          return Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.message || 'Failed to update status'
+          });
+        }
+        
+        // Update button and badge
+        if (data.isActive) {
+          btn.className = 'btn btn-outline-warning';
+          btn.innerHTML = '<i class="fas fa-toggle-on"></i> Deactivate';
+          btn.setAttribute('onclick', `toggleItem('${field}', '${id}', true)`);
+          badge.className = 'badge bg-success';
+          badge.textContent = 'Active';
+        } else {
+          btn.className = 'btn btn-outline-success';
+          btn.innerHTML = '<i class="fas fa-toggle-off"></i> Activate';
+          btn.setAttribute('onclick', `toggleItem('${field}', '${id}', false)`);
+          badge.className = 'badge bg-secondary';
+          badge.textContent = 'Inactive';
+        }
+        
+        // Show success message
+        Swal.fire({
+          icon: 'success',
+          title: 'Status Updated!',
+          text: `Item ${data.isActive ? 'activated' : 'deactivated'} successfully.`,
+          timer: 1500,
+          showConfirmButton: false
+        });
+        
+      } catch (error) {
+        console.error('Toggle error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Network Error',
+          text: 'Unable to update status. Please try again.'
+        });
+      }
     }
 
     async function finalizeEdit(field, id, index) {
@@ -204,43 +422,10 @@
       });
     }
 
-    async function deleteItem(field, id) {
-      const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete it!'
-      });
-
-      if (!result.isConfirmed) return;
-
-      const res = await fetch(`/admin/products/${field}/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-
-      if (!res.ok) {
-        return Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: data.message || 'Failed to delete'
-        });
-      }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Item has been deleted.',
-        timer: 1500,
-        showConfirmButton: false
-      }).then(() => window.location.reload());
-    }
-
     function handleEnter(e, field, input) {
       if (e.key === 'Enter') {
         e.preventDefault();
-        saveNewItem(field, input.closest('li').querySelector('.btn-success'));
+        saveNewItem(field, input.closest('tr').querySelector('.btn-success'));
       }
     }
   </script>

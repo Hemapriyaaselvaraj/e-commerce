@@ -282,7 +282,7 @@
     </div>
   </footer>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert/dist/sweetalert.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       var form = document.getElementById("signupForm");
@@ -517,16 +517,96 @@
         }
         
         if (!termsCheckbox.checked) {
-          swal("Please agree to the Terms of Service and Privacy Policy");
+          Swal.fire({
+            title: 'Terms Required',
+            text: 'Please agree to the Terms of Service and Privacy Policy',
+            icon: 'warning',
+            confirmButtonText: 'OK'
+          });
           hasErrors = true;
         }
         
         if (hasErrors) {
-          swal("Please fix the errors above before submitting");
+          Swal.fire({
+            title: 'Validation Error',
+            text: 'Please fix the errors above before submitting',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
           return false;
         }
         
-        form.submit();
+        // Show loading state
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+        
+        // Submit form via fetch
+        const formData = new FormData(form);
+        
+        // Convert FormData to URLSearchParams for proper encoding
+        const urlEncodedData = new URLSearchParams();
+        for (const [key, value] of formData.entries()) {
+          urlEncodedData.append(key, value);
+        }
+        
+        fetch('/user/signup', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: urlEncodedData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Show success SweetAlert
+            Swal.fire({
+              title: "Account Created Successfully!",
+              text: "We've sent a verification code to your email. Please check your inbox and enter the code to verify your account.",
+              icon: "success",
+              confirmButtonText: "Continue to Verification",
+              confirmButtonColor: '#28a745',
+              allowOutsideClick: false
+            }).then(() => {
+              // Store data in sessionStorage for OTP page
+              sessionStorage.setItem('otpEmail', data.email);
+              sessionStorage.setItem('otpFlow', data.flow);
+              if (data.otpExpiry) {
+                sessionStorage.setItem('otpExpiry', data.otpExpiry);
+              }
+              
+              // Redirect to OTP page
+              window.location.href = '/user/verifyOtp?email=' + encodeURIComponent(data.email) + '&flow=' + data.flow;
+            });
+          } else {
+            // Show error message
+            Swal.fire({
+              title: "Signup Failed",
+              text: data.message || "An error occurred during signup. Please try again.",
+              icon: "error",
+              confirmButtonText: "Try Again",
+              confirmButtonColor: '#dc3545'
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Signup error:', error);
+          Swal.fire({
+            title: "Network Error",
+            text: "Unable to create account. Please check your connection and try again.",
+            icon: "error",
+            confirmButtonText: "Try Again",
+            confirmButtonColor: '#dc3545'
+          });
+        })
+        .finally(() => {
+          // Reset button state
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        });
       });
     });
   </script>

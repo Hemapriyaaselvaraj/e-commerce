@@ -284,6 +284,7 @@
 
         container.innerHTML = `
           <span class="remove-btn" onclick="this.parentElement.remove()">&times;</span>
+          ${data._id ? `<input type="hidden" name="variations[${index}][variationId]" value="${data._id}" />` : ''}
           <div class="row g-3 align-items-end">
             <div class="col-md-3">
               <label>Size</label>
@@ -579,6 +580,7 @@
           editVariations.forEach(function(v, i) {
             addVariation({
               index: i,
+              _id: v._id,
               size: v.size,
               color: v.color,
               stock: v.stock,

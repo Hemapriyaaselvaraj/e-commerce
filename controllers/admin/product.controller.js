@@ -50,18 +50,21 @@ const createCategory = async (req, res) => {
       });
     }
 
+    const trimmedValue = value.trim();
+    
+    // Check for existing category (case-insensitive, exact match)
     const isCategoryAlreadyAvailable = await productCategoryModel.findOne({
-      category: { $regex: `^${value}$`, $options: "i" },
+      category: { $regex: new RegExp(`^${trimmedValue}$`, 'i') }
     });
 
     if (isCategoryAlreadyAvailable) {
       return res.status(400).json({ 
-        message: "A category with this name already exists. Please choose a different name." 
+        message: `A category with the name "${trimmedValue}" already exists. Please choose a different name.` 
       });
     }
 
     const newCategory = new productCategoryModel({
-      category: value.trim().toUpperCase(),
+      category: trimmedValue.toUpperCase(),
     });
     await newCategory.save();
 
@@ -96,7 +99,7 @@ const updateCategory = async (req, res) => {
     }
 
     const isCategoryAlreadyAvailable = await productCategoryModel.findOne({
-      category: { $regex: `^${value}$`, $options: "i" },
+      category: { $regex: `^${value.trim()}$`, $options: "i" },
       _id: { $ne: id }
     });
 
@@ -120,6 +123,34 @@ const updateCategory = async (req, res) => {
     console.error("Error updating category:", error);
     res.status(500).json({ 
       message: "We couldn't update the category due to a technical issue. Please try again or contact support if the problem continues." 
+    });
+  }
+};
+
+const toggleCategoryStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const category = await productCategoryModel.findById(id);
+    
+    if (!category) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Category not found" 
+      });
+    }
+
+    category.isActive = !category.isActive;
+    await category.save();
+
+    res.json({ 
+      success: true, 
+      isActive: category.isActive 
+    });
+  } catch (error) {
+    console.error("Toggle category status error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server Error" 
     });
   }
 };
@@ -158,17 +189,19 @@ const createType = async (req, res) => {
       });
     }
 
+    const trimmedValue = value.trim();
+
     const isTypeAlreadyAvailable = await productTypeModel.findOne({
-      type: { $regex: `^${value}$`, $options: "i" },
+      type: { $regex: new RegExp(`^${trimmedValue}$`, 'i') }
     });
 
     if (isTypeAlreadyAvailable) {
       return res.status(400).json({ 
-        message: "A product type with this name already exists. Please choose a different name." 
+        message: `A product type with the name "${trimmedValue}" already exists. Please choose a different name.` 
       });
     }
 
-    const newType = new productTypeModel({ type: value.trim().toUpperCase() });
+    const newType = new productTypeModel({ type: trimmedValue.toUpperCase() });
     await newType.save();
 
     res.status(201).json({
@@ -216,6 +249,34 @@ const updateType = async (req, res) => {
   }
 };
 
+const toggleTypeStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const type = await productTypeModel.findById(id);
+    
+    if (!type) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Product type not found" 
+      });
+    }
+
+    type.isActive = !type.isActive;
+    await type.save();
+
+    res.json({ 
+      success: true, 
+      isActive: type.isActive 
+    });
+  } catch (error) {
+    console.error("Toggle type status error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server Error" 
+    });
+  }
+};
+
 const deleteType = async (req, res) => {
   try {
     const { id } = req.params;
@@ -233,22 +294,41 @@ const deleteType = async (req, res) => {
 const createSize = async (req, res) => {
   try {
     const value = req.body.value?.trim();
+    
+    if (!value) {
+      return res.status(400).json({ 
+        message: "Please enter a size value. The value cannot be empty." 
+      });
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || value === '' || value.includes('e')) {
+      return res.status(400).json({ 
+        message: "Size must be a valid number!" 
+      });
+    }
+
     const isSizeAlreadyAvailable = await productSizeModel.findOne({
-      size: value,
+      size: numericValue,
     });
 
     if (isSizeAlreadyAvailable) {
-      throw new Error("Size already exists");
+      return res.status(400).json({ 
+        message: "A size with this value already exists. Please choose a different size." 
+      });
     }
 
-    const newSize = new productSizeModel({ size: Number(value) });
+    const newSize = new productSizeModel({ size: numericValue });
     await newSize.save();
 
     res.status(201).json({
-      message: "Size created",
+      message: "Size created successfully!",
     });
   } catch (error) {
-    res.status(500).json({ message: error.message || "Failed to create size" });
+    console.error("Error creating size:", error);
+    res.status(500).json({ 
+      message: "We couldn't create the size due to a technical issue. Please try again or contact support if the problem continues." 
+    });
   }
 };
 
@@ -295,6 +375,34 @@ const updateSize = async (req, res) => {
   }
 };
 
+const toggleSizeStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const size = await productSizeModel.findById(id);
+    
+    if (!size) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Size not found" 
+      });
+    }
+
+    size.isActive = !size.isActive;
+    await size.save();
+
+    res.json({ 
+      success: true, 
+      isActive: size.isActive 
+    });
+  } catch (error) {
+    console.error("Toggle size status error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server Error" 
+    });
+  }
+};
+
 const deleteSize = async (req, res) => {
   try {
     const { id } = req.params;
@@ -317,24 +425,35 @@ const createColor = async (req, res) => {
   try {
     const { value } = req.body;
 
+    if (!value || !value.trim()) {
+      return res.status(400).json({ 
+        message: "Please enter a color name. The name cannot be empty." 
+      });
+    }
+
+    const trimmedValue = value.trim();
+
     const isColorAlreadyAvailable = await productColorModel.findOne({
-      color: { $regex: `^${value}$`, $options: "i" },
+      color: { $regex: new RegExp(`^${trimmedValue}$`, 'i') }
     });
 
     if (isColorAlreadyAvailable) {
-      throw new Error("Color already exists");
+      return res.status(400).json({ 
+        message: `A color with the name "${trimmedValue}" already exists. Please choose a different name.` 
+      });
     }
 
-    const newColor = new productColorModel({ color: value.toUpperCase() });
+    const newColor = new productColorModel({ color: trimmedValue.toUpperCase() });
     await newColor.save();
 
     res.status(201).json({
-      message: "Color created",
+      message: "Color created successfully!",
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to create color" });
+    console.error("Error creating color:", error);
+    res.status(500).json({ 
+      message: "We couldn't create the color due to a technical issue. Please try again or contact support if the problem continues." 
+    });
   }
 };
 
@@ -371,6 +490,34 @@ const updateColor = async (req, res) => {
     res
       .status(500)
       .json({ message: error.message || "Failed to update color" });
+  }
+};
+
+const toggleColorStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const color = await productColorModel.findById(id);
+    
+    if (!color) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Color not found" 
+      });
+    }
+
+    color.isActive = !color.isActive;
+    await color.save();
+
+    res.json({ 
+      success: true, 
+      isActive: color.isActive 
+    });
+  } catch (error) {
+    console.error("Toggle color status error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server Error" 
+    });
   }
 };
 
@@ -494,11 +641,11 @@ const toggleActive = async (req, res) => {
 const getAddProduct = async (req, res) => {
   const user = await userModel.findOne({ _id: req.session.userId });
 
-  let sizes = await productSizeModel.find();
+  let sizes = await productSizeModel.find({ isActive: true });
   sizes = sizes.sort((a, b) => Number(a.size) - Number(b.size));
-  const colors = await productColorModel.find().sort({ color: 1 });
-  const categories = await productCategoryModel.find().sort({ category: 1 });
-  const types = await productTypeModel.find().sort({ type: 1 });
+  const colors = await productColorModel.find({ isActive: true }).sort({ color: 1 });
+  const categories = await productCategoryModel.find({ isActive: true }).sort({ category: 1 });
+  const types = await productTypeModel.find({ isActive: true }).sort({ type: 1 });
 
   res.render("admin/addProduct", {
     name: user.firstName,
@@ -599,6 +746,7 @@ const getEditProduct = async(req,res) => {
               input:"$variations",
               as: "v",
               in:{
+                _id: "$$v._id",
                 size: "$$v.product_size",
                 color: "$$v.product_color",
                 stock: "$$v.stock_quantity",
@@ -614,10 +762,10 @@ const getEditProduct = async(req,res) => {
 
     const product = result[0];
 
-    const categories = await productCategoryModel.find({}).lean();
-    const types = await productTypeModel.find({}).lean();
-    const sizes = await productSizeModel.find({}).lean();
-    const colors = await productColorModel.find({}).lean();
+    const categories = await productCategoryModel.find({ isActive: true }).lean();
+    const types = await productTypeModel.find({ isActive: true }).lean();
+    const sizes = await productSizeModel.find({ isActive: true }).lean();
+    const colors = await productColorModel.find({ isActive: true }).lean();
 
     const user = await userModel.findById(req.session.userId);
     res.render("admin/addProduct", {
@@ -662,31 +810,44 @@ const postEditProduct = async (req, res) => {
 
     const existingVariations = await ProductVariation.find({ product_id: productId });
 
-    const findExistingVar = (size, color) =>
-      existingVariations.find(v => v.product_size === size && v.product_color === color);
-
     const files = req.files || [];
     const getVariationImages = index =>
       files.filter(file => file.fieldname === `variationImages_${index}`).map(file => file.path);
 
-    const submittedKeys = new Set();
     const changes = [];
+    const processedVariationIds = new Set();
 
     for (let i = 0; i < variations.length; i++) {
-      const { size, color, stock } = variations[i];
-      const key = `${size}__${color}`;
-      submittedKeys.add(key);
-
+      const { size, color, stock, variationId } = variations[i];
+      
       const newImageUrls = getVariationImages(i);
       const deletedImages = req.body[`deletedVariationImage_${i}`] || [];
 
-      const existing = findExistingVar(size, color);
+      let targetVariation = null;
+      
+      // If variationId is provided, try to find the existing variation by ID
+      if (variationId) {
+        targetVariation = existingVariations.find(v => v._id.toString() === variationId);
+        processedVariationIds.add(variationId);
+      }
+      
+      // If no variation found by ID, try to find by size+color (for new variations)
+      if (!targetVariation) {
+        targetVariation = existingVariations.find(v => 
+          v.product_size === size && 
+          v.product_color === color &&
+          !processedVariationIds.has(v._id.toString())
+        );
+        if (targetVariation) {
+          processedVariationIds.add(targetVariation._id.toString());
+        }
+      }
 
-      if (existing) {
-        // Calculate final image count for existing variation
+      if (targetVariation) {
+        // Updating existing variation
         const finalImages = [
           ...newImageUrls,
-          ...(existing.images || []).filter(url => !deletedImages.includes(url))
+          ...(targetVariation.images || []).filter(url => !deletedImages.includes(url))
         ];
         
         // Validate minimum 4 images per variation
@@ -696,12 +857,14 @@ const postEditProduct = async (req, res) => {
           });
         }
         
-        existing.stock_quantity = stock;
-        existing.images = finalImages;
-        existing.updated_at = new Date();
-        changes.push(existing.save());
+        targetVariation.product_size = size;
+        targetVariation.product_color = color;
+        targetVariation.stock_quantity = stock;
+        targetVariation.images = finalImages;
+        targetVariation.updated_at = new Date();
+        changes.push(targetVariation.save());
       } else {
-        // Validate minimum 4 images for new variation
+        // Creating new variation
         if (newImageUrls.length < 4) {
           return res.status(400).json({ 
             error: `Each product variation must have at least 4 images. New variation ${i + 1} (${size} - ${color}) has only ${newImageUrls.length} image(s). Please add ${4 - newImageUrls.length} more image(s).` 
@@ -722,9 +885,9 @@ const postEditProduct = async (req, res) => {
       }
     }
 
+    // Delete variations that are no longer in the submitted list
     for (const v of existingVariations) {
-      const key = `${v.product_size}__${v.product_color}`;
-      if (!submittedKeys.has(key)) {
+      if (!processedVariationIds.has(v._id.toString())) {
         changes.push(ProductVariation.deleteOne({ _id: v._id }));
       }
     }
@@ -764,6 +927,7 @@ module.exports = {
   createCategory,
   updateCategory,
   deleteCategory,
+  toggleCategoryStatus,
   createType,
   createColor,
   createSize,
@@ -773,6 +937,9 @@ module.exports = {
   deleteType,
   deleteColor,
   deleteSize,
+  toggleTypeStatus,
+  toggleSizeStatus,
+  toggleColorStatus,
   getProducts,
   toggleActive,
   getAddProduct,

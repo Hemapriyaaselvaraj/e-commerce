@@ -35,8 +35,6 @@ const signup = async (req, res) => {
 
     if (!lastName || !lastName.trim()) {
       errors.push('Last name is required');
-    } else if (lastName.trim().length < 2) {
-      errors.push('Last name must be at least 2 characters');
     } else if (lastName.trim().length > 50) {
       errors.push('Last name must be less than 50 characters');
     } else if (!/^[a-zA-Z\s'-]+$/.test(lastName.trim())) {
@@ -108,6 +106,13 @@ const signup = async (req, res) => {
 
     // If there are validation errors, return them
     if (errors.length > 0) {
+      // Check if it's a fetch request expecting JSON
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(400).json({
+          success: false,
+          message: errors.join('. ')
+        });
+      }
       return res.render("user/signup", {
         error: errors.join('. '),
         oldInput: req.body,
@@ -118,6 +123,13 @@ const signup = async (req, res) => {
     let user = await userModel.findOne({ email: email.trim().toLowerCase() });
 
     if (user && user.isVerified) {
+      // Check if it's a fetch request expecting JSON
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(400).json({
+          success: false,
+          message: "This email address is already registered. Please sign in to your existing account or use a different email address."
+        });
+      }
       return res.render("user/signup", {
         error: "This email address is already registered. Please sign in to your existing account or use a different email address.",
         oldInput: req.body,
@@ -127,6 +139,13 @@ const signup = async (req, res) => {
     // Check if phone number already exists
     const existingPhone = await userModel.findOne({ phoneNumber: phoneNumber.trim() });
     if (existingPhone && existingPhone.isVerified) {
+      // Check if it's a fetch request expecting JSON
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(400).json({
+          success: false,
+          message: "This phone number is already registered. Please use a different phone number."
+        });
+      }
       return res.render("user/signup", {
         error: "This phone number is already registered. Please use a different phone number.",
         oldInput: req.body,
@@ -160,6 +179,13 @@ const signup = async (req, res) => {
             description: "Referral signup bonus"
           });
         } else {
+          // Check if it's a fetch request expecting JSON
+          if (req.headers.accept && req.headers.accept.includes('application/json')) {
+            return res.status(400).json({
+              success: false,
+              message: "Invalid referral code. Please check and try again."
+            });
+          }
           return res.render("user/signup", {
             error: "Invalid referral code. Please check and try again.",
             oldInput: req.body,
@@ -198,6 +224,13 @@ const signup = async (req, res) => {
             description: "Referral signup bonus"
           });
         } else {
+          // Check if it's a fetch request expecting JSON
+          if (req.headers.accept && req.headers.accept.includes('application/json')) {
+            return res.status(400).json({
+              success: false,
+              message: "Invalid referral code. Please check and try again."
+            });
+          }
           return res.render("user/signup", {
             error: "Invalid referral code. Please check and try again.",
             oldInput: req.body,
@@ -214,6 +247,17 @@ const signup = async (req, res) => {
     const otpVerification = await otpVerificationModel.findOne({ email: email.trim().toLowerCase() });
     const otpExpiry = otpVerification ? otpVerification.expiry.getTime() : null;
 
+    // Check if it's a fetch request expecting JSON
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.json({
+        success: true,
+        message: "Account created successfully! Please check your email for the verification code.",
+        email: email.trim().toLowerCase(),
+        flow: "sign-up",
+        otpExpiry: otpExpiry
+      });
+    }
+
     return res.render("user/verifyOtp", { 
       error: null, 
       email: email.trim().toLowerCase(), 
@@ -223,6 +267,13 @@ const signup = async (req, res) => {
 
   } catch (error) {
     console.error('Signup error:', error);
+    // Check if it's a fetch request expecting JSON
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(500).json({
+        success: false,
+        message: "An error occurred during signup. Please try again."
+      });
+    }
     return res.render("user/signup", {
       error: "An error occurred during signup. Please try again.",
       oldInput: req.body,
@@ -234,6 +285,21 @@ const viewSignup = (req, res) => {
   return res.render("user/signup", {
     error: null,
     oldInput: {},
+  });
+};
+
+const viewVerifyOtp = (req, res) => {
+  const { email, flow } = req.query;
+  
+  if (!email || !flow) {
+    return res.redirect('/user/signup');
+  }
+  
+  return res.render("user/verifyOtp", {
+    error: null,
+    email: email,
+    flow: flow,
+    otpExpiry: null
   });
 };
 
@@ -412,29 +478,55 @@ const changePassword = async(req, res) => {
   }
 
 
-  const login = async (req, res) => {
+const login = async (req, res) => {
   const { email, password } = req.body;
 
   const user = await userModel.findOne({ email });
 
-  if (!user) return res.render("user/login", { error: "We couldn't find an account with that email address. Please check your email or create a new account." });
+  if (!user) {
+    const errorMsg = "We couldn't find an account with that email address. Please check your email or create a new account.";
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(400).json({ success: false, message: errorMsg });
+    }
+    return res.render("user/login", { error: errorMsg });
+  }
 
   if (user.isBlocked) {
-    return res.render("user/login", { error: "Your account has been temporarily suspended. Please contact our support team for assistance." });
+    const errorMsg = "Your account has been temporarily suspended. Please contact our support team for assistance.";
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(400).json({ success: false, message: errorMsg });
+    }
+    return res.render("user/login", { error: errorMsg });
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
 
-  if (!isMatch) return res.render("user/login", { error: "The password you entered is incorrect. Please check your password and try again." });
-
+  if (!isMatch) {
+    const errorMsg = "The password you entered is incorrect. Please check your password and try again.";
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(400).json({ success: false, message: errorMsg });
+    }
+    return res.render("user/login", { error: errorMsg });
+  }
 
   if (!user.isVerified) {
-
     await sendOtpToVerifyEmail(email);
 
     // Get the OTP expiry time to pass to frontend
     const otpVerification = await otpVerificationModel.findOne({ email });
     const otpExpiry = otpVerification ? otpVerification.expiry.getTime() : null;
+
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.json({
+        success: false,
+        requiresVerification: true,
+        message: "Please verify your account using the verification code we've sent to your email address.",
+        redirectUrl: '/user/verifyOtp',
+        email: email,
+        flow: 'login',
+        otpExpiry: otpExpiry
+      });
+    }
 
     return res.render('user/verifyOtp', { 
       error: "Please verify your account using the verification code we've sent to your email address.", 
@@ -448,18 +540,28 @@ const changePassword = async(req, res) => {
   req.session.role = user.role;
   req.session.userId = user._id;
 
-  // Check if there's a redirect URL stored in session
-  const redirectUrl = req.session.redirectAfterLogin;
-  if (redirectUrl) {
-    delete req.session.redirectAfterLogin; // Clean up
-    return res.redirect(redirectUrl);
+  // Determine redirect URL
+  let redirectUrl = req.session.redirectAfterLogin || '/';
+  if (redirectUrl === '/' && user.role !== 'user') {
+    redirectUrl = '/admin/dashboard';
   }
 
-  if (user.role == "user") {
-    return res.redirect("/");
-  } else {
-    return res.redirect("/admin/dashboard");
+  if (req.session.redirectAfterLogin) {
+    delete req.session.redirectAfterLogin; // Clean up
   }
+
+  // Return success response for fetch
+  if (req.headers.accept && req.headers.accept.includes('application/json')) {
+    return res.json({
+      success: true,
+      message: `Welcome back, ${user.firstName}!`,
+      redirectUrl: redirectUrl,
+      userRole: user.role
+    });
+  }
+
+  // Fallback for non-AJAX requests
+  return res.redirect(redirectUrl);
 };
 
 const logout = (req, res) => {
@@ -543,6 +645,7 @@ async function sendOtpToVerifyEmail(email) {
 module.exports = {
     signup,
     viewSignup,
+    viewVerifyOtp,
     viewLogin,
     forgotPassword,
     sendOtp,
