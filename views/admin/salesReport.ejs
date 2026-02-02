@@ -583,7 +583,12 @@
             <tr>
               <td><strong>${order.order_number}</strong></td>
               <td>${customerName}</td>
-              <td>${new Date(order.ordered_at).toLocaleDateString()}</td>
+              <td>${new Date(order.ordered_at).toLocaleDateString('en-IN', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                timeZone: 'Asia/Kolkata'
+              })}</td>
               <td class="text-center">
                 <span class="badge bg-dark">${deliveredItemsCount}</span>
               </td>

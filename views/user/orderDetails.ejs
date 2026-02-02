@@ -595,11 +595,11 @@
               <div class="col-md-6">
                 <div class="order-info-section">
                   <h5>Order Information</h5>
-                  <p><strong>Order Date:</strong> <%= new Date(order.createdAt).toLocaleDateString() %></p>
+                  <p><strong>Order Date:</strong> <%= formatDate(order.createdAt) %></p>
                   <p><strong>Payment Method:</strong> <%= order.paymentMethod %></p>
                   <p><strong>Payment Status:</strong> <%= order.paymentStatus %></p>
                   <% if (order.estimatedDelivery) { %>
-                    <p><strong>Estimated Delivery:</strong> <%= new Date(order.estimatedDelivery).toLocaleDateString() %></p>
+                    <p><strong>Estimated Delivery:</strong> <%= formatDate(order.estimatedDelivery) %></p>
                   <% } %>
                 </div>
               </div>

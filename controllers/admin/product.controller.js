@@ -8,6 +8,7 @@ const Product = require("../../models/productModel");
 const ProductVariation = require("../../models/productVariationModel");
 const productVariationModel = require("../../models/productVariationModel");
 const { default: mongoose } = require("mongoose");
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 const getProductConfiguration = async (req, res) => {
   try {
@@ -30,6 +31,9 @@ const getProductConfiguration = async (req, res) => {
         size: sizes,
         color: colors,
       },
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
   } catch (error) {
     console.error("Error loading product configuration:", error);
@@ -611,6 +615,9 @@ const getProducts = async (req, res) => {
       totalPages,
       totalResults,
       pageSize,
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
   } catch (error) {
     res
@@ -655,6 +662,9 @@ const getAddProduct = async (req, res) => {
     colors,
     mode: "add",
     product: {},
+    formatDate,
+    formatDateTime,
+    formatDateForInput
   });
 };
 
@@ -775,7 +785,10 @@ const getEditProduct = async(req,res) => {
       types,
       sizes,
       colors,
-      mode: "edit"
+      mode: "edit",
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
 
 }catch(err) {

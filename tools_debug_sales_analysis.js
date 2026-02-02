@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
 require('dotenv').config();
+const mongoose = require('mongoose');
 
 async function debugSalesReport() {
   try {
@@ -7,10 +7,9 @@ async function debugSalesReport() {
     console.log('Connected to MongoDB');
     
     const Order = require('./models/orderModel');
-    const User = require('./models/userModel');
     
-    // Get the specific orders from your screenshot
-    const orderNumbers = ['TOES2601131318', 'TOES2601131315', 'TOES2601131313', 'TOES2601131312', 'TOES2601131311'];
+    // Sample order numbers to analyze - you can modify these
+    const orderNumbers = ['ORD-1733140179380-8765', 'ORD-1733140179380-1234'];
     
     for (const orderNumber of orderNumbers) {
       console.log(`\n${'='.repeat(60)}`);
@@ -18,7 +17,7 @@ async function debugSalesReport() {
       console.log(`${'='.repeat(60)}`);
       
       const order = await Order.findOne({ order_number: orderNumber })
-        .populate('user_id', 'firstName lastName')
+        .populate('user_id', 'firstName lastName email')
         .lean();
       
       if (!order) {
@@ -42,16 +41,16 @@ async function debugSalesReport() {
       console.log(`   Final Total: Rs${order.total}`);
       
       console.log(`\n📦 Products (${order.products.length}):`);
+      
       let calculatedSubtotal = 0;
       let totalCouponAllocated = 0;
+      let deliveredCount = 0;
       let deliveredProductsSubtotal = 0;
       let deliveredCouponAllocated = 0;
-      let deliveredCount = 0;
       
       order.products.forEach((product, index) => {
         const productTotal = product.price * product.quantity;
-        const originalTotal = (product.original_price || product.price) * product.quantity;
-        const productDiscount = originalTotal - productTotal;
+        const productDiscount = ((product.original_price || product.price) - product.price) * product.quantity;
         const couponAllocated = product.coupon_discount_allocated || 0;
         
         calculatedSubtotal += productTotal;
@@ -68,9 +67,9 @@ async function debugSalesReport() {
         console.log(`     Coupon Allocated: Rs${couponAllocated}`);
         
         if (product.status === 'DELIVERED') {
+          deliveredCount++;
           deliveredProductsSubtotal += productTotal;
           deliveredCouponAllocated += couponAllocated;
-          deliveredCount++;
         }
       });
       
@@ -89,11 +88,10 @@ async function debugSalesReport() {
       console.log(`   Delivered Coupon Allocated: Rs${deliveredCouponAllocated}`);
       
       // Calculate what the sales report should show
-      const totalProducts = order.products.length;
-      const deliveredRatio = deliveredCount / totalProducts;
-      const proportionalShipping = (order.shipping_charge || 0) * deliveredRatio;
       const reportSubtotal = deliveredProductsSubtotal;
       const reportDiscount = deliveredCouponAllocated;
+      const proportionalShipping = deliveredCount > 0 ? 
+        (order.shipping_charge * deliveredProductsSubtotal) / calculatedSubtotal : 0;
       const reportTotal = reportSubtotal + proportionalShipping - reportDiscount;
       
       console.log(`\n📊 Sales Report Should Show:`);
@@ -109,11 +107,17 @@ async function debugSalesReport() {
       }
     }
     
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`✅ ANALYSIS COMPLETE`);
+    console.log(`${'='.repeat(60)}`);
+    
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error during analysis:', error);
   } finally {
-    mongoose.disconnect();
+    await mongoose.disconnect();
+    console.log('Disconnected from database');
   }
 }
 
+// Run the debug function
 debugSalesReport();

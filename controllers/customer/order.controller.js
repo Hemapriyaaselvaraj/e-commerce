@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
 const { calculateBestOffer } = require("../../utils/offerCalculator");
 const { calculateCartTotals } = require("../../utils/cartCalculator");
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 
 const placeOrder = async (req, res) => {
@@ -621,7 +622,10 @@ const getUserOrders = async(req,res) => {
       prevPage: page - 1,
       search: search || '',
       status: status || '',
-      dateFilter: dateFilter || ''
+      dateFilter: dateFilter || '',
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
   } catch (error) {
     console.error('Error fetching user orders:', error);
@@ -678,7 +682,10 @@ const getOrderDetails = async(req,res) => {
 
    res.render('user/orderDetails', {
       order: formattedOrder,
-      user: user
+      user: user,
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
   } catch (error) {
     console.error('Error fetching order details:', error);

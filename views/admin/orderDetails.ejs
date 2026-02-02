@@ -516,9 +516,9 @@
                   <span class="badge bg-secondary"><%= order.status %></span>
                 <% } %>
               </p>
-              <p><strong>Order Date:</strong> <%= new Date(order.ordered_at || order.createdAt).toLocaleDateString() %></p>
+              <p><strong>Order Date:</strong> <%= formatDate(order.ordered_at || order.createdAt) %></p>
               <% if (order.delivered_at) { %>
-                <p><strong>Delivered Date:</strong> <%= new Date(order.delivered_at).toLocaleDateString() %></p>
+                <p><strong>Delivered Date:</strong> <%= formatDate(order.delivered_at) %></p>
               <% } %>
             </div>
             <div class="col-md-6">
@@ -780,7 +780,7 @@
                         <% if (p.return_details) { %>
                           <small class="d-block mb-2">
                             <strong>Reason:</strong> <%= p.return_details.reason %><br>
-                            <strong>Requested:</strong> <%= new Date(p.return_details.requested_at).toLocaleDateString() %>
+                            <strong>Requested:</strong> <%= formatDate(p.return_details.requested_at) %>
                           </small>
                         <% } %>
                         <div class="d-flex gap-2">

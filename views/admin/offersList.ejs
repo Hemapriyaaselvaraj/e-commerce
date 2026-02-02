@@ -286,9 +286,9 @@
 
               <!-- Validity -->
               <td>
-                <%= new Date(o.validFrom).toLocaleDateString() %> <br>
+                <%= formatDate(o.validFrom) %> <br>
                 to <br>
-                <%= new Date(o.validTo).toLocaleDateString() %>
+                <%= formatDate(o.validTo) %>
               </td>
 
               <!-- Status -->

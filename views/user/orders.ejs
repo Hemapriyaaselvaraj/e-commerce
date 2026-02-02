@@ -329,7 +329,7 @@
                     </span>
                   </div>
                   <p class="card-text">
-                    <small class="text-muted">Ordered on <%= new Date(order.createdAt).toLocaleDateString() %></small>
+                    <small class="text-muted">Ordered on <%= formatDate(order.createdAt) %></small>
                   </p>
                   <div class="order-items">
                     <% order.items.forEach(function(item) { %>
@@ -452,17 +452,11 @@
         return;
       }
       
-      console.log('Form found:', form);
-      
       const selects = form.querySelectorAll('select');
       const searchInput = form.querySelector('input[name="search"]');
       
-      console.log('Found selects:', selects.length);
-      console.log('Found search input:', searchInput);
-      
       selects.forEach((select, index) => {
         select.addEventListener('change', function() {
-          console.log(`Select ${index} changed to:`, this.value);
           form.submit();
         });
       });
@@ -472,7 +466,6 @@
         searchInput.addEventListener('keypress', function(e) {
           if (e.key === 'Enter') {
             e.preventDefault();
-            console.log('Enter pressed, submitting form with search:', this.value);
             form.submit();
           }
         });
@@ -483,7 +476,6 @@
       if (searchButton) {
         searchButton.addEventListener('click', function(e) {
           e.preventDefault();
-          console.log('Search button clicked');
           form.submit();
         });
       }

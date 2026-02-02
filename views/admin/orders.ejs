@@ -374,7 +374,7 @@
                         <%= order.status %>
                       </span>
                     </td>
-                    <td><%= new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) %></td>
+                    <td><%= formatDate(order.createdAt) %></td>
                     <td>₹ <%= order.total.toLocaleString() %></td>
                     <td class="order-actions">
                       <a href="/admin/orders/<%= order._id %>" class="action-icon" title="View Order">

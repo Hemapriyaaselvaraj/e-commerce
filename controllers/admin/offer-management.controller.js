@@ -2,6 +2,7 @@ const Offer = require('../../models/offerModel');
 const Product = require('../../models/productModel');
 const Category = require('../../models/productCategoryModel');
 const User = require('../../models/userModel');
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 const getOffersList = async (req, res) => {
   try {
@@ -19,7 +20,14 @@ const getOffersList = async (req, res) => {
     // Clear success messages after getting them
     delete req.session.success;
 
-    res.render("admin/offersList", { offers, name, success });
+    res.render("admin/offersList", { 
+      offers, 
+      name, 
+      success,
+      formatDate,
+      formatDateTime,
+      formatDateForInput
+    });
 
   } catch (error) {
     console.error("Offers list error:", error);
@@ -49,7 +57,10 @@ const getAddOffer = async (req, res) => {
       categories,
       offer: null,
       error,
-      success: null // Never pass success messages to the form
+      success: null, // Never pass success messages to the form
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
 
   } catch (error) {
@@ -190,7 +201,10 @@ const getEditOffer = async (req, res) => {
       categories,
       offer,
       error,
-      success: null // Never show success messages on edit form load
+      success: null, // Never show success messages on edit form load
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
 
   } catch (error) {
@@ -202,8 +216,6 @@ const getEditOffer = async (req, res) => {
 const postEditOffer = async (req, res) => {
   try {
     const offerId = req.params.id;
-    console.log('Edit offer request for ID:', offerId);
-    console.log('Request body:', req.body);
 
     let {
       offerName,
@@ -216,19 +228,16 @@ const postEditOffer = async (req, res) => {
 
     // Validate required fields
     if (!offerName || !offerName.trim()) {
-      console.log('Validation failed: Offer name is required');
       req.session.error = "Offer name is required and cannot be empty";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
 
     if (!discountPercentage || parseFloat(discountPercentage) <= 0 || parseFloat(discountPercentage) > 90) {
-      console.log('Validation failed: Invalid discount percentage');
       req.session.error = "Discount percentage must be between 1 and 90";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
 
     if (!validFrom || !validTo) {
-      console.log('Validation failed: Dates are required');
       req.session.error = "Valid from and valid to dates are required";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
@@ -239,14 +248,12 @@ const postEditOffer = async (req, res) => {
 
     // Check if dates are valid
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-      console.log('Validation failed: Invalid date format');
       req.session.error = "Invalid date format provided";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
 
     // Check if end date is after start date
     if (toDate <= fromDate) {
-      console.log('Validation failed: End date must be after start date');
       req.session.error = "Valid to date must be after valid from date";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
@@ -255,7 +262,6 @@ const postEditOffer = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (toDate <= today) {
-      console.log('Validation failed: End date must be in future');
       req.session.error = "The end date must be in the future. Please select a date after today.";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
@@ -265,7 +271,6 @@ const postEditOffer = async (req, res) => {
     // Check minimum validity period (at least 1 day)
     const daysDifference = (toDate - fromDate) / (1000 * 60 * 60 * 24);
     if (daysDifference < 1) {
-      console.log('Validation failed: Minimum validity period');
       req.session.error = "Offer must be valid for at least 1 day";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
@@ -273,14 +278,12 @@ const postEditOffer = async (req, res) => {
     // For editing offers, we're more flexible with past dates
     // Only check if the offer hasn't expired yet
     if (toDate < new Date().setHours(0, 0, 0, 0)) {
-      console.log('Validation failed: Offer has already expired');
       req.session.error = "Cannot edit an offer that has already expired";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
 
     // Check maximum validity period (not more than 1 year)
     if (daysDifference > 365) {
-      console.log('Validation failed: Maximum validity period');
       req.session.error = "Offer validity period cannot exceed 1 year (365 days)";
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
@@ -291,22 +294,12 @@ const postEditOffer = async (req, res) => {
       _id: { $ne: offerId }
     });
     if (existing) {
-      console.log('Validation failed: Duplicate offer name');
       req.session.error = `Offer name "${offerName.trim()}" already exists`;
       return res.redirect(`/admin/edit-offer/${offerId}`);
     }
 
     product = product ? (Array.isArray(product) ? product : [product]) : [];
     category = category ? (Array.isArray(category) ? category : [category]) : [];
-
-    console.log('Updating offer with data:', {
-      offerName: offerName.trim(),
-      discountPercentage: parseFloat(discountPercentage),
-      product,
-      category,
-      validFrom: fromDate,
-      validTo: toDate
-    });
 
     const updatedOffer = await Offer.findByIdAndUpdate(offerId, {
       offerName: offerName.trim(),
@@ -317,10 +310,7 @@ const postEditOffer = async (req, res) => {
       validTo: toDate
     }, { new: true });
 
-    console.log('Offer updated successfully:', updatedOffer);
-
     req.session.success = `Offer "${offerName.trim()}" updated successfully!`;
-    console.log('Redirecting to /admin/offers');
     res.redirect("/admin/offers");
 
   } catch (error) {

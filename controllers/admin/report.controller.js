@@ -2,6 +2,7 @@ const Order = require('../../models/orderModel');
 const User = require('../../models/userModel');
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 const getSalesReportPage = async (req, res) => {
   try {
@@ -9,7 +10,10 @@ const getSalesReportPage = async (req, res) => {
 
     res.render("admin/salesReport", {
       name: user ? user.firstName : "Admin",
-      pageTitle: "Sales Report"
+      pageTitle: "Sales Report",
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
 
   } catch (error) {

@@ -2,6 +2,7 @@ const User = require('../../models/userModel');
 const WalletTransaction = require('../../models/walletModel');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 
 const razorpay = new Razorpay({
@@ -35,6 +36,9 @@ res.render("user/wallet", {
       currentPage: parseInt(page),
       totalPages: Math.ceil(totalTransactions / ITEMS_PER_PAGE),
       totalResults: totalTransactions,
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
 
   } catch (error) {

@@ -303,7 +303,7 @@ body {
           <div class="txn-item">
             <div>
               <strong><%= t.description %></strong><br>
-              <small><%= new Date(t.date).toLocaleDateString() %></small>
+              <small><%= formatDate(t.date) %></small>
             </div>
             <div class="<%= t.type === 'credit' ? 'credit' : 'debit' %>">
               <%= t.type === 'credit' ? '+ ' : '- ' %>₹<%= t.amount.toFixed(2) %>

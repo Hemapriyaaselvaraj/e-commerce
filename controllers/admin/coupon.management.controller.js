@@ -1,9 +1,15 @@
 const Coupon = require("../../models/couponModel");
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 const getCoupons = async(req,res) => {
     try{
         const coupons = await Coupon.find().lean();
-         res.render("admin/couponList", { coupons });
+         res.render("admin/couponList", { 
+           coupons,
+           formatDate,
+           formatDateTime,
+           formatDateForInput
+         });
     }catch(err){
         console.error("Coupon list error:", err);
       res.status(500).send("Server Error");
@@ -12,7 +18,12 @@ const getCoupons = async(req,res) => {
 
 const getAddCoupon = async (req, res) => {
     try {
-      res.render("admin/couponForm", { coupon: null });
+      res.render("admin/couponForm", { 
+        coupon: null,
+        formatDate,
+        formatDateTime,
+        formatDateForInput
+      });
     } catch (error) {
       console.error("Error loading coupon form:", error);
       res.status(500).send("Server error");
@@ -159,7 +170,12 @@ const getAddCoupon = async (req, res) => {
       const coupon = await Coupon.findById(req.params.id).lean();
       if (!coupon) return res.status(404).send("Coupon not found");
 
-      res.render("admin/couponForm", { coupon }); 
+      res.render("admin/couponForm", { 
+        coupon,
+        formatDate,
+        formatDateTime,
+        formatDateForInput
+      }); 
     } catch (err) {
       console.error("Edit coupon error:", err);
       res.status(500).send("Server error");

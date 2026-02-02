@@ -1,6 +1,7 @@
 const userModel = require("../../models/userModel");
 const Order = require("../../models/orderModel");
 const Product = require("../../models/productModel");
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 const getDashboard = async (req, res) => {
   try {
@@ -10,7 +11,12 @@ const getDashboard = async (req, res) => {
       return res.redirect('/user/login'); 
     }
    
-    return res.render("admin/dashboard", { name: user.firstName });
+    return res.render("admin/dashboard", { 
+      name: user.firstName,
+      formatDate,
+      formatDateTime,
+      formatDateForInput
+    });
 
   } catch (error) {
     console.error("Dashboard error:", error);

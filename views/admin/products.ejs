@@ -241,7 +241,7 @@
                   <td>₹ <%= product.price.toFixed(2) %></td>
                   <td><%= product.product_category %></span></td>
                   <td><%= product.product_type %></span></td>
-                  <td><%= product.created_at.toDateString() %></td>
+                  <td><%= formatDate(product.created_at) %></td>
                   <td>
                     <span class="status <%= product.is_active ? 'active' : 'inactive' %>">
                       <%= product.is_active ? 'Active' : 'Inactive' %>
@@ -316,21 +316,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  console.log('DOM loaded, looking for toggle buttons...');
-  const toggleButtons = document.querySelectorAll('.toggle-active');
-  console.log('Found toggle buttons:', toggleButtons.length, toggleButtons);
-  
   document.querySelectorAll('.toggle-active').forEach(button => {
-    console.log('Attaching event listener to toggle button:', button);
     button.addEventListener('click', function(e) {
-      console.log('Toggle button clicked!', this);
       e.preventDefault();
       const row = button.closest('tr');
       const id = row.getAttribute('data-id');
       const isActive = row.querySelector('.status').classList.contains('active');
       const action = isActive ? 'inactivate' : 'activate';
-      
-      console.log('Product ID:', id, 'Action:', action);
       
       if (typeof Swal !== 'undefined') {
         Swal.fire({
@@ -343,14 +335,12 @@ document.addEventListener('DOMContentLoaded', function() {
           confirmButtonText: 'Yes, proceed!'
         }).then((result) => {
           if (result.isConfirmed) {
-            console.log('Making fetch request to:', `/admin/products/${id}/toggle-active`);
             fetch(`/admin/products/${id}/toggle-active`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' }
             })
             .then(res => res.json())
             .then(data => {
-              console.log('Response:', data);
               if (data.success) {
                 window.location.reload();
               } else {
@@ -373,14 +363,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       } else {
         if (confirm(`Are you sure you want to ${action} this product?`)) {
-          console.log('Making fetch request to:', `/admin/products/${id}/toggle-active`);
           fetch(`/admin/products/${id}/toggle-active`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' }
           })
           .then(res => res.json())
           .then(data => {
-            console.log('Response:', data);
             if (data.success) {
               window.location.reload();
             } else {

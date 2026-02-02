@@ -3,6 +3,7 @@ const Order = require('../../models/orderModel');
 const PDFDocument = require('pdfkit');
 const ProductVariation = require('../../models/productVariationModel');
 const WalletTransaction = require('../../models/walletModel');
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 const ITEMS_PER_PAGE = 10;
 
@@ -49,6 +50,9 @@ const getOrderList = async (req, res) => {
       status,
       sort,
       name: user.firstName,
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
 
   } catch (error) {
@@ -81,7 +85,12 @@ const getOrderDetail = async (req, res) => {
       });
     }
 
-    res.render('admin/orderDetails', { order });
+    res.render('admin/orderDetails', { 
+      order,
+      formatDate,
+      formatDateTime,
+      formatDateForInput
+    });
   } catch (error) {
     console.error('Error loading order details:', error);
     res.status(500).render('admin/500', { 

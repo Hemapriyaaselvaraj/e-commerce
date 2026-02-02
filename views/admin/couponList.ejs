@@ -324,8 +324,8 @@
                   
                   <td data-label="Valid Period">
                     <div class="date-range">
-                      <div><i class="fas fa-calendar-alt me-1"></i><%= new Date(c.validFrom).toLocaleDateString() %></div>
-                      <div><i class="fas fa-calendar-check me-1"></i><%= new Date(c.validTo).toLocaleDateString() %></div>
+                      <div><i class="fas fa-calendar-alt me-1"></i><%= formatDate(c.validFrom) %></div>
+                      <div><i class="fas fa-calendar-check me-1"></i><%= formatDate(c.validTo) %></div>
                     </div>
                   </td>
                   

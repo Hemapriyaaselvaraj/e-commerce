@@ -1,5 +1,6 @@
 const userModel = require("../../models/userModel");
 const Order = require("../../models/orderModel");
+const { formatDate, formatDateTime, formatDateForInput } = require("../../utils/dateFormatter");
 
 const getCustomers = async (req, res) => {
   try {
@@ -72,7 +73,10 @@ const getCustomers = async (req, res) => {
       currentStatus: status || 'all',
       currentSort: sort || 'nameAsc',
       currentPage,
-      totalPages: Math.ceil(totalResults / pageSize)
+      totalPages: Math.ceil(totalResults / pageSize),
+      formatDate,
+      formatDateTime,
+      formatDateForInput
     });
   } catch (error) {
     console.error('Error loading customers:', error);

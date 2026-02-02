@@ -229,7 +229,6 @@
       }
 
       try {
-        console.log(`Attempting to create ${field} with value:`, value);
         
         const res = await fetch(`/admin/products/${field}`, {
           method: 'POST',
@@ -237,12 +236,9 @@
           body: JSON.stringify({ value })
         });
         
-        console.log('Response status:', res.status);
         const data = await res.json();
-        console.log('Response data:', data);
 
         if (!res.ok) {
-          console.log('Error response received:', data.message);
           return Swal.fire({
             icon: 'error',
             title: 'Error',
