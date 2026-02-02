@@ -334,25 +334,22 @@
       <div class="modal-body">
         <form id="changePasswordForm">
           <div class="mb-3">
-            <label for="changePasswordEmail" class="form-label">Email</label>
-            <input type="email" class="form-control" id="changePasswordEmail" value="<%= user.email %>" readonly>
+            <label for="currentPasswordInput" class="form-label">Current Password <span class="text-danger">*</span></label>
+            <input type="password" class="form-control" id="currentPasswordInput" placeholder="Enter current password" required>
+            <div class="invalid-feedback" id="currentPasswordInputError"></div>
           </div>
           <div class="mb-3">
-            <button type="button" class="btn btn-outline-secondary" id="sendOtpBtn">Send OTP</button>
+            <label for="newPasswordInput" class="form-label">New Password <span class="text-danger">*</span></label>
+            <input type="password" class="form-control" id="newPasswordInput" placeholder="Enter new password" required>
+            <div class="invalid-feedback" id="newPasswordInputError"></div>
+            <div class="form-text">Password must be at least 8 characters with uppercase, lowercase, number, and special character</div>
           </div>
           <div class="mb-3">
-            <label for="otpInput" class="form-label">OTP</label>
-            <input type="text" class="form-control" id="otpInput" placeholder="Enter OTP" disabled>
+            <label for="confirmPasswordInput" class="form-label">Confirm New Password <span class="text-danger">*</span></label>
+            <input type="password" class="form-control" id="confirmPasswordInput" placeholder="Confirm new password" required>
+            <div class="invalid-feedback" id="confirmPasswordInputError"></div>
           </div>
-          <div class="mb-3">
-            <label for="newPasswordInput" class="form-label">New Password</label>
-            <input type="password" class="form-control" id="newPasswordInput" placeholder="New Password" disabled>
-          </div>
-          <div class="mb-3">
-            <label for="confirmPasswordInput" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="confirmPasswordInput" placeholder="Confirm Password" disabled>
-          </div>
-          <button type="submit" class="btn btn-dark" id="submitChangePasswordBtn" disabled>Change Password</button>
+          <button type="submit" class="btn btn-dark w-100" id="submitChangePasswordBtn">Change Password</button>
         </form>
         <div id="changePasswordError" class="text-danger mt-2"></div>
       </div>
@@ -601,94 +598,173 @@
 
   const changePasswordBtn = document.getElementById('changePasswordBtn');
   const changePasswordModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
-  const sendOtpBtn = document.getElementById('sendOtpBtn');
-  const otpInput = document.getElementById('otpInput');
+  const currentPasswordInput = document.getElementById('currentPasswordInput');
   const newPasswordInput = document.getElementById('newPasswordInput');
   const confirmPasswordInput = document.getElementById('confirmPasswordInput');
   const submitChangePasswordBtn = document.getElementById('submitChangePasswordBtn');
   const changePasswordError = document.getElementById('changePasswordError');
 
+  // Password validation functions
+  function validatePassword(password) {
+    const errors = [];
+    
+    if (!password) {
+      errors.push('Password is required');
+    } else {
+      if (password.length < 8) {
+        errors.push('Password must be at least 8 characters');
+      }
+      if (!/[A-Z]/.test(password)) {
+        errors.push('Password must contain at least one uppercase letter');
+      }
+      if (!/[a-z]/.test(password)) {
+        errors.push('Password must contain at least one lowercase letter');
+      }
+      if (!/[0-9]/.test(password)) {
+        errors.push('Password must contain at least one number');
+      }
+      if (!/[^A-Za-z0-9]/.test(password)) {
+        errors.push('Password must contain at least one special character');
+      }
+    }
+    
+    return errors;
+  }
+
+  function showFieldError(fieldId, errors) {
+    const field = document.getElementById(fieldId);
+    const errorDiv = document.getElementById(fieldId + 'Error');
+    
+    if (errors.length > 0) {
+      field.classList.add('is-invalid');
+      field.classList.remove('is-valid');
+      errorDiv.textContent = errors[0];
+      errorDiv.style.display = 'block';
+    } else {
+      field.classList.remove('is-invalid');
+      field.classList.add('is-valid');
+      errorDiv.textContent = '';
+      errorDiv.style.display = 'none';
+    }
+  }
+
+  function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorDiv = document.getElementById(fieldId + 'Error');
+    
+    field.classList.remove('is-invalid', 'is-valid');
+    errorDiv.textContent = '';
+    errorDiv.style.display = 'none';
+  }
+
+  // Real-time validation
+  newPasswordInput.addEventListener('input', function() {
+    const errors = validatePassword(this.value);
+    showFieldError('newPasswordInput', errors);
+  });
+
+  confirmPasswordInput.addEventListener('input', function() {
+    const errors = [];
+    if (!this.value) {
+      errors.push('Please confirm your password');
+    } else if (this.value !== newPasswordInput.value) {
+      errors.push('Passwords do not match');
+    }
+    showFieldError('confirmPasswordInput', errors);
+  });
+
   changePasswordBtn.onclick = function() {
     changePasswordModal.show();
-    otpInput.value = '';
+    // Clear form
+    currentPasswordInput.value = '';
     newPasswordInput.value = '';
     confirmPasswordInput.value = '';
-    otpInput.disabled = true;
-    newPasswordInput.disabled = true;
-    confirmPasswordInput.disabled = true;
-    submitChangePasswordBtn.disabled = true;
     changePasswordError.textContent = '';
-  };
-
-  sendOtpBtn.onclick = function() {
-    fetch('/user/login/sendOtp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: document.getElementById('changePasswordEmail').value })
-    })
-    .then(res => res.text())
-    .then(() => {
-      otpInput.disabled = false;
-      changePasswordError.textContent = 'OTP sent to your email.';
-    })
-    .catch(() => {
-      changePasswordError.textContent = 'Failed to send OTP.';
-    });
-  };
-
-  otpInput.oninput = function() {
-    if (otpInput.value.length === 6) {
-      newPasswordInput.disabled = false;
-      confirmPasswordInput.disabled = false;
-      submitChangePasswordBtn.disabled = false;
-    } else {
-      newPasswordInput.disabled = true;
-      confirmPasswordInput.disabled = true;
-      submitChangePasswordBtn.disabled = true;
-    }
+    
+    // Clear validation states
+    clearFieldError('currentPasswordInput');
+    clearFieldError('newPasswordInput');
+    clearFieldError('confirmPasswordInput');
   };
 
   document.getElementById('changePasswordForm').onsubmit = function(e) {
     e.preventDefault();
-    fetch('/user/changePassword', {
+    console.log('Form submitted'); // Debug log
+    
+    const currentPassword = currentPasswordInput.value;
+    const newPassword = newPasswordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+    
+    // Validate all fields
+    const currentPasswordErrors = !currentPassword ? ['Current password is required'] : [];
+    const newPasswordErrors = validatePassword(newPassword);
+    const confirmPasswordErrors = [];
+    
+    if (!confirmPassword) {
+      confirmPasswordErrors.push('Please confirm your password');
+    } else if (confirmPassword !== newPassword) {
+      confirmPasswordErrors.push('Passwords do not match');
+    }
+    
+    // Check if new password is same as current
+    if (currentPassword && newPassword && currentPassword === newPassword) {
+      newPasswordErrors.push('New password must be different from current password');
+    }
+    
+    // Show validation errors
+    showFieldError('currentPasswordInput', currentPasswordErrors);
+    showFieldError('newPasswordInput', newPasswordErrors);
+    showFieldError('confirmPasswordInput', confirmPasswordErrors);
+    
+    // Check if there are any errors
+    if (currentPasswordErrors.length > 0 || newPasswordErrors.length > 0 || confirmPasswordErrors.length > 0) {
+      return;
+    }
+    
+    // Disable submit button and show loading
+    submitChangePasswordBtn.disabled = true;
+    submitChangePasswordBtn.textContent = 'Changing...';
+    changePasswordError.textContent = '';
+    
+    fetch('/profile/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: document.getElementById('changePasswordEmail').value,
-        otp: otpInput.value,
-        password: newPasswordInput.value,
-        confirmPassword: confirmPasswordInput.value
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword
       })
     })
-    .then(res => res.text())
-    .then(response => {
-      const trimmed = response.trim();
-      if (trimmed === 'Password changed successfully!') {
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
         changePasswordModal.hide();
         Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: 'Password changed successfully! Please login with your new password.',
-          showConfirmButton: false,
+          title: "Success!",
+          text: "Password changed successfully! Please login with your new password.",
+          icon: "success",
           timer: 2000,
-          didClose: () => {
-            
-            fetch('/user/logout', { 
-              method: 'POST', 
-              credentials: 'same-origin' 
-            }).then(() => {
-              window.location.href = '/user/login';
-            });
-          }
+          showConfirmButton: false
+        }).then(() => {
+          // Logout user and redirect to login
+          fetch('/user/logout', { 
+            method: 'POST', 
+            credentials: 'same-origin' 
+          }).then(() => {
+            window.location.href = '/user/login';
+          });
         });
-      } else if (trimmed.includes('Invalid otp')) {
-        changePasswordError.textContent = 'Wrong OTP';
       } else {
-        changePasswordError.textContent = trimmed;
+        changePasswordError.textContent = data.message || 'Failed to change password';
       }
     })
-    .catch(() => {
-      changePasswordError.textContent = 'Failed to change password.';
+    .catch(error => {
+      console.error('Password change error:', error);
+      changePasswordError.textContent = 'Failed to change password. Please try again.';
+    })
+    .finally(() => {
+      submitChangePasswordBtn.disabled = false;
+      submitChangePasswordBtn.textContent = 'Change Password';
     });
   };
   

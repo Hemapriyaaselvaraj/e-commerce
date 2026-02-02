@@ -304,6 +304,116 @@ const getReferAndEarn = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.session?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Please sign in to change your password.'
+      });
+    }
+
+    // Validate input
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required.'
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New passwords do not match.'
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password.'
+      });
+    }
+
+    // Validate new password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long.'
+      });
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must contain at least one uppercase letter.'
+      });
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must contain at least one lowercase letter.'
+      });
+    }
+
+    if (!/[0-9]/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must contain at least one number.'
+      });
+    }
+
+    if (!/[^A-Za-z0-9]/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must contain at least one special character.'
+      });
+    }
+
+    // Get user and verify current password
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+
+    // Check current password
+    const bcrypt = require('bcrypt');
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect.'
+      });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    await userModel.findByIdAndUpdate(userId, { password: hashedNewPassword });
+
+    return res.json({
+      success: true,
+      message: 'Password changed successfully!'
+    });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while changing password. Please try again.'
+    });
+  }
+};
 
 module.exports = {
     getProfile,
@@ -311,5 +421,6 @@ module.exports = {
     updateProfileImage,
     getEditProfile,
     postEditProfile,
-    getReferAndEarn
+    getReferAndEarn,
+    changePassword
 }

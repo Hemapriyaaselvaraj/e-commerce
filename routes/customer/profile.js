@@ -11,6 +11,7 @@ router.get('/',profileController.getProfile);
 router.patch('/', profileController.updateProfile);
 router.get('/edit', profileController.getEditProfile);
 router.patch('/edit', profileController.postEditProfile);
+router.post('/change-password', profileController.changePassword);
 router.get('/referAndEarn', profileController.getReferAndEarn);
 
 
