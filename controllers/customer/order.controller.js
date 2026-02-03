@@ -123,25 +123,30 @@ const placeOrder = async (req, res) => {
       phone_number: address.phone_number
     };
 
+    // Only create order in database for COD and WALLET payments
+    // Razorpay orders will be created after payment verification
+    let savedOrder = null;
 
-    const order = new Order({
-      order_number: orderNumber,
-      user_id: userId,
-      products: orderProducts,
-      total,
-      subtotal,
-      tax: 0, 
-      shipping_charge,
-      coupon_discount: couponDiscount,
-      applied_coupon_code: appliedCouponCode,
-      shipping_address: shippingAddress,
-      payment_method: paymentMethod,
-      estimated_delivery_date: estimatedDelivery,
-      status: paymentMethod === 'COD' ? 'ORDERED' : 'PENDING',
-      payment_status: 'PENDING'
-    });
+    if (paymentMethod === 'COD' || paymentMethod === 'WALLET') {
+      const order = new Order({
+        order_number: orderNumber,
+        user_id: userId,
+        products: orderProducts,
+        total,
+        subtotal,
+        tax: 0, 
+        shipping_charge,
+        coupon_discount: couponDiscount,
+        applied_coupon_code: appliedCouponCode,
+        shipping_address: shippingAddress,
+        payment_method: paymentMethod,
+        estimated_delivery_date: estimatedDelivery,
+        status: paymentMethod === 'COD' ? 'ORDERED' : 'PENDING',
+        payment_status: 'PENDING'
+      });
 
-    const savedOrder = await order.save();
+      savedOrder = await order.save();
+    }
 
     
     if (paymentMethod === 'COD') {
@@ -238,33 +243,44 @@ if (paymentMethod === 'WALLET') {
           throw new Error('Razorpay is not initialized. Check your API keys.');
         }
 
-        const razorpayOrder = await createRazorpayOrder(total, savedOrder._id);
-        
-        await Order.findByIdAndUpdate(savedOrder._id, {
-          'razorpay.order_id': razorpayOrder.id,
-          'razorpay.amount': razorpayOrder.amount,
-          'razorpay.currency': razorpayOrder.currency
-        });
+        // SECURITY FIX: Don't create order in database yet - only create Razorpay order
+        // Store order data in session temporarily until payment is verified
+        const orderData = {
+          userId,
+          orderProducts,
+          subtotal,
+          shipping_charge,
+          couponDiscount,
+          appliedCouponCode,
+          total,
+          shippingAddress,
+          paymentMethod,
+          estimatedDelivery,
+          stockUpdates,
+          cartItems: cartCalculation.items
+        };
+
+        // Store in session temporarily (will be cleared after payment or timeout)
+        req.session.pendingOrder = orderData;
+        req.session.pendingOrderExpiry = Date.now() + (15 * 60 * 1000); // 15 minutes expiry
+
+        const razorpayOrder = await createRazorpayOrder(total, `ord_${Date.now()}`); // Shorter receipt ID
 
         return res.status(200).json({
           success: true,
-          orderId: savedOrder._id,
-          orderNumber: savedOrder.order_number,
           key: process.env.RAZORPAY_KEY_ID,
           amount: razorpayOrder.amount,
           currency: razorpayOrder.currency,
           razorpayOrderId: razorpayOrder.id,
-          message: 'Proceed to payment'
+          message: 'Proceed to payment',
+          // Don't return orderId since order isn't created yet
+          tempOrderData: {
+            total: total,
+            orderNumber: orderNumber // Generate but don't save yet
+          }
         });
       } catch (error) {
         const errorMessage = error.message || 'Failed to initialize payment';
-        
-        
-        try {
-          await Order.findByIdAndDelete(savedOrder._id);
-        } catch (deleteError) {
-          
-        }
         
         return res.status(500).json({
           success: false,
@@ -281,7 +297,11 @@ if (paymentMethod === 'WALLET') {
 
 const createRazorpayOrder = async (amount, orderId) => {
   if (!razorpayInstance) {
-    throw new Error('Razorpay is not properly initialized');
+    throw new Error('Razorpay is not properly initialized. Check your API keys.');
+  }
+
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay API keys are not configured properly');
   }
 
   try {
@@ -293,12 +313,45 @@ const createRazorpayOrder = async (amount, orderId) => {
       currency: 'INR',
       receipt: orderId.toString()
     };
+    
     const order = await razorpayInstance.orders.create(orderOptions);
+    
+    if (!order) {
+      throw new Error('Razorpay API returned null/undefined order');
+    }
     
     return order;
   } catch (error) {
-    console.error('❌ Razorpay order creation failed:', error);
-    throw error;
+    // Extract error details from Razorpay error structure
+    let errorMessage = 'Unknown error';
+    let errorCode = null;
+    let errorDescription = null;
+    
+    if (error.error) {
+      // Razorpay error structure
+      errorCode = error.error.code;
+      errorDescription = error.error.description;
+      errorMessage = errorDescription || error.error.code || 'Razorpay API error';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    // Provide more specific error messages
+    if (errorCode === 'BAD_REQUEST_ERROR') {
+      if (errorDescription && errorDescription.includes('receipt')) {
+        throw new Error('Invalid receipt format. Please try again.');
+      } else {
+        throw new Error('Invalid request to Razorpay. Please check your order details.');
+      }
+    } else if (errorCode === 'GATEWAY_ERROR') {
+      throw new Error('Razorpay gateway error. Please try again later.');
+    } else if (errorCode === 'SERVER_ERROR') {
+      throw new Error('Razorpay server error. Please try again later.');
+    } else if (errorMessage && errorMessage.includes('API key')) {
+      throw new Error('Invalid Razorpay API credentials. Please check your configuration.');
+    } else {
+      throw new Error(`Razorpay order creation failed: ${errorMessage}`);
+    }
   }
 };
 
@@ -373,60 +426,24 @@ const getOrderSuccess = async (req, res) => {
 
 const getOrderFailure = async (req, res) => {
   try {
-    const orderId = req.params.id;
-    const userId = req.session.userId;
-
-    
-    const order = await Order.findOne({
-      _id: orderId,
-      user_id: userId
-    }).populate({
-      path: 'products.variation',
-      populate: {
-        path: 'product_id',
-        select: 'name images'
-      }
-    });
-
-    
-    if (!order) {
-      return res.render('user/orderFailure', {
-        order: {
-          _id: null,
-          orderNumber: 'N/A',
-          total: 0,
-          paymentDetails: {
-            method: 'N/A',
-            status: 'FAILED'
-          },
-          failureReason: 'Order not found or invalid.'
-        },
-        name: ''
-      });
+    // Clear any pending order data on payment failure
+    if (req.session.pendingOrder) {
+      delete req.session.pendingOrder;
+      delete req.session.pendingOrderExpiry;
     }
 
-
-    const user = await userModel.findById(userId);
+    const user = await userModel.findById(req.session.userId);
     const displayName = user ? `${user.firstName} ${user.lastName}` : "";
 
-    
-    let failureReason = "Payment failed. Please try again.";
-    if (order.payment_status === "FAILED") {
-      failureReason = "Payment verification failed.";
-    } else if (order.payment_status === "PENDING") {
-      failureReason = "Payment was not completed or was cancelled.";
-    }
-
-    
     const orderData = {
-      _id: order._id,
-      orderNumber: order.order_number,
-      total: order.total,
+      _id: null,
+      orderNumber: 'N/A',
+      total: 0,
       paymentDetails: {
-        method: order.payment_method,
-        status: order.payment_status,
+        method: 'RAZORPAY',
+        status: 'FAILED'
       },
-      failureReason
+      failureReason: 'Payment was cancelled or failed. No order was created.'
     };
 
     res.render('user/orderFailure', {
@@ -456,7 +473,7 @@ const getOrderFailure = async (req, res) => {
 
 const verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({
@@ -465,6 +482,7 @@ const verifyPayment = async (req, res) => {
       });
     }
 
+    // Verify payment signature
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -474,48 +492,77 @@ const verifyPayment = async (req, res) => {
     const isSignatureValid = expectedSignature === razorpay_signature;
 
     if (!isSignatureValid) {
-      await Order.findByIdAndUpdate(orderId, {
-        payment_status: 'FAILED',
-        status: 'CANCELLED'
-      });
+      // Clear pending order data on failed verification
+      if (req.session.pendingOrder) {
+        delete req.session.pendingOrder;
+        delete req.session.pendingOrderExpiry;
+      }
+      
       return res.status(400).json({
         success: false,
         message: 'Payment signature verification failed'
       });
     }
 
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      {
-        payment_status: 'COMPLETED',
-        status: 'ORDERED',
-        'razorpay.payment_id': razorpay_payment_id
-      },
-      { new: true }
-    );
-
-    if (!order) {
-      return res.status(404).json({
+    // Check if pending order data exists and hasn't expired
+    if (!req.session.pendingOrder || !req.session.pendingOrderExpiry) {
+      return res.status(400).json({
         success: false,
-        message: 'Order not found'
+        message: 'Order session expired. Please try placing the order again.'
       });
     }
 
-    const userId = order.user_id;
+    if (Date.now() > req.session.pendingOrderExpiry) {
+      delete req.session.pendingOrder;
+      delete req.session.pendingOrderExpiry;
+      return res.status(400).json({
+        success: false,
+        message: 'Order session expired. Please try placing the order again.'
+      });
+    }
+
+    // Get pending order data from session
+    const orderData = req.session.pendingOrder;
+    const userId = orderData.userId;
+
+    // Generate new order number for the actual order
+    const orderNumber = await generateOrderNumber();
+
+    // NOW create the order in database after successful payment verification
+    const order = new Order({
+      order_number: orderNumber,
+      user_id: userId,
+      products: orderData.orderProducts,
+      total: orderData.total,
+      subtotal: orderData.subtotal,
+      tax: 0,
+      shipping_charge: orderData.shipping_charge,
+      coupon_discount: orderData.couponDiscount,
+      applied_coupon_code: orderData.appliedCouponCode,
+      shipping_address: orderData.shippingAddress,
+      payment_method: orderData.paymentMethod,
+      estimated_delivery_date: orderData.estimatedDelivery,
+      status: 'ORDERED', // Order is confirmed after payment
+      payment_status: 'COMPLETED', // Payment is verified
+      razorpay: {
+        order_id: razorpay_order_id,
+        payment_id: razorpay_payment_id,
+        signature: razorpay_signature
+      }
+    });
+
+    const savedOrder = await order.save();
+
+    // Now reduce stock and clear cart since payment is confirmed
+    if (orderData.stockUpdates && orderData.stockUpdates.length > 0) {
+      await ProductVariation.bulkWrite(orderData.stockUpdates);
+    }
+
     await Cart.deleteMany({ user_id: userId });
 
-    const stockUpdates = order.products.map(product => ({
-      updateOne: {
-        filter: { _id: product.variation },
-        update: { $inc: { stock_quantity: -product.quantity } }
-      }
-    }));
-
-    if (stockUpdates.length > 0) {
-      await ProductVariation.bulkWrite(stockUpdates);
-    }
-    if (order.applied_coupon_code) {
-      const coupon = await Coupon.findOne({ code: order.applied_coupon_code });
+    // Update coupon usage
+    if (orderData.appliedCouponCode) {
+      const coupon = await Coupon.findOne({ code: orderData.appliedCouponCode });
       
       if (coupon) {
         const userUsageIndex = coupon.usedBy.findIndex(u => u.userId && u.userId.toString() === userId.toString());
@@ -523,7 +570,6 @@ const verifyPayment = async (req, res) => {
         if (userUsageIndex >= 0) {
           coupon.usedBy[userUsageIndex].count += 1;
         } else {
-
           coupon.usedBy.push({ userId, count: 1 });
         }
         
@@ -531,18 +577,29 @@ const verifyPayment = async (req, res) => {
       }
     }
     
+    // Clear session data
     if (req.session.appliedCoupon) {
       delete req.session.appliedCoupon;
     }
+    delete req.session.pendingOrder;
+    delete req.session.pendingOrderExpiry;
 
     return res.status(200).json({
       success: true,
-      message: 'Payment verified successfully',
-      orderId: order._id
+      message: 'Payment verified and order created successfully',
+      orderId: savedOrder._id,
+      orderNumber: savedOrder.order_number
     });
 
   } catch (error) {
     console.error('❌ Payment verification error:', error);
+    
+    // Clear pending order data on error
+    if (req.session.pendingOrder) {
+      delete req.session.pendingOrder;
+      delete req.session.pendingOrderExpiry;
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error verifying payment: ' + error.message
@@ -1107,6 +1164,29 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+// Function to handle payment cancellation/failure
+const handlePaymentCancellation = async (req, res) => {
+  try {
+    // Clear pending order data
+    if (req.session.pendingOrder) {
+      delete req.session.pendingOrder;
+      delete req.session.pendingOrderExpiry;
+    }
+
+    return res.json({
+      success: true,
+      message: 'Payment cancelled. No order was created.',
+      redirect: '/orders'
+    });
+
+  } catch (error) {
+    console.error('Error handling payment cancellation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error handling payment cancellation'
+    });
+  }
+};
 
 
 module.exports = {
@@ -1118,5 +1198,6 @@ module.exports = {
     getOrderDetails,
     requestReturn,
     downloadInvoice,
-    cancelOrder
+    cancelOrder,
+    handlePaymentCancellation
 }

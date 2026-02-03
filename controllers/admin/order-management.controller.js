@@ -110,7 +110,9 @@ const cancelOrder = async (req, res) => {
       });
     }
 
-    const order = await Order.findById(req.params.id).populate('products.variation');
+    const order = await Order.findById(req.params.id)
+      .populate('products.variation')
+      .populate('user_id');
     
     if (!order) {
       return res.status(404).json({ 
@@ -133,16 +135,34 @@ const cancelOrder = async (req, res) => {
       });
     }
 
+    // Security check: Prevent refunds for unverified payments
+    if (['RAZORPAY', 'RAZOR_PAY', 'ONLINE'].includes(order.payment_method) && 
+        order.payment_status !== 'COMPLETED') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot process refund for unverified payment. Please verify payment status first.' 
+      });
+    }
+
+    let refundAmount = 0;
+    let itemsToRefund = [];
+
     if (productId === 'full') {
       order.status = 'CANCELLED';
-      for (let item of order.products) {
-        const variation = await ProductVariation.findById(item.variation._id);
-        if (variation) {
-          variation.stock_quantity += item.quantity;
-          await variation.save();
+      
+      order.products.forEach(item => {
+        if (item.status !== 'CANCELLED') {
+          item.status = 'CANCELLED';
+          
+          itemsToRefund.push({
+            variation: item.variation._id || item.variation,
+            quantity: item.quantity
+          });
+
+          // Calculate refund amount: product price - allocated coupon discount
+          refundAmount += (item.price * item.quantity) - (item.coupon_discount_allocated || 0);
         }
-        item.status = 'CANCELLED';
-      }
+      });
     } else {
       const item = order.products.find(p => p._id.toString() === productId);
       if (!item) {
@@ -159,20 +179,100 @@ const cancelOrder = async (req, res) => {
         });
       }
       
-      const variation = await ProductVariation.findById(item.variation);
-      if (variation) {
-        variation.stock_quantity += item.quantity;
-        await variation.save();
-      }
       item.status = 'CANCELLED';
+      
+      itemsToRefund.push({
+        variation: item.variation._id || item.variation,
+        quantity: item.quantity
+      });
+
+      // Calculate refund amount: product price - allocated coupon discount
+      refundAmount = (item.price * item.quantity) - (item.coupon_discount_allocated || 0);
+
+      // Check if all products are cancelled
+      const allCancelled = order.products.every(p => p.status === 'CANCELLED');
+      if (allCancelled) {
+        order.status = 'CANCELLED';
+      }
+    }
+
+    // Update stock quantities
+    const stockUpdates = itemsToRefund.map(item => ({
+      updateOne: {
+        filter: { _id: item.variation },
+        update: { $inc: { stock_quantity: item.quantity } }
+      }
+    }));
+
+    if (stockUpdates.length > 0) {
+      await ProductVariation.bulkWrite(stockUpdates);
+    }
+
+    // Process refund for paid orders
+    if (refundAmount > 0 && ['RAZORPAY', 'RAZOR_PAY', 'ONLINE', 'WALLET'].includes(order.payment_method)) {
+      if (!order.user_id) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Customer information not found for this order.' 
+        });
+      }
+
+      // Add refund to customer's wallet
+      order.user_id.wallet = (order.user_id.wallet || 0) + refundAmount;
+      await order.user_id.save();
+
+      // Create wallet transaction record
+      await WalletTransaction.create({
+        user_id: order.user_id._id,
+        amount: refundAmount,
+        type: 'credit',
+        description: `Refund for cancelled item(s) in order ${order.order_number} (Admin cancelled)`
+      });
+
+      // Update order refund information
+      order.refund_amount = (order.refund_amount || 0) + refundAmount;
+      order.refund_status = order.status === 'CANCELLED' ? 'FULL_REFUND' : 'PARTIAL_REFUND';
+    }
+
+    // Recalculate order totals after cancellation
+    const activeItems = order.products.filter(p => p.status !== 'CANCELLED');
+    
+    if (activeItems.length > 0) {
+      // Recalculate subtotal from active (non-cancelled) items
+      const newSubtotal = activeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      // Recalculate coupon discount from active items
+      const newCouponDiscount = activeItems.reduce((sum, item) => sum + (item.coupon_discount_allocated || 0), 0);
+      
+      // Recalculate shipping (free shipping if subtotal > 1000, otherwise 50)
+      const newShipping = newSubtotal > 1000 ? 0 : 50;
+      
+      // Recalculate total
+      const newTotal = newSubtotal + newShipping + (order.tax || 0) - newCouponDiscount;
+      
+      // Update order totals
+      order.subtotal = newSubtotal;
+      order.shipping_charge = newShipping;
+      order.coupon_discount = newCouponDiscount;
+      order.total = newTotal;
+    } else {
+      // If all items are cancelled, set totals to 0
+      order.subtotal = 0;
+      order.shipping_charge = 0;
+      order.coupon_discount = 0;
+      order.total = 0;
     }
 
     order.cancellationReason = reason || '';
     await order.save();
     
+    const message = refundAmount > 0 
+      ? `Order has been cancelled successfully. Rs${refundAmount.toLocaleString()} has been refunded to customer's wallet. Stock quantities have been updated.`
+      : 'Order has been cancelled successfully. Stock quantities have been updated.';
+    
     res.json({ 
       success: true, 
-      message: 'Order has been cancelled successfully. Stock quantities have been updated.' 
+      message: message
     });
   } catch (error) {
     console.error('Error cancelling order:', error);
@@ -284,7 +384,25 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const order = await Order.findByIdAndUpdate(
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found. It may have been deleted or the ID is incorrect.' 
+      });
+    }
+
+    // Security check: Prevent marking unverified payments as delivered
+    if (status === 'DELIVERED' && 
+        ['RAZORPAY', 'RAZOR_PAY', 'ONLINE'].includes(order.payment_method) && 
+        order.payment_status !== 'COMPLETED') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot mark order as delivered. Payment verification required for online payments.' 
+      });
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
       {
         $set: {
@@ -295,7 +413,7 @@ const updateOrderStatus = async (req, res) => {
       { new: true } 
     );
 
-    if (!order) {
+    if (!updatedOrder) {
       return res.status(404).json({ 
         success: false, 
         message: 'Order not found. It may have been deleted or the ID is incorrect.' 
@@ -303,10 +421,10 @@ const updateOrderStatus = async (req, res) => {
     }
 
     // Update payment status if order is delivered and payment method is online
-    if (status === 'DELIVERED' && ['RAZORPAY', 'WALLET', 'UPI', 'ONLINE'].includes(order.payment_method)) {
-      order.payment_status = 'COMPLETED';
-      order.delivered_at = new Date();
-      await order.save();
+    if (status === 'DELIVERED' && ['RAZORPAY', 'WALLET', 'UPI', 'ONLINE'].includes(updatedOrder.payment_method)) {
+      updatedOrder.payment_status = 'COMPLETED';
+      updatedOrder.delivered_at = new Date();
+      await updatedOrder.save();
     }
 
     if (req.headers['content-type'] === 'application/json') {
@@ -365,6 +483,16 @@ const updateProductStatus = async (req, res) => {
       return res.status(404).json({ 
         success: false, 
         message: 'Order not found. It may have been deleted or the ID is incorrect.' 
+      });
+    }
+
+    // Security check: Prevent marking unverified payments as delivered
+    if (status === 'DELIVERED' && 
+        ['RAZORPAY', 'RAZOR_PAY', 'ONLINE'].includes(order.payment_method) && 
+        order.payment_status !== 'COMPLETED') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot mark product as delivered. Payment verification required for online payments.' 
       });
     }
 

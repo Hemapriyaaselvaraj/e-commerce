@@ -8,12 +8,14 @@ router.use(isCustomerAccessible);
 
 router.post('/place-order', orderController.placeOrder );
 router.post('/verifyPayment', orderController.verifyPayment);
+router.post('/cancelPayment', orderController.handlePaymentCancellation);
 router.post('/return-request', orderController.requestReturn);
 router.delete('/cancel/:orderId/product', orderController.cancelOrder);
 
 router.delete('/cancel/:orderId', orderController.cancelOrder)
 router.get('/orderSuccess/:orderId', orderController.getOrderSuccess);
-router.get('/orderFailure/:orderId', orderController.getOrderFailure);
+router.get('/orderFailure', orderController.getOrderFailure); // Remove orderId requirement
+router.get('/orderFailure/:orderId', orderController.getOrderFailure); // Keep for backward compatibility
 router.get('/my-orders', orderController.getUserOrders);
 router.get('/details/:orderId', orderController.getOrderDetails);
 router.get('/download-invoice/:orderId', orderController.downloadInvoice)

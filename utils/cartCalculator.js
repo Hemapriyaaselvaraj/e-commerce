@@ -38,13 +38,36 @@ const calculateCartTotals = async (userId, session = {}) => {
 
     let subtotal = 0;
     const validItems = [];
+    const stockIssues = [];
 
     cartItems.forEach((item) => {
       const variation = item.product_variation_id;
       const product = variation?.product_id;
       
-      // Skip items that are inactive or out of stock
-      if (!product || !product.is_active || variation.stock_quantity < item.quantity) {
+      // Check if product is inactive
+      if (!product || !product.is_active) {
+        stockIssues.push({
+          name: product?.name || 'Unknown Product',
+          issue: 'Product is no longer available'
+        });
+        return;
+      }
+      
+      // Check stock availability
+      if (variation.stock_quantity <= 0) {
+        stockIssues.push({
+          name: product.name,
+          issue: 'Out of stock'
+        });
+        return;
+      }
+      
+      // Check if requested quantity exceeds available stock
+      if (variation.stock_quantity < item.quantity) {
+        stockIssues.push({
+          name: product.name,
+          issue: `Only ${variation.stock_quantity} items available, but ${item.quantity} requested`
+        });
         return;
       }
       
@@ -132,6 +155,26 @@ const calculateCartTotals = async (userId, session = {}) => {
     }
 
     const total = subtotal + shipping - couponDiscount;
+
+    // Check if there are stock issues
+    if (stockIssues.length > 0) {
+      const stockMessage = stockIssues.length === 1 
+        ? `${stockIssues[0].name}: ${stockIssues[0].issue}`
+        : `${stockIssues.length} items have stock issues. Please check your cart.`;
+      
+      return {
+        success: false,
+        message: stockMessage,
+        stockIssues,
+        subtotal: Math.round(subtotal),
+        shipping,
+        couponDiscount: Math.round(couponDiscount),
+        appliedCouponCode,
+        total: Math.round(total),
+        items: validItems,
+        couponValidationMessage
+      };
+    }
 
     return {
       success: true,

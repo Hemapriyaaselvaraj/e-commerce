@@ -760,6 +760,17 @@
       let isProcessing = false;
 
       placeOrderButton.addEventListener("click", async () => {
+        // Check if button is disabled due to validation errors
+        if (placeOrderButton.disabled) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Cannot Place Order',
+            text: 'Please fix the validation errors before placing your order.',
+            confirmButtonColor: '#343a40'
+          });
+          return;
+        }
+        
         if (isProcessing) {
           return;
         }
@@ -804,6 +815,41 @@
           // First, verify the cart total with backend
           const cartTotalRes = await fetch("/cart/total");
           const cartTotalData = await cartTotalRes.json();
+          
+          // Check for stock issues
+          if (!cartTotalData.success) {
+            if (cartTotalData.stockIssues && cartTotalData.stockIssues.length > 0) {
+              // Show detailed stock issues
+              let stockMessage = "Stock Issues Found:\n\n";
+              cartTotalData.stockIssues.forEach(issue => {
+                stockMessage += `• ${issue.name}: ${issue.issue}\n`;
+              });
+              stockMessage += "\nPlease update your cart and try again.";
+              
+              Swal.fire({
+                icon: 'warning',
+                title: 'Stock Issues',
+                text: stockMessage,
+                confirmButtonColor: '#0f172a',
+                confirmButtonText: 'Go to Cart'
+              }).then(() => {
+                window.location.href = '/cart';
+              });
+            } else {
+              // Generic cart error
+              Swal.fire({
+                icon: 'error',
+                title: 'Cart Error',
+                text: cartTotalData.message || 'Unable to process your cart. Please try again.',
+                confirmButtonColor: '#0f172a'
+              });
+            }
+            
+            isProcessing = false;
+            placeOrderButton.disabled = false;
+            placeOrderButton.textContent = "Place Order";
+            return;
+          }
           
           if (cartTotalData.success) {
             const frontendTotal = parseFloat(document.getElementById('grandTotal').textContent.replace('₹', '').replace(',', ''));
@@ -850,12 +896,27 @@
 
           if (!res.ok || !data.success){
              const errorMsg = data.message || `HTTP ${res.status}`;
-             Swal.fire({
-               icon: 'error',
-               title: 'Order Failed',
-               text: errorMsg,
-               confirmButtonColor: '#0f172a'
-             });
+             
+             // Check if this is a stock-related error
+             if (errorMsg.includes('stock') || errorMsg.includes('available') || errorMsg.includes('No available products')) {
+               Swal.fire({
+                 icon: 'warning',
+                 title: 'Stock Issue',
+                 text: errorMsg + '\n\nPlease check your cart and try again.',
+                 confirmButtonColor: '#0f172a',
+                 confirmButtonText: 'Go to Cart'
+               }).then(() => {
+                 window.location.href = '/cart';
+               });
+             } else {
+               Swal.fire({
+                 icon: 'error',
+                 title: 'Order Failed',
+                 text: errorMsg,
+                 confirmButtonColor: '#0f172a'
+               });
+             }
+             
              isProcessing = false;
              placeOrderButton.disabled = false;
              placeOrderButton.textContent = "Place Order";
@@ -878,23 +939,39 @@
               order_id: data.razorpayOrderId,
               handler: async (response) => {
                 try {
+                  // Show loading state
+                  Swal.fire({
+                    title: 'Verifying Payment...',
+                    text: 'Please wait while we verify your payment',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                      Swal.showLoading();
+                    }
+                  });
+
                   const verifyRes = await fetch("/order/verifyPayment", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       razorpay_order_id: response.razorpay_order_id,
                       razorpay_payment_id: response.razorpay_payment_id,
-                      razorpay_signature: response.razorpay_signature,
-                      orderId: data.orderId,
+                      razorpay_signature: response.razorpay_signature
+                      // No orderId needed - order will be created after verification
                     }),
                   });
+                  
                   const verifyData = await verifyRes.json();
-                  if (verifyData.success)
-                    window.location.href = `/order/orderSuccess/${data.orderId}`;
-                  else
-                    window.location.href = `/order/orderFailure/${data.orderId}`;
-                } catch {
-                  window.location.href = `/order/orderFailure/${data.orderId}`;
+                  
+                  if (verifyData.success && verifyData.orderId) {
+                    // Payment verified and order created successfully
+                    window.location.href = `/order/orderSuccess/${verifyData.orderId}`;
+                  } else {
+                    // Payment verification failed
+                    window.location.href = `/order/orderFailure`;
+                  }
+                } catch (error) {
+                  console.error('Payment verification error:', error);
+                  window.location.href = `/order/orderFailure`;
                 }
               },
               prefill: {
@@ -905,7 +982,15 @@
               theme: { color: "#3399cc" },
               modal: {
                 ondismiss: function () {
-                  window.location.href = `/order/orderFailure/${data.orderId}`;
+                  // Payment cancelled - clear pending order
+                  fetch("/order/cancelPayment", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                  }).then(() => {
+                    window.location.href = `/order/orderFailure`;
+                  }).catch(() => {
+                    window.location.href = `/order/orderFailure`;
+                  });
                 },
               },
             };
@@ -1043,6 +1128,7 @@ function applyCouponCode(code) {
 
 async function applyCoupon() {
   const code = document.getElementById("couponInput").value.trim().toUpperCase();
+  const placeOrderButton = document.getElementById("placeOrder");
   
   if (!code) {
     document.getElementById("couponMessage").innerText = "Please enter a coupon code";
@@ -1093,6 +1179,11 @@ async function applyCoupon() {
     
     document.getElementById("couponInput").value = code;
     
+    // Enable Place Order button on successful coupon application
+    placeOrderButton.disabled = false;
+    placeOrderButton.style.opacity = "1";
+    placeOrderButton.style.cursor = "pointer";
+    
     // Update COD availability after coupon is applied
     updateCODAvailability();
   } else {
@@ -1104,11 +1195,31 @@ async function applyCoupon() {
     if (couponRow) {
       couponRow.remove();
     }
+    
+    // Check if this is a business rule violation (coupon validation error)
+    if (data.message && (
+      data.message.includes('violates business rules') || 
+      data.message.includes('minimum purchase') ||
+      data.message.includes('greater than discount')
+    )) {
+      // Disable Place Order button for business rule violations
+      placeOrderButton.disabled = true;
+      placeOrderButton.style.opacity = "0.5";
+      placeOrderButton.style.cursor = "not-allowed";
+      placeOrderButton.title = "Please fix coupon validation errors before placing order";
+    } else {
+      // For other errors (expired, not found, etc.), keep button enabled
+      placeOrderButton.disabled = false;
+      placeOrderButton.style.opacity = "1";
+      placeOrderButton.style.cursor = "pointer";
+      placeOrderButton.title = "";
+    }
   }
 }
 
 async function removeCoupon() {
   const code = document.getElementById("couponInput").value;
+  const placeOrderButton = document.getElementById("placeOrder");
 
   const res = await fetch("/order/remove-coupon", {
     method: "DELETE",
@@ -1130,6 +1241,12 @@ async function removeCoupon() {
     if (couponRow) {
       couponRow.remove();
     }
+    
+    // Re-enable Place Order button when coupon is removed
+    placeOrderButton.disabled = false;
+    placeOrderButton.style.opacity = "1";
+    placeOrderButton.style.cursor = "pointer";
+    placeOrderButton.title = "";
     
     // Refresh to update totals
     location.reload();
