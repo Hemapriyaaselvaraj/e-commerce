@@ -77,6 +77,12 @@ const calculateCartTotals = async (userId, session = {}) => {
       appliedCouponCode = session.appliedCoupon.code;
     }
 
+    // Ensure coupon discount doesn't exceed subtotal + shipping to prevent negative totals
+    const maxDiscount = subtotal + shipping;
+    if (couponDiscount > maxDiscount) {
+      couponDiscount = maxDiscount;
+    }
+
     const total = subtotal + shipping - couponDiscount;
 
     return {

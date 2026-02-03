@@ -75,6 +75,12 @@ const checkout = async (req, res) => {
   let couponDiscount = 0;
   if (req.session.appliedCoupon) {
     couponDiscount = req.session.appliedCoupon.discount || 0;
+    
+    // Ensure coupon discount doesn't exceed total to prevent negative amounts
+    if (couponDiscount > total) {
+      couponDiscount = total;
+    }
+    
     grandTotal = total - couponDiscount; // Grand total is after coupon discount
   }
 

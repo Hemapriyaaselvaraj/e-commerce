@@ -75,7 +75,8 @@ const applyCoupon = async (req, res) => {
         discount = coupon.maxDiscount;
       }
     } else {
-      discount = coupon.discountValue;
+      // For fixed amount coupons, cap the discount at cart total to prevent negative amounts
+      discount = Math.min(coupon.discountValue, cartTotal);
     }
 
   
