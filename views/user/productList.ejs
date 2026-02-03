@@ -748,7 +748,7 @@
                 <button
                   type="button"
                   class="wishlist-btn <%= wishlistMap && wishlistMap[product._id] ? 'active' : '' %>"
-                  onclick="event.stopPropagation(); toggleWishlist(event, '<%= product._id %>')"
+                  onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(event, '<%= product._id %>')"
                   aria-label="Add to wishlist"
                 >
                   <i class="<%= wishlistMap && wishlistMap[product._id] ? 'fas' : 'far' %> fa-heart"></i>
@@ -845,6 +845,9 @@
 
   <script>
     async function toggleWishlist(event, productId) {
+      event.preventDefault();
+      event.stopPropagation();
+      
       const btn = event.currentTarget;
       try {
         const res = await fetch('/wishlist/toggle', {
