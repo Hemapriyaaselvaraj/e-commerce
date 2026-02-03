@@ -90,6 +90,26 @@ main {
       color: #222;
       margin: 10px 0;
     }
+    .price-with-offer {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .original-price {
+      font-size: 0.9rem;
+    }
+    .final-price {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    .offer-badge {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .offer-badge small {
+      font-size: 0.8rem;
+    }
     .wishlist-item-actions {
       display: flex;
       flex-direction: column;
@@ -251,10 +271,23 @@ main {
                 <h3 class="wishlist-item-name"><%= item.name %></h3>
                 <p class="wishlist-item-info">Category: <%= item.category %></p>
                 <div class="wishlist-item-price">
-                  <strong>₹<%= item.price ? item.price.toFixed(2) : 'N/A' %></strong>
+                  <% if (item.hasOffer) { %>
+                    <div class="price-with-offer">
+                      <span class="original-price text-muted text-decoration-line-through">₹<%= item.originalPrice.toFixed(2) %></span>
+                      <strong class="final-price text-success">₹<%= item.finalPrice.toFixed(2) %></strong>
+                      <div class="offer-badge">
+                        <small class="text-success fw-bold"><%= item.offerDiscount %>% OFF</small>
+                        <% if (item.offerName) { %>
+                          <small class="text-muted d-block"><%= item.offerName %></small>
+                        <% } %>
+                      </div>
+                    </div>
+                  <% } else { %>
+                    <strong>₹<%= item.originalPrice.toFixed(2) %></strong>
+                  <% } %>
                 </div>
                 <div class="wishlist-item-actions">
-                  <% if (item.stock === 0) { %>
+                  <% if (item.stockQuantity === 0) { %>
                     <button class="add-to-cart-btn btn btn-secondary" wishlist-entry-id="<%= item._id %>" disabled>Out of Stock</button>
                   <% } else { %>
                     <button class="add-to-cart-btn btn btn-primary" wishlist-entry-id="<%= item._id %>">Add to Cart</button>

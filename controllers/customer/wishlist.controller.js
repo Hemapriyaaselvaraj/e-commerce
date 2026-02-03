@@ -2,6 +2,8 @@ const Wishlist = require('../../models/wishlistModel');
 const ProductVariation = require('../../models/productVariationModel');
 const User = require('../../models/userModel');
 const Cart = require('../../models/cartModel');
+const Offer = require('../../models/offerModel');
+const { calculateBestOffer } = require('../../utils/offerCalculator');
 
 
 const toggleWishlist = async (req, res) => {
@@ -70,17 +72,46 @@ const getWishlist = async (req, res) => {
       .populate('product_id')
       .populate('variation_id');
 
-    const items = wishlistEntries.map(entry => ({
-      category: entry.product_id.product_category,
-      price: entry.product_id.price,
-      image: (entry.variation_id?.images?.length > 0) 
-        ? entry.variation_id.images[0] 
-        : '/images/default-shoe.png',
-      _id: entry._id,
-      size: entry.selected_size,
-      color: entry.selected_color,
-      variationId: entry.variation_id._id
-    }));
+    // Get active offers
+    const now = new Date();
+    const activeOffers = await Offer.find({
+      isActive: true,
+      validFrom: { $lte: now },
+      validTo: { $gte: now }
+    })
+    .populate('category', 'category')
+    .lean();
+
+    const items = wishlistEntries.map(entry => {
+      const product = entry.product_id;
+      
+      // Calculate best offer for this product
+      const offerResult = calculateBestOffer(product, activeOffers);
+      
+      // Calculate final price after offer discount
+      const originalPrice = product.price;
+      const discountAmount = (originalPrice * offerResult.discountPercentage) / 100;
+      const finalPrice = originalPrice - discountAmount;
+
+      return {
+        name: product.name,
+        category: product.product_category,
+        originalPrice: originalPrice,
+        finalPrice: finalPrice,
+        offerDiscount: offerResult.discountPercentage,
+        offerName: offerResult.offerName,
+        hasOffer: offerResult.discountPercentage > 0,
+        image: (entry.variation_id?.images?.length > 0) 
+          ? entry.variation_id.images[0] 
+          : '/images/default-shoe.png',
+        _id: entry._id,
+        productId: product._id,
+        size: entry.selected_size,
+        color: entry.selected_color,
+        variationId: entry.variation_id._id,
+        stockQuantity: entry.variation_id?.stock_quantity || 0
+      };
+    });
 
     res.render('user/wishlist', {
       items: items,
