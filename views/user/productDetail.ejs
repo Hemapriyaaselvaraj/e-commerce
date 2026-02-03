@@ -134,8 +134,19 @@
     .add-to-cart, .add-to-wishlist { width: 120%; margin-top: 14px; padding: 13px 0; border-radius: 5px; font-size: 1.13rem; font-weight: 500; text-align: center; cursor: pointer; }
     .add-to-cart { background: #000; color: #fff; border: none; transition: background 0.18s; }
     .add-to-cart:hover { background: #646363; }
-    .add-to-wishlist { background: #fff; border: 1px solid #000; color: #000; transition: background 0.18s, border-color 0.18s; }
-    .add-to-wishlist:hover { background: #d25656; border-color: #333; }
+    .add-to-wishlist { background: #fff; border: 1px solid #000; color: #000; transition: all 0.3s ease; }
+    .add-to-wishlist:hover { background: #f8f8f8; border-color: #333; }
+    
+    /* Wishlist button states */
+    .add-to-wishlist.in-wishlist { 
+      background: #dc3545; 
+      border-color: #dc3545; 
+      color: #fff; 
+    }
+    .add-to-wishlist.in-wishlist:hover { 
+      background: #c82333; 
+      border-color: #bd2130; 
+    }
 
     .features p { margin-top: 12px; font-size: 1.04rem; }
 
@@ -301,7 +312,13 @@
           <input type="hidden" id="currentCartQuantity" value="<%= typeof currentCartQuantity !== 'undefined' && currentCartQuantity !== null ? Number(currentCartQuantity) : 0 %>">
         </div>
         <button class="add-to-cart" id="addToCartBtn">🛒 Add to Cart</button>
-        <button class="add-to-wishlist" id="addToWishlistBtn">♡ Add to Wishlist</button>
+        <button class="add-to-wishlist <% if (isInWishlist) { %>in-wishlist<% } %>" id="addToWishlistBtn">
+          <% if (isInWishlist) { %>
+            ❤️ In Wishlist
+          <% } else { %>
+            ♡ Add to Wishlist
+          <% } %>
+        </button>
         <div class="features">
           <p>🚚 Free shipping on orders over ₹ 1000</p>
           <p>↩️ 30-day return policy</p>
@@ -953,6 +970,8 @@
 
   
     const addToWishlistBtn = document.getElementById('addToWishlistBtn');
+    let isCurrentlyInWishlist = <%= isInWishlist ? 'true' : 'false' %>;
+    
     if (addToWishlistBtn) {
       addToWishlistBtn.onclick = function() {
         // Check if user is logged in first
@@ -960,7 +979,7 @@
         
         if (!isLoggedIn) {
           // Redirect to login page with message
-          window.location.href = '/user/login?message=' + encodeURIComponent('Please login to add items to your wishlist') + '&redirect=' + encodeURIComponent(window.location.pathname);
+          window.location.href = '/user/login?message=' + encodeURIComponent('Please login to manage your wishlist') + '&redirect=' + encodeURIComponent(window.location.pathname);
           return;
         }
 
@@ -971,7 +990,7 @@
         if (!selectedSize || !selectedColor) {
           Swal.fire({
             title: 'Selection Required',
-            text: 'Please select both size and color before adding to wishlist.',
+            text: 'Please select both size and color before managing wishlist.',
             icon: 'warning'
           });
           return;
@@ -992,7 +1011,16 @@
           return;
         }
 
-        fetch('/wishlist/add', {
+        // Determine action based on current state
+        const action = isCurrentlyInWishlist ? 'remove' : 'add';
+        const endpoint = isCurrentlyInWishlist ? '/wishlist/remove' : '/wishlist/add';
+        
+        // Disable button during request
+        addToWishlistBtn.disabled = true;
+        const originalText = addToWishlistBtn.innerHTML;
+        addToWishlistBtn.innerHTML = isCurrentlyInWishlist ? 'Removing...' : 'Adding...';
+
+        fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1008,11 +1036,18 @@
         .then(res => res.json())
         .then(data => {
           if (data.success) {
+            // Toggle the state
+            isCurrentlyInWishlist = !isCurrentlyInWishlist;
+            
+            // Update button appearance
+            updateWishlistButtonState();
+            
+            // Show success message
             Swal.fire({
               title: 'Success!',
-              text: data.message || 'Added to wishlist!',
+              text: data.message || (isCurrentlyInWishlist ? 'Added to wishlist!' : 'Removed from wishlist!'),
               icon: 'success',
-              timer: 2000,
+              timer: 1500,
               showConfirmButton: false
             });
             
@@ -1023,7 +1058,7 @@
           } else {
             Swal.fire({
               title: 'Error',
-              text: data.message || 'Could not add to wishlist.',
+              text: data.message || 'Could not update wishlist.',
               icon: 'error'
             });
           }
@@ -1031,11 +1066,29 @@
         .catch(() => {
           Swal.fire({
             title: 'Network Error',
-            text: 'Could not add to wishlist. Please try again.',
+            text: 'Could not update wishlist. Please try again.',
             icon: 'error'
           });
+        })
+        .finally(() => {
+          // Re-enable button
+          addToWishlistBtn.disabled = false;
+          updateWishlistButtonState();
         });
       };
+    }
+    
+    // Function to update wishlist button appearance
+    function updateWishlistButtonState() {
+      if (addToWishlistBtn) {
+        if (isCurrentlyInWishlist) {
+          addToWishlistBtn.classList.add('in-wishlist');
+          addToWishlistBtn.innerHTML = '❤️ In Wishlist';
+        } else {
+          addToWishlistBtn.classList.remove('in-wishlist');
+          addToWishlistBtn.innerHTML = '♡ Add to Wishlist';
+        }
+      }
     }
 
   

@@ -319,6 +319,16 @@ const productDetail = async (req, res) => {
       p.image = relatedImageMap[p._id.toString()] || null;
     });
 
+    // Check if product is in user's wishlist
+    let isInWishlist = false;
+    if (req.session.userId) {
+      const wishlistItem = await Wishlist.findOne({
+        user_id: req.session.userId,
+        product_id: productId
+      });
+      isInWishlist = !!wishlistItem;
+    }
+
     
     return res.render("user/productDetail", {
       product,
@@ -331,7 +341,8 @@ const productDetail = async (req, res) => {
       selectedSize,
       selectedColor,
       selectedVariationId,
-      selectedStock 
+      selectedStock,
+      isInWishlist
     });
 
   } catch (err) {

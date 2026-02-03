@@ -297,11 +297,55 @@ const getWishlistCount = async (req, res) => {
   }
 };
 
+const removeFromWishlistByProduct = async (req, res) => {
+  try {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Please log in to manage your wishlist.' 
+      });
+    }
+    
+    const { productId, variationId } = req.body;
+    if (!productId || !variationId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Product and variation information is required.' 
+      });
+    }
+    
+    const result = await Wishlist.deleteOne({ 
+      user_id: req.session.userId, 
+      product_id: productId,
+      variation_id: variationId
+    });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Item not found in your wishlist.' 
+      });
+    }
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Removed from wishlist successfully.' 
+    });
+  } catch (error) {
+    console.error('Remove from wishlist by product error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to remove item from wishlist. Please try again later.' 
+    });
+  }
+};
+
 module.exports = {
   toggleWishlist ,
   getWishlist,
   removeFromWishlist,
   addToWishlist,
   moveToCart,
-  getWishlistCount
+  getWishlistCount,
+  removeFromWishlistByProduct
  };
