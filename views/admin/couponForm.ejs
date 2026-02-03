@@ -290,6 +290,10 @@
                       value="<%= coupon ? coupon.minimumPurchase : 0 %>">
                   </div>
                   <div class="form-text">Minimum cart value required to use this coupon</div>
+                  <div id="fixedAmountWarning" class="alert alert-warning mt-2" style="display: none; font-size: 0.875rem;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Business Rule:</strong> For fixed amount coupons, minimum purchase must be greater than the discount amount to prevent losses.
+                  </div>
                 </div>
 
                 <div class="col-md-6 mb-3">
@@ -388,9 +392,10 @@
       } else {
         symbol.textContent = '₹';
       }
+      validateBusinessLogic();
     });
 
-    // Set initial symbol
+    // Set initial symbol and validate on page load
     window.addEventListener('DOMContentLoaded', function() {
       const discountType = document.getElementById('discountType').value;
       const symbol = document.getElementById('discount-symbol');
@@ -399,6 +404,9 @@
       } else {
         symbol.textContent = '₹';
       }
+      
+      // Initial business logic validation
+      validateBusinessLogic();
     });
 
     // Form validation and AJAX submission
@@ -460,6 +468,21 @@
         });
         document.getElementById('discountValue').focus();
         return;
+      }
+
+      // Business logic validation: For fixed amount coupons, minimum purchase must be higher than discount
+      if (discountType === 'FLAT') {
+        const minPurchase = parseFloat(formData.get('minimumPurchase')) || 0;
+        if (minPurchase <= parseFloat(discountValue)) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Business Logic Error',
+            text: `For fixed amount coupons, minimum purchase amount (₹${minPurchase}) must be greater than the discount amount (₹${discountValue}) to prevent losses.`,
+            confirmButtonColor: '#343a40'
+          });
+          document.getElementById('minimumPurchase').focus();
+          return;
+        }
       }
       
       if (!validFrom || !validTo) {
@@ -623,7 +646,46 @@
         this.style.borderColor = '#28a745';
         this.title = '';
       }
+      
+      // Trigger minimum purchase validation for fixed amount coupons
+      validateBusinessLogic();
     });
+
+    // Business logic validation function
+    function validateBusinessLogic() {
+      const discountType = document.getElementById('discountType').value;
+      const discountValue = parseFloat(document.getElementById('discountValue').value) || 0;
+      const minimumPurchase = parseFloat(document.getElementById('minimumPurchase').value) || 0;
+      const minPurchaseField = document.getElementById('minimumPurchase');
+      const warningDiv = document.getElementById('fixedAmountWarning');
+      
+      if (discountType === 'FLAT') {
+        // Show warning for fixed amount coupons
+        if (warningDiv) warningDiv.style.display = 'block';
+        
+        if (discountValue > 0) {
+          if (minimumPurchase <= discountValue) {
+            minPurchaseField.style.borderColor = '#dc3545';
+            minPurchaseField.title = `Invalid: Minimum purchase (₹${minimumPurchase}) must be greater than discount (₹${discountValue}) to prevent losses`;
+          } else {
+            minPurchaseField.style.borderColor = '#28a745';
+            minPurchaseField.title = `Valid: Minimum purchase (₹${minimumPurchase}) is greater than discount (₹${discountValue})`;
+          }
+        }
+      } else if (discountType === 'PERCENTAGE') {
+        // Hide warning for percentage coupons
+        if (warningDiv) warningDiv.style.display = 'none';
+        minPurchaseField.style.borderColor = '#28a745';
+        minPurchaseField.title = 'Minimum purchase amount for percentage discount';
+      } else {
+        if (warningDiv) warningDiv.style.display = 'none';
+        minPurchaseField.style.borderColor = '';
+        minPurchaseField.title = '';
+      }
+    }
+
+    // Add event listeners for business logic validation
+    document.getElementById('minimumPurchase').addEventListener('input', validateBusinessLogic);
 
     // Date validation with flexible rules (same as offers)
     function validateDates() {

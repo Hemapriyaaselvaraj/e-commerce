@@ -65,6 +65,17 @@ const getAddCoupon = async (req, res) => {
         });
       }
 
+      // Business logic validation: For fixed amount coupons, minimum purchase must be higher than discount
+      if (discountType === 'FLAT') {
+        const minPurchase = parseFloat(minimumPurchase) || 0;
+        if (minPurchase <= discountValue) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'For fixed amount coupons, minimum purchase amount must be greater than the discount amount to prevent losses. Please set minimum purchase higher than ₹' + discountValue + '.' 
+          });
+        }
+      }
+
       if (code.trim().length < 3) {
         return res.status(400).json({ 
           success: false, 
@@ -236,6 +247,17 @@ const postEditCoupon = async (req, res) => {
           success: false, 
           message: 'Percentage discount cannot exceed 100%' 
         });
+      }
+
+      // Business logic validation: For fixed amount coupons, minimum purchase must be higher than discount
+      if (discountType === 'FLAT') {
+        const minPurchase = parseFloat(minimumPurchase) || 0;
+        if (minPurchase <= discountValue) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'For fixed amount coupons, minimum purchase amount must be greater than the discount amount to prevent losses. Please set minimum purchase higher than ₹' + discountValue + '.' 
+          });
+        }
       }
 
       if (code.trim().length < 3) {

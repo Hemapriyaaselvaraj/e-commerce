@@ -75,7 +75,16 @@ const applyCoupon = async (req, res) => {
         discount = coupon.maxDiscount;
       }
     } else {
-      // For fixed amount coupons, cap the discount at cart total to prevent negative amounts
+      // Additional business logic validation for fixed amount coupons
+      const minPurchase = coupon.minimumPurchase || 0;
+      if (minPurchase <= coupon.discountValue) {
+        return res.json({
+          success: false,
+          message: `This coupon violates business rules: minimum purchase (₹${minPurchase}) must be greater than discount (₹${coupon.discountValue}). Please contact support.`,
+        });
+      }
+      
+      // For fixed amount coupons, apply discount but ensure it doesn't exceed cart total
       discount = Math.min(coupon.discountValue, cartTotal);
     }
 
