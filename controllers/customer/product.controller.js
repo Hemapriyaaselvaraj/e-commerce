@@ -98,11 +98,23 @@ const productList = async (req, res) => {
       if (max && max !== "null") cond.$lte = parseFloat(max);
       return cond;
     });
-    filter.price = priceConditions.length === 1
-      ? priceConditions[0]
-      : undefined;
-    if (priceConditions.length > 1) {
-      filter.$or = priceConditions.map(p => ({ price: p }));
+    
+    if (priceConditions.length === 1) {
+      filter.price = priceConditions[0];
+    } else if (priceConditions.length > 1) {
+      // For multiple price ranges, we need to use $and to combine with existing filters
+      const existingFilters = { ...filter };
+      filter.$and = [
+        existingFilters,
+        { $or: priceConditions.map(p => ({ price: p })) }
+      ];
+      
+      // Remove the individual filter properties since they're now in $and
+      Object.keys(existingFilters).forEach(key => {
+        if (key !== '$and') {
+          delete filter[key];
+        }
+      });
     }
   }
 
