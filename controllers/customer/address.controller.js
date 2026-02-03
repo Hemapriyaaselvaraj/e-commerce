@@ -29,9 +29,8 @@ const getAddresses = async (req, res) => {
 
 const postAddAddress = async (req, res) => {
   try {
-    
     if (!req.session || !req.session.userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Please sign in to save an address.' });
     }
 
     const { 
@@ -47,33 +46,109 @@ const postAddAddress = async (req, res) => {
       isDefault 
     } = req.body;
 
-    
+    // Validate required fields
     if (!name || !house_number || !locality || !city || !state || !pincode || !phone_number) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Name, house number, locality, city, state, pincode and phone number are required.' 
+      });
     }
+
+    // Validate name (2-50 characters, letters and spaces only)
+    const nameRegex = /^[a-zA-Z\s]{2,50}$/;
+    if (!nameRegex.test(name.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Name must be 2-50 characters long and contain only letters and spaces.' 
+      });
+    }
+
+    // Validate phone number (10 digits, Indian format)
+    const phoneRegex = /^[6-9][0-9]{9}$/;
+    if (!phoneRegex.test(phone_number.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please enter a valid 10-digit Indian phone number starting with 6-9.' 
+      });
+    }
+
+    // Validate pincode (6 digits)
+    const pincodeRegex = /^[0-9]{6}$/;
+    if (!pincodeRegex.test(pincode.toString().trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please enter a valid 6-digit pincode.' 
+      });
+    }
+
+    // Validate city and state (letters, spaces, and common punctuation)
+    const locationRegex = /^[a-zA-Z\s\-\.]{2,50}$/;
+    if (!locationRegex.test(city.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'City name must be 2-50 characters and contain only letters, spaces, hyphens, and dots.' 
+      });
+    }
+
+    if (!locationRegex.test(state.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'State name must be 2-50 characters and contain only letters, spaces, hyphens, and dots.' 
+      });
+    }
+
+    // Validate house number and locality (alphanumeric with common punctuation)
+    const addressRegex = /^[a-zA-Z0-9\s\-\.\,\/\#]{1,100}$/;
+    if (!addressRegex.test(house_number.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'House number contains invalid characters. Use only letters, numbers, spaces, and common punctuation.' 
+      });
+    }
+
+    if (!addressRegex.test(locality.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Locality contains invalid characters. Use only letters, numbers, spaces, and common punctuation.' 
+      });
+    }
+
+    // Normalize type field
+    const normalizeType = (value = '') => {
+      const normalized = value.toString().trim().toUpperCase();
+      const allowed = ['HOME', 'WORK', 'OTHER'];
+      if (allowed.includes(normalized)) return normalized;
+      return 'HOME';
+    };
+
+    // Check if this is the first address (should be default)
+    const addressCount = await Address.countDocuments({ user_id: req.session.userId });
+    const shouldBeDefault = addressCount === 0 || isDefault === "on" || isDefault === true;
 
     const newAddress = {
       user_id: req.session.userId,
-      name,
-      label: label || 'Home',
-      type: type || 'HOME',
-      house_number,
-      locality,
-      city,
-      state,
-      pincode,
-      phone_number,
-      isDefault: isDefault === "on" || isDefault === true ? true : false
+      name: name.trim(),
+      label: label?.trim() || 'Home',
+      type: normalizeType(type || label),
+      house_number: house_number.trim(),
+      locality: locality.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      pincode: Number(pincode),
+      phone_number: phone_number.trim(),
+      isDefault: shouldBeDefault
     };
 
     await Address.create(newAddress);
 
-    return res.json({ success: true, message: 'Address added successfully' });
+    return res.json({ success: true, message: 'Address added successfully!' });
 
   } catch (error) {
     console.error("❌ Error adding address:", error);
-    console.error("❌ Error stack:", error.stack);
-    return res.status(500).json({ success: false, message: error.message || "Server error while adding address" });
+    return res.status(500).json({ 
+      success: false, 
+      message: "Unable to save address at the moment. Please check your information and try again." 
+    });
   }
 };
 
@@ -93,7 +168,7 @@ const getEditAddress = async (req, res) => {
 const postEditAddress = async (req, res) => {
   try {
     if (!req.session || !req.session.userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Please sign in to edit address.' });
     }
 
     const { 
@@ -110,35 +185,108 @@ const postEditAddress = async (req, res) => {
 
     // Validate required fields
     if (!name || !house_number || !locality || !city || !state || !pincode || !phone_number) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Name, house number, locality, city, state, pincode and phone number are required.' 
+      });
     }
+
+    // Validate name (2-50 characters, letters and spaces only)
+    const nameRegex = /^[a-zA-Z\s]{2,50}$/;
+    if (!nameRegex.test(name.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Name must be 2-50 characters long and contain only letters and spaces.' 
+      });
+    }
+
+    // Validate phone number (10 digits, Indian format)
+    const phoneRegex = /^[6-9][0-9]{9}$/;
+    if (!phoneRegex.test(phone_number.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please enter a valid 10-digit Indian phone number starting with 6-9.' 
+      });
+    }
+
+    // Validate pincode (6 digits)
+    const pincodeRegex = /^[0-9]{6}$/;
+    if (!pincodeRegex.test(pincode.toString().trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please enter a valid 6-digit pincode.' 
+      });
+    }
+
+    // Validate city and state (letters, spaces, and common punctuation)
+    const locationRegex = /^[a-zA-Z\s\-\.]{2,50}$/;
+    if (!locationRegex.test(city.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'City name must be 2-50 characters and contain only letters, spaces, hyphens, and dots.' 
+      });
+    }
+
+    if (!locationRegex.test(state.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'State name must be 2-50 characters and contain only letters, spaces, hyphens, and dots.' 
+      });
+    }
+
+    // Validate house number and locality (alphanumeric with common punctuation)
+    const addressRegex = /^[a-zA-Z0-9\s\-\.\,\/\#]{1,100}$/;
+    if (!addressRegex.test(house_number.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'House number contains invalid characters. Use only letters, numbers, spaces, and common punctuation.' 
+      });
+    }
+
+    if (!addressRegex.test(locality.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Locality contains invalid characters. Use only letters, numbers, spaces, and common punctuation.' 
+      });
+    }
+
+    // Normalize type field
+    const normalizeType = (value = '') => {
+      const normalized = value.toString().trim().toUpperCase();
+      const allowed = ['HOME', 'WORK', 'OTHER'];
+      if (allowed.includes(normalized)) return normalized;
+      return 'HOME';
+    };
 
     const address = await Address.findOne({ _id: req.params.id, user_id: req.session.userId });
     
     if (!address) {
-      return res.status(404).json({ success: false, message: 'Address not found' });
+      return res.status(404).json({ success: false, message: 'Address not found.' });
     }
 
     await Address.findOneAndUpdate(
       { _id: req.params.id, user_id: req.session.userId }, 
       {
-        name,
-        label: label || 'Home',
-        type: type || 'HOME',
-        house_number,
-        locality,
-        city,
-        state,
-        pincode,
-        phone_number
+        name: name.trim(),
+        label: label?.trim() || 'Home',
+        type: normalizeType(type || label),
+        house_number: house_number.trim(),
+        locality: locality.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        pincode: Number(pincode),
+        phone_number: phone_number.trim()
       }
     );
 
-    return res.json({ success: true, message: 'Address updated successfully' });
+    return res.json({ success: true, message: 'Address updated successfully!' });
 
   } catch (error) {
     console.error('Error updating address:', error);
-    return res.status(500).json({ success: false, message: 'Failed to update address. Please try again.' });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Unable to update address at the moment. Please check your information and try again.' 
+    });
   }
 };
 
