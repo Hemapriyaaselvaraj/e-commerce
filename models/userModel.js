@@ -33,7 +33,11 @@ const userSchema = new mongoose.Schema(
     },
     lastName: {
       type: String,
-      required: true,
+      required: function() {
+        // lastName is required for email signups but optional for Google OAuth
+        return this.signupMethod !== 'google';
+      },
+      default: ''
     },
     phoneNumber: {
       type: String,
@@ -69,7 +73,8 @@ const userSchema = new mongoose.Schema(
     },
     referralCode: { 
       type: String, 
-      unique: true 
+      unique: true,
+      sparse: true  // This allows multiple null values
     },
     referredBy: { 
       type: String, 

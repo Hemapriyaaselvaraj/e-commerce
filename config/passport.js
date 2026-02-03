@@ -39,7 +39,7 @@ passport.use(new GoogleStrategy({
 
       const newUser = new userModel({
         googleId: profile.id, 
-        firstName: profile.name.givenName || '',
+        firstName: profile.name.givenName || profile.displayName || 'User',
         lastName: profile.name.familyName || '',
         email,
         password: null, 
