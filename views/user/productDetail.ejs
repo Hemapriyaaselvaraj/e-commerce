@@ -935,14 +935,9 @@
             timer: 2000,
             showConfirmButton: false
           });
-          match.stock_quantity -= quantity;
-          updateStockMessage();
           
-          if (match.stock_quantity === 0) {
-            qtyInput.value = 0;
-          } else {
-            qtyInput.value = 1;
-          }
+          // Reset quantity input to 1 after successful add to cart
+          qtyInput.value = 1;
           updateQtyButtons();
           
           // Update navbar cart count
