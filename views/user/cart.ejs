@@ -302,6 +302,14 @@
     <h2>Shopping Cart</h2>
     <p><%= items.length %> item<%= items.length === 1 ? '' : 's' %> in your cart</p>
 
+    <% if (typeof couponValidationMessage !== 'undefined' && couponValidationMessage) { %>
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Coupon Update:</strong> <%= couponValidationMessage %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
     <div class="cart-content">
       <div class="cart-items">
         <% if (items.length) { %>
@@ -626,6 +634,32 @@
         });
       });
     });
+
+    // Helper function to show coupon validation messages
+    function showCouponValidationMessage(message) {
+      // Remove any existing coupon validation alerts
+      const existingAlerts = document.querySelectorAll('.coupon-validation-alert');
+      existingAlerts.forEach(alert => alert.remove());
+      
+      // Create new alert
+      const alertDiv = document.createElement('div');
+      alertDiv.className = 'alert alert-warning alert-dismissible fade show coupon-validation-alert';
+      alertDiv.setAttribute('role', 'alert');
+      alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Coupon Update:</strong> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      
+      // Insert after the cart header
+      const cartHeader = document.querySelector('.cart-container h2').parentNode;
+      const existingMessage = cartHeader.querySelector('.alert');
+      if (existingMessage) {
+        existingMessage.replaceWith(alertDiv);
+      } else {
+        cartHeader.insertBefore(alertDiv, cartHeader.children[2]); // After h2 and p
+      }
+    }
   </script>
 </body>
 </html>

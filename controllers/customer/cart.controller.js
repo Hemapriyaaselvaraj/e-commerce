@@ -11,12 +11,25 @@ const getCartPage = async (req, res) => {
 
     if (!userId) return res.redirect('/user/login');
 
+    // Use cart calculator for consistent calculation and coupon revalidation
+    const cartCalculation = await calculateCartTotals(userId, req.session);
+    
+    if (!cartCalculation.success) {
+      return res.render("user/cart", {
+        items: [],
+        subtotal: 0,
+        shipping: 0,
+        total: 0,
+        couponValidationMessage: null
+      });
+    }
+
+    // Get detailed cart items for display
     const cartItems = await Cart.find({ user_id: userId })
       .populate({
         path: "product_variation_id",
         populate: { path: "product_id" }
       });
-
 
     const now = new Date();
     const activeOffers = await Offer.find({
@@ -28,12 +41,10 @@ const getCartPage = async (req, res) => {
     .lean();
 
     const items = cartItems.map(cart => {
-
       const variation = cart.product_variation_id;
       const product = variation?.product_id;
 
       const originalPrice = product?.price || 0;
-
       const offerResult = calculateBestOffer(product, activeOffers);
       const maxOfferDiscount = offerResult.discountPercentage;
       const finalPrice = offerResult.finalPrice;
@@ -56,16 +67,12 @@ const getCartPage = async (req, res) => {
 
     const validItems = items.filter(i => i.isActive && i.stock > 0);
 
-    const subtotal = validItems.reduce((sum, i) => sum + i.total, 0);
-    const shipping = subtotal > 1000 ? 0 : 50;
-    const total = subtotal + shipping;
-
     res.render("user/cart", {
       items,
-      subtotal,
-      shipping,
-      total,
-
+      subtotal: cartCalculation.subtotal,
+      shipping: cartCalculation.shipping,
+      total: cartCalculation.total,
+      couponValidationMessage: cartCalculation.couponValidationMessage
     });
 
   } catch (error) {
@@ -116,7 +123,21 @@ const updateCartQuantity = async (req, res) => {
     cartItem.updated_at = Date.now();
 
     await cartItem.save();
-    res.json({ success: true, quantity: cartItem.quantity });
+    
+    // Revalidate coupon after cart change
+    let couponValidationMessage = null;
+    if (req.session.appliedCoupon) {
+      const cartCalculation = await calculateCartTotals(userId, req.session);
+      if (cartCalculation.couponValidationMessage) {
+        couponValidationMessage = cartCalculation.couponValidationMessage;
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      quantity: cartItem.quantity,
+      couponValidationMessage
+    });
   } catch (error) {
     console.error('Update cart quantity error:', error);
     res.status(500).json({
@@ -154,9 +175,20 @@ const removeFromCart = async (req, res) => {
     }
 
     await Cart.deleteOne({ _id: cartItemId, user_id: userId });
+    
+    // Revalidate coupon after cart change
+    let couponValidationMessage = null;
+    if (req.session.appliedCoupon) {
+      const cartCalculation = await calculateCartTotals(userId, req.session);
+      if (cartCalculation.couponValidationMessage) {
+        couponValidationMessage = cartCalculation.couponValidationMessage;
+      }
+    }
+    
     res.json({
       success: true,
-      message: 'Item removed from cart successfully.'
+      message: 'Item removed from cart successfully.',
+      couponValidationMessage
     });
   } catch (error) {
     console.error('Remove from cart error:', error);
@@ -211,7 +243,21 @@ const addToCart = async (req, res) => {
       }
       await Cart.create({ user_id: userId, product_variation_id, quantity });
     }
-    res.json({ success: true, message: 'Added to cart' });
+    
+    // Revalidate coupon after cart change
+    let couponValidationMessage = null;
+    if (req.session.appliedCoupon) {
+      const cartCalculation = await calculateCartTotals(userId, req.session);
+      if (cartCalculation.couponValidationMessage) {
+        couponValidationMessage = cartCalculation.couponValidationMessage;
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Added to cart',
+      couponValidationMessage
+    });
   } catch (err) {
     console.error('Add to cart error:', err);
     res.status(500).json({ success: false, message: 'Server error. Please try again.' });

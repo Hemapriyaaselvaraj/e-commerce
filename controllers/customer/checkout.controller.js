@@ -4,6 +4,7 @@ const Cart = require("../../models/cartModel");
 const Offer = require("../../models/offerModel");
 const Coupon = require('../../models/couponModel');
 const { calculateBestOffer } = require("../../utils/offerCalculator");
+const { calculateCartTotals } = require("../../utils/cartCalculator");
 
 
 const checkout = async (req, res) => {
@@ -11,6 +12,13 @@ const checkout = async (req, res) => {
   const user = await userModel.findById(userId);
 
   const addresses = await Address.find({ user_id: userId }).lean();
+
+  // Use cart calculator for consistent calculation and coupon revalidation
+  const cartCalculation = await calculateCartTotals(userId, req.session);
+  
+  if (!cartCalculation.success) {
+    return res.redirect('/cart');
+  }
 
   const cartItems = await Cart.find({ user_id: userId }).populate({
     path: "product_variation_id",
@@ -62,30 +70,7 @@ const checkout = async (req, res) => {
     0
   );
 
-  const subtotal = filteredItems.reduce(
-    (sum, p) => sum + p.priceAfter * p.quantity,
-    0
-  );
-
-  const shipping = subtotal > 1000 ? 0 : 50;
-  let total = subtotal + shipping;
-  let grandTotal = total; // This will be the final amount after coupon
-  
-  // Apply any session coupon discount for display consistency
-  let couponDiscount = 0;
-  if (req.session.appliedCoupon) {
-    couponDiscount = req.session.appliedCoupon.discount || 0;
-    
-    // Ensure coupon discount doesn't exceed total to prevent negative amounts
-    if (couponDiscount > total) {
-      couponDiscount = total;
-    }
-    
-    grandTotal = total - couponDiscount; // Grand total is after coupon discount
-  }
-
   const razorpayKeyId = process.env.RAZORPAY_KEY_ID; 
-
 
   res.render("user/checkout", {
     userEmail: user.email || "",
@@ -94,13 +79,14 @@ const checkout = async (req, res) => {
     products: filteredItems,
     originalSubtotal: Math.round(originalSubtotal),
     offerDiscount: Math.round(offerDiscount),
-    subtotal: Math.round(subtotal),
-    shipping,
-    couponDiscount: Math.round(couponDiscount),
+    subtotal: cartCalculation.subtotal,
+    shipping: cartCalculation.shipping,
+    couponDiscount: cartCalculation.couponDiscount,
     appliedCoupon: req.session.appliedCoupon || null,
-    total: Math.round(total), // Total before coupon (subtotal + shipping)
-    grandTotal: Math.round(grandTotal), // Final total after coupon
-    razorpayKeyId
+    total: cartCalculation.subtotal + cartCalculation.shipping, // Total before coupon
+    grandTotal: cartCalculation.total, // Final total after coupon
+    razorpayKeyId,
+    couponValidationMessage: cartCalculation.couponValidationMessage
   });
 };
 

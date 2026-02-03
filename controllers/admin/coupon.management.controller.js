@@ -67,7 +67,7 @@ const getAddCoupon = async (req, res) => {
 
       // Business logic validation: For fixed amount coupons, minimum purchase must be higher than discount
       if (discountType === 'FLAT') {
-        const minPurchase = parseFloat(minimumPurchase) || 0;
+        const minPurchase = parseInt(minimumPurchase) || 0; // Use parseInt for whole numbers
         if (minPurchase <= discountValue) {
           return res.status(400).json({ 
             success: false, 
@@ -156,7 +156,7 @@ const getAddCoupon = async (req, res) => {
         description,
         discountType,
         discountValue: parseFloat(discountValue),
-        minimumPurchase: parseFloat(minimumPurchase) || 0,
+        minimumPurchase: parseInt(minimumPurchase) || 0, // Use parseInt for whole numbers
         maxDiscount: parseFloat(maxDiscount) || null,
         validFrom: fromDate,
         validTo: toDate,
@@ -251,7 +251,7 @@ const postEditCoupon = async (req, res) => {
 
       // Business logic validation: For fixed amount coupons, minimum purchase must be higher than discount
       if (discountType === 'FLAT') {
-        const minPurchase = parseFloat(minimumPurchase) || 0;
+        const minPurchase = parseInt(minimumPurchase) || 0; // Use parseInt for whole numbers
         if (minPurchase <= discountValue) {
           return res.status(400).json({ 
             success: false, 

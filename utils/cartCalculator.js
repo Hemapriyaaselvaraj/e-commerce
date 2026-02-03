@@ -1,5 +1,6 @@
 const Cart = require('../models/cartModel');
 const Offer = require('../models/offerModel');
+const Coupon = require('../models/couponModel');
 const { calculateBestOffer } = require('./offerCalculator');
 
 /**
@@ -69,12 +70,59 @@ const calculateCartTotals = async (userId, session = {}) => {
 
     const shipping = subtotal > 1000 ? 0 : 50;
     
-    // Get coupon discount from session
+    // Revalidate applied coupon if exists
     let couponDiscount = 0;
     let appliedCouponCode = null;
+    let couponValidationMessage = null;
+    
     if (session.appliedCoupon) {
-      couponDiscount = session.appliedCoupon.discount || 0;
-      appliedCouponCode = session.appliedCoupon.code;
+      try {
+        const coupon = await Coupon.findById(session.appliedCoupon.couponId);
+        
+        if (!coupon) {
+          // Coupon no longer exists
+          delete session.appliedCoupon;
+          couponValidationMessage = "Applied coupon no longer exists and has been removed.";
+        } else {
+          const now = new Date();
+          
+          // Check if coupon is still valid (dates)
+          if (now < coupon.validFrom || now > coupon.validTo) {
+            delete session.appliedCoupon;
+            couponValidationMessage = "Applied coupon has expired and has been removed.";
+          }
+          // Check minimum purchase requirement
+          else if (subtotal < (coupon.minimumPurchase || 0)) {
+            delete session.appliedCoupon;
+            couponValidationMessage = `Applied coupon requires minimum purchase of ₹${coupon.minimumPurchase} but cart total is ₹${subtotal}. Coupon has been removed.`;
+          }
+          // Check business logic for fixed amount coupons
+          else if (coupon.discountType === 'FLAT' && (coupon.minimumPurchase || 0) <= coupon.discountValue) {
+            delete session.appliedCoupon;
+            couponValidationMessage = "Applied coupon has invalid configuration and has been removed.";
+          }
+          // Coupon is still valid, recalculate discount
+          else {
+            appliedCouponCode = coupon.code;
+            
+            if (coupon.discountType === "PERCENTAGE") {
+              couponDiscount = Math.round((subtotal * coupon.discountValue) / 100);
+              if (coupon.maxDiscount && coupon.maxDiscount > 0 && couponDiscount > coupon.maxDiscount) {
+                couponDiscount = coupon.maxDiscount;
+              }
+            } else {
+              couponDiscount = Math.min(coupon.discountValue, subtotal);
+            }
+            
+            // Update session with recalculated discount
+            session.appliedCoupon.discount = couponDiscount;
+          }
+        }
+      } catch (error) {
+        // Error validating coupon, remove it
+        delete session.appliedCoupon;
+        couponValidationMessage = "Error validating applied coupon. Coupon has been removed.";
+      }
     }
 
     // Ensure coupon discount doesn't exceed subtotal + shipping to prevent negative totals
@@ -92,7 +140,8 @@ const calculateCartTotals = async (userId, session = {}) => {
       couponDiscount: Math.round(couponDiscount),
       appliedCouponCode,
       total: Math.round(total),
-      items: validItems
+      items: validItems,
+      couponValidationMessage // Include validation message if coupon was removed
     };
 
   } catch (error) {

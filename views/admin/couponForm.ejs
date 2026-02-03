@@ -281,12 +281,13 @@
                   <div class="input-group">
                     <span class="input-group-text">₹</span>
                     <input 
-                      type="number" 
+                      type="text" 
                       id="minimumPurchase"
                       name="minimumPurchase" 
                       class="form-control" 
                       placeholder="0"
-                      min="0"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
                       value="<%= coupon ? coupon.minimumPurchase : 0 %>">
                   </div>
                   <div class="form-text">Minimum cart value required to use this coupon</div>
@@ -472,12 +473,12 @@
 
       // Business logic validation: For fixed amount coupons, minimum purchase must be higher than discount
       if (discountType === 'FLAT') {
-        const minPurchase = parseFloat(formData.get('minimumPurchase')) || 0;
+        const minPurchase = parseInt(formData.get('minimumPurchase')) || 0;
         if (minPurchase <= parseFloat(discountValue)) {
           Swal.fire({
             icon: 'error',
             title: 'Business Logic Error',
-            text: `For fixed amount coupons, minimum purchase amount (₹${minPurchase}) must be greater than the discount amount (₹${discountValue}) to prevent losses.`,
+            text: `For fixed amount coupons, minimum purchase amount (₹${minPurchase}) must be greater than the discount amount (₹${parseFloat(discountValue)}) to prevent losses.`,
             confirmButtonColor: '#343a40'
           });
           document.getElementById('minimumPurchase').focus();
@@ -655,7 +656,7 @@
     function validateBusinessLogic() {
       const discountType = document.getElementById('discountType').value;
       const discountValue = parseFloat(document.getElementById('discountValue').value) || 0;
-      const minimumPurchase = parseFloat(document.getElementById('minimumPurchase').value) || 0;
+      const minimumPurchase = parseInt(document.getElementById('minimumPurchase').value) || 0;
       const minPurchaseField = document.getElementById('minimumPurchase');
       const warningDiv = document.getElementById('fixedAmountWarning');
       
@@ -684,8 +685,39 @@
       }
     }
 
-    // Add event listeners for business logic validation
-    document.getElementById('minimumPurchase').addEventListener('input', validateBusinessLogic);
+    // Simplified input handling for minimum purchase - no automatic modifications
+    document.getElementById('minimumPurchase').addEventListener('input', function(e) {
+      // Store the current cursor position
+      const cursorPosition = this.selectionStart;
+      
+      // Only allow digits, remove everything else
+      const cleanValue = this.value.replace(/[^0-9]/g, '');
+      
+      // Only update if the value actually changed
+      if (cleanValue !== this.value) {
+        this.value = cleanValue;
+        // Restore cursor position
+        this.setSelectionRange(cursorPosition, cursorPosition);
+      }
+      
+      // Validate business logic without modifying the input
+      validateBusinessLogic();
+    });
+
+    // Prevent non-numeric characters from being typed
+    document.getElementById('minimumPurchase').addEventListener('keydown', function(e) {
+      // Allow: backspace, delete, tab, escape, enter, home, end, left, right, up, down
+      if ([8, 9, 27, 13, 35, 36, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
+          // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z
+          (e.ctrlKey === true && [65, 67, 86, 88, 90].indexOf(e.keyCode) !== -1)) {
+        return; // Let it happen, don't do anything
+      }
+      
+      // Ensure that it is a number and stop the keypress
+      if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+        e.preventDefault();
+      }
+    });
 
     // Date validation with flexible rules (same as offers)
     function validateDates() {
