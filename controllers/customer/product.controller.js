@@ -31,32 +31,59 @@ const productList = async (req, res) => {
   const currentPage = parseInt(page) || 1;
   const pageSize = 10;
 
+  const [categories, types, sizesRaw, colors] = await Promise.all([
+    productCategoryModel.find({ isActive: true }).lean(),
+    productTypeModel.find({ isActive: true }).lean(),
+    productSizeModel.find({ isActive: true }).lean(),
+    productColorModel.find({ isActive: true }).lean()
+  ]);
+  
+  // Sort sizes numerically
+  const sizes = sizesRaw.sort((a, b) => Number(a.size) - Number(b.size));
+  
+  // Validate that selected filters are active
+  const activeCategories = categories.map(c => c.category);
+  const activeTypes = types.map(t => t.type);
+  const activeSizes = sizes.map(s => s.size);
+  const activeColors = colors.map(c => c.color);
+  
+  // Filter out inactive selections
+  const validSelectedType = selectedType.filter(type => activeTypes.includes(type));
+  const validSelectedSize = selectedSize.filter(size => activeSizes.includes(size));
+  const validSelectedColor = selectedColor.filter(color => activeColors.includes(color));
+  const validSelectedCategory = selectedCategory && activeCategories.includes(selectedCategory) ? selectedCategory : null;
+
   //Build base Mongoose filter object
   const filter = { is_active: true };
-  if (selectedCategory) filter.product_category = selectedCategory;
-  if (selectedType.length) filter.product_type = { $in: selectedType };
+  
+  // Filter to only show products with active categories and types
+  filter.product_category = { $in: activeCategories };
+  filter.product_type = { $in: activeTypes };
+  
+  // Apply user selections (which are already validated)
+  if (validSelectedCategory) filter.product_category = validSelectedCategory;
+  if (validSelectedType.length) filter.product_type = { $in: validSelectedType };
   if (searchText) filter.name = { $regex: searchText, $options: "i" };
 
   //Filter by variations (size/color)
   let variationProductIds = null;
-  if (selectedSize.length || selectedColor.length) {
-    const variationFilter = {};
-    if (selectedSize.length) variationFilter.product_size = { $in: selectedSize };
-    if (selectedColor.length) variationFilter.product_color = { $in: selectedColor };
+  
+  // Always get products that have at least one variation with active colors and sizes
+  const activeVariationFilter = {
+    product_color: { $in: activeColors },
+    product_size: { $in: activeSizes }
+  };
+  
+  if (validSelectedSize.length || validSelectedColor.length) {
+    // User has selected specific sizes/colors
+    const variationFilter = { ...activeVariationFilter };
+    if (validSelectedSize.length) variationFilter.product_size = { $in: validSelectedSize };
+    if (validSelectedColor.length) variationFilter.product_color = { $in: validSelectedColor };
 
     const variations = await ProductVariation.find(variationFilter, "product_id").lean();
     variationProductIds = [...new Set(variations.map(v => v.product_id.toString()))];
     if (!variationProductIds.length) {
       // Still need to fetch filter data even when no products match
-      const [categories, types, sizesRaw, colors] = await Promise.all([
-        productCategoryModel.find({ isActive: true }).lean(),
-        productTypeModel.find({ isActive: true }).lean(),
-        productSizeModel.find({ isActive: true }).lean(),
-        productColorModel.find({ isActive: true }).lean()
-      ]);
-      
-      // Sort sizes numerically
-      const sizes = sizesRaw.sort((a, b) => Number(a.size) - Number(b.size));
       const priceRanges = [
         { label: "0 - 500", min: 0, max: 500 },
         { label: "500 - 1000", min: 500, max: 1000 },
@@ -72,10 +99,10 @@ const productList = async (req, res) => {
         sizes,
         colors,
         priceRanges,
-        selectedCategory,
-        selectedType,
-        selectedSize,
-        selectedColor,
+        selectedCategory: validSelectedCategory,
+        selectedType: validSelectedType,
+        selectedSize: validSelectedSize,
+        selectedColor: validSelectedColor,
         selectedPrice,
         currentPage: 1,
         totalPages: 0,
@@ -86,6 +113,13 @@ const productList = async (req, res) => {
         wishlistMap: {}
       });
     }
+  } else {
+    // No specific size/color selected, get all products with active variations
+    const variations = await ProductVariation.find(activeVariationFilter, "product_id").lean();
+    variationProductIds = [...new Set(variations.map(v => v.product_id.toString()))];
+  }
+  
+  if (variationProductIds) {
     filter._id = { $in: variationProductIds };
   }
 
@@ -121,6 +155,13 @@ const productList = async (req, res) => {
   // 6. Get, sort, and paginate products
   let products = await Product.find(filter).lean();
   
+  console.log('Product filtering results:', {
+    totalProductsFound: products.length,
+    filter: JSON.stringify(filter),
+    activeCategories: activeCategories.length,
+    activeTypes: activeTypes.length
+  });
+  
   // Get all active offers with populated category
   const now = new Date();
   const activeOffers = await Offer.find({
@@ -153,7 +194,7 @@ const productList = async (req, res) => {
     {
       $match: {
         product_id: { $in: productIds },
-        ...(selectedColor.length && { product_color: { $in: selectedColor } })
+        ...(validSelectedColor.length && { product_color: { $in: validSelectedColor } })
       }
     },
     {
@@ -184,15 +225,8 @@ const productList = async (req, res) => {
     }
   }
 
-  const [categories, types, sizesRaw, colors] = await Promise.all([
-    productCategoryModel.find({ isActive: true }).lean(),
-    productTypeModel.find({ isActive: true }).lean(),
-    productSizeModel.find({ isActive: true }).lean(),
-    productColorModel.find({ isActive: true }).lean()
-  ]);
-  
-  // Sort sizes numerically
-  const sizes = sizesRaw.sort((a, b) => Number(a.size) - Number(b.size));
+
+
   const priceRanges = [
     { label: "0 - 500", min: 0, max: 500 },
     { label: "500 - 1000", min: 500, max: 1000 },
@@ -202,16 +236,19 @@ const productList = async (req, res) => {
   ];
 
   return res.render("user/productList", {
-    products,
+    products: products.map(p => {
+      console.log('Product ID being rendered:', p._id, 'Type:', typeof p._id);
+      return p;
+    }),
     categories,
     types,
     sizes,
     colors,
     priceRanges,
-    selectedCategory,
-    selectedType,
-    selectedSize,
-    selectedColor,
+    selectedCategory: validSelectedCategory,
+    selectedType: validSelectedType,
+    selectedSize: validSelectedSize,
+    selectedColor: validSelectedColor,
     selectedPrice,
     currentPage,
     totalPages,
@@ -244,13 +281,40 @@ const productDetail = async (req, res) => {
     
     // Validate if productId is a valid MongoDB ObjectId
     const mongoose = require('mongoose');
+    console.log('Is valid ObjectId:', mongoose.Types.ObjectId.isValid(productId));
+    
     if (!mongoose.Types.ObjectId.isValid(productId)) {
+      console.log('Invalid ObjectId, returning 404');
       return res.status(404).render('user/404');
     }
     
     const product = await Product.findById(productId).lean();
+    console.log('Product found:', !!product);
 
-    if (!product) {
+    if (!product || !product.is_active) {
+      console.log('Product not found or inactive, returning 404');
+      return res.status(404).render('user/404');
+    }
+
+    // Check if product's category and type are active
+    const [category, type] = await Promise.all([
+      productCategoryModel.findOne({ category: product.product_category, isActive: true }).lean(),
+      productTypeModel.findOne({ type: product.product_type, isActive: true }).lean()
+    ]);
+
+    console.log('Product details:', {
+      productId,
+      productCategory: product.product_category,
+      productType: product.product_type,
+      categoryFound: !!category,
+      typeFound: !!type
+    });
+
+    if (!category || !type) {
+      console.log('Product blocked - inactive category or type:', {
+        category: category ? 'active' : 'inactive',
+        type: type ? 'active' : 'inactive'
+      });
       return res.status(404).render('user/404');
     }
 
@@ -269,6 +333,31 @@ const productDetail = async (req, res) => {
 
     const variations = await ProductVariation.find({ product_id: productId }).lean();
 
+    // Filter variations to only include those with active colors and sizes
+    const [activeSizes, activeColors] = await Promise.all([
+      productSizeModel.find({ isActive: true }).lean(),
+      productColorModel.find({ isActive: true }).lean()
+    ]);
+
+    const activeSizeValues = activeSizes.map(s => s.size);
+    const activeColorValues = activeColors.map(c => c.color);
+
+    const validVariations = variations.filter(v => 
+      activeSizeValues.includes(Number(v.product_size)) && 
+      activeColorValues.includes(v.product_color)
+    );
+
+    if (!validVariations.length) {
+      console.log('Product blocked - no valid variations:', {
+        productId,
+        totalVariations: variations.length,
+        validVariations: validVariations.length,
+        activeSizeValues,
+        activeColorValues
+      });
+      return res.status(404).render('user/404');
+    }
+
   
     let initialImages = [];
     let selectedSize = null;
@@ -276,8 +365,8 @@ const productDetail = async (req, res) => {
     let selectedVariationId = null;
     let selectedStock = 0; 
 
-    if (variations && variations.length) {
-      const defaultVariation = variations.find(v => v.stock_quantity > 0) || variations[0];
+    if (validVariations && validVariations.length) {
+      const defaultVariation = validVariations.find(v => v.stock_quantity > 0) || validVariations[0];
 
       if (defaultVariation) {
         initialImages = Array.isArray(defaultVariation.images) ? defaultVariation.images.slice() : [];
@@ -290,14 +379,14 @@ const productDetail = async (req, res) => {
 
     const sizes = [];
     const colors = [];
-    variations.forEach(v => {
+    validVariations.forEach(v => {
       if (!sizes.includes(v.product_size)) sizes.push(v.product_size);
       if (!colors.includes(v.product_color)) colors.push(v.product_color);
     });
 
   
     const sizeColorMap = {};
-    variations.forEach(v => {
+    validVariations.forEach(v => {
       if (!sizeColorMap[v.product_size]) sizeColorMap[v.product_size] = [];
       sizeColorMap[v.product_size].push({
         color: v.product_color,
@@ -349,7 +438,7 @@ const productDetail = async (req, res) => {
       colors,
       relatedProducts,
       sizeColorMap,
-      variations,
+      variations: validVariations,
       selectedSize,
       selectedColor,
       selectedVariationId,

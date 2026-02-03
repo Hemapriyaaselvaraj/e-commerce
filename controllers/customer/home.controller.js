@@ -1,12 +1,29 @@
 const userModel = require('../../models/userModel');
 const Product = require('../../models/productModel');
 const ProductVariation = require('../../models/productVariationModel');
+const productCategoryModel = require('../../models/productCategoryModel');
+const productTypeModel = require('../../models/productTypeModel');
 
 const home = async (req, res) => {
   try {
+    // Get active categories and types
+    const [activeCategories, activeTypes] = await Promise.all([
+      productCategoryModel.find({ isActive: true }).lean(),
+      productTypeModel.find({ isActive: true }).lean()
+    ]);
+
+    const activeCategoryNames = activeCategories.map(c => c.category);
+    const activeTypeNames = activeTypes.map(t => t.type);
+
+    // Base filter for active products with active categories and types
+    const baseFilter = {
+      is_active: true,
+      product_category: { $in: activeCategoryNames },
+      product_type: { $in: activeTypeNames }
+    };
 
     const bannerResult = await Product.aggregate([
-      { $match: { is_active: true } },
+      { $match: baseFilter },
       { $sample: { size: 1 } },
 
       {
@@ -33,7 +50,7 @@ const home = async (req, res) => {
     const bannerImage = bannerResult[0]?.bannerImage || null;
 
     const categoryImages = await Product.aggregate([
-      { $match: { is_active: true } },
+      { $match: baseFilter },
 
       {
         $group: {
@@ -65,7 +82,7 @@ const home = async (req, res) => {
 
 
     const featuredProducts = await Product.aggregate([
-      { $match: { is_active: true } },
+      { $match: baseFilter },
       { $sample: { size: 4 } },
 
       {

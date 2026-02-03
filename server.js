@@ -70,6 +70,13 @@ app.set('view engine', 'ejs');
 
 app.use(attachUserName);
 
+// Add request logger to debug routing issues
+app.use((req, res, next) => {
+  console.log(`REQUEST: ${req.method} ${req.originalUrl}`);
+  console.log('Request received at:', new Date().toISOString());
+  next();
+});
+
 app.use('/user',userRoutes)
 app.use('/admin',adminRoutes)
 app.use('/products', productRoutes)

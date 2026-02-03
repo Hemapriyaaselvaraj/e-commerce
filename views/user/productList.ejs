@@ -733,10 +733,10 @@
   <div class="product-list-container <%= products && products.length && products.length <= 2 ? 'few-results' : '' %>">
           <% if (products && products.length) { %>
             <% products.forEach(product => { %>
-              <div 
-                class="product-card enhanced-card"
-                onclick="window.location.href='/products/<%= product._id %>'"
-              >
+              <div class="product-card enhanced-card">
+                <a href="/products/<%= product._id %>" style="text-decoration: none; color: inherit; display: block;">
+                  <div style="width: 100%; height: 100%;">
+                <!-- Product content will go here -->
                 <!-- Offer badge - Show only if there's an admin offer -->
                 <% if (product.offerDiscount && product.offerDiscount > 0) { %>
                   <div class="offer-badge">
@@ -779,6 +779,8 @@
                     </span>
                   </div>
                 </div>
+                  </div>
+                </a>
               </div>
             <% }) %>
           <% } else { %>
