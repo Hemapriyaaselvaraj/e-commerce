@@ -29,7 +29,7 @@ const productList = async (req, res) => {
   const selectedPrice = [].concat(price || []);
   const searchText = search?.trim() || "";
   const currentPage = parseInt(page) || 1;
-  const pageSize = 10;
+  const pageSize = 15;
 
   const [categories, types, sizesRaw, colors] = await Promise.all([
     productCategoryModel.find({ isActive: true }).lean(),
